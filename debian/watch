@@ -1,0 +1,2 @@
+version=3
+opts=uversionmangle=s/^/0./ http://code.google.com/p/bsnes/downloads/list http://bsnes.googlecode.com/files/bsnes_v(.*).tar.bz2

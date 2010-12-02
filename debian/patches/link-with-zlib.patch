@@ -1,0 +1,21 @@
+Link against Debian zlib rather than internal copy of zlib
+--- a/snesreader/Makefile
++++ b/snesreader/Makefile
+@@ -6,7 +6,7 @@
+ c     := $(compiler) -std=gnu99
+ cpp   := $(subst cc,++,$(compiler)) -std=gnu++0x
+ flags := -O3 -I. -Iobj -fomit-frame-pointer
+-link  := -lbz2
++link  := -lbz2 -lz
+ 
+ ifeq ($(platform),x)
+   flags := -fPIC $(flags)
+@@ -20,7 +20,7 @@
+ # fex
+ objects += Binary_Extractor blargg_common blargg_errors Data_Reader fex File_Extractor Gzip_Extractor Gzip_Reader Rar_Extractor Zip7_Extractor Zip_Extractor Zlib_Inflater
+ # zlib
+-objects += adler32 crc32 inffast inflate inftrees zutil
++#objects += adler32 crc32 inffast inflate inftrees zutil
+ # 7-zip
+ objects += 7zAlloc 7zBuf 7zCrc 7zDecode 7zExtract 7zHeader 7zIn 7zItem 7zStream Bcj2 Bra86 LzmaDec
+ # unrar

@@ -1,0 +1,42 @@
+Remove support for rar, which requires non-free interal library
+--- a/snesreader/Makefile
++++ b/snesreader/Makefile
+@@ -24,7 +24,7 @@
+ # 7-zip
+ objects += 7zAlloc 7zBuf 7zCrc 7zDecode 7zExtract 7zHeader 7zIn 7zItem 7zStream Bcj2 Bra86 LzmaDec
+ # unrar
+-objects += archive arcread coder crc encname extract getbits model rarvm rarvmtbl rawread suballoc unicode unpack unpack15 unpack20 unrar unrar_misc unrar_open
++#objects += archive arcread coder crc encname extract getbits model rarvm rarvmtbl rawread suballoc unicode unpack unpack15 unpack20 unrar unrar_misc unrar_open
+ # micro-bunzip
+ #objects += micro-bunzip
+ # jma
+--- a/snesreader/fex/blargg_config.h
++++ b/snesreader/fex/blargg_config.h
+@@ -8,7 +8,7 @@
+ 
+ // Enable RAR archive support. Doing so adds extra licensing restrictions
+ // to this library (see unrar/readme.txt for more information).
+-#define FEX_ENABLE_RAR 1
++// #define FEX_ENABLE_RAR 1
+ 
+ // Accept file paths encoded as UTF-8. Currently only affects Windows,
+ // as Unix/Linux/Mac OS X already use UTF-8 paths.
+--- a/snesreader/snesreader.cpp
++++ b/snesreader/snesreader.cpp
+@@ -18,7 +18,7 @@
+ using namespace nall;
+ 
+ dllexport const char* snesreader_supported() {
+-  return "*.zip *.z *.7z *.rar *.gz *.bz2 *.jma";
++  return "*.zip *.z *.7z *.gz *.bz2 *.jma";
+ }
+ 
+ void snesreader_apply_ips(const char *filename, uint8_t *&data, unsigned &size) {
+@@ -233,7 +233,6 @@
+   if(striend(filename, ".zip")
+   || striend(filename, ".z")
+   || striend(filename, ".7z")
+-  || striend(filename, ".rar")
+   || striend(filename, ".gz")) {
+     success = snesreader_load_fex(filename, data, size);
+   } else if(striend(filename, ".bz2")) {

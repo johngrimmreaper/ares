@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS=
+#export DH_OPTIONS=-v
+
+flags = -g
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	flags += -O0
+else
+	flags += -O3 -fomit-frame-pointer
+endif
+
+%:
+	dh $@
+
+# We have to clean manually because the Makefile does not support distclean,
+# and does not remove compiled bsnes binary
+override_dh_auto_clean:
+	cd bsnes && make clean ui=ui-qt
+	-rm bsnes/out/bsnes
+	cd snesreader && make clean
+
+override_dh_auto_build:
+	dh_auto_build -Dbsnes --parallel -- \
+		flags="-I. -Isnes -DPROFILE_COMPATIBILITY $(flags)" ui=ui-qt compiler=gcc profile=compatibility
+	dh_auto_build -Dsnesreader --parallel -- flags="-I. -Iobj -fPIC $(flags)"
+
+# There are no tests to run
+override_dh_auto_test:
+
+override_dh_auto_install:
+	dh_auto_install -pbsnes -Dbsnes -- prefix="/usr" DESTDIR="../debian/bsnes"
+	install -D -m 644 snesreader/libsnesreader.so debian/bsnes-snesreader/usr/lib/bsnes/libsnesreader.so
+	dh_installman debian/bsnes.6
+	install -D -p -m 644 debian/bsnes.xpm debian/bsnes/usr/share/pixmaps/bsnes.xpm
+
+# libsnesreader.so is internal
+# prevent dh_makeshlibs from adding unnecessary ldconfig to install scripts and making a shlibs file
+override_dh_makeshlibs:
+
+# Dummy build for quick testing
+#override_dh_auto_build:
+#	echo test > bsnes/out/bsnes
+#	echo test > snesreader/libsnesreader.so

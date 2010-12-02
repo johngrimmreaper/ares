@@ -1,0 +1,24 @@
+Source: bsnes
+Section: games
+Priority: optional
+Maintainer: Brandon Barnes <winterknight@nerdshack.com>
+Build-Depends: debhelper (>= 7.0.50~), libqt4-dev, libsdl1.2-dev, libpulse-dev,
+               libopenal-dev, libao-dev, libxv-dev, libbz2-dev, zlib1g-dev
+Standards-Version: 3.9.1
+Homepage: http://byuu.org/bsnes/
+
+Package: bsnes
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: bsnes-snesreader
+Description: Accurate SNES/SuperFamicom emulator
+ bsnes is an emulator that focuses on accuracy, debugging functionality, and
+ clean code. bsnes does not include speed and game-specific hacks for
+ compatibility, and as a result the minimum system requirements are very high.
+
+Package: bsnes-snesreader
+Architecture: any
+Depends: bsnes, ${shlibs:Depends}, ${misc:Depends}
+Description: bsnes helper library for loading ROMs within archives
+ By default, bsnes will only load raw ROM files. By adding snesreader, you
+ can load ROM files directly from archives such as ZIP and BZ2.

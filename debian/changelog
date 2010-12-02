@@ -1,0 +1,5 @@
+bsnes (0.072-3) unstable; urgency=low
+
+  * Initial release (Closes: #598968)
+
+ -- Brandon Barnes <winterknight@nerdshack.com>  Sat,  2 Dec 2010 03:15:00 -0800
