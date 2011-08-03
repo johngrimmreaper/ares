@@ -1,6 +1,1 @@
-misc-makefile-changes.patch
-link-with-libbz2.patch
-remove-rar.patch
-link-with-zlib.patch
-add-internal-library-path.patch
-remove-useless-profile-settings.patch
+debian-changes-0.072-3
