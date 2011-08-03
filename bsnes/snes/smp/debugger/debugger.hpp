@@ -2,7 +2,7 @@ class SMPDebugger : public SMP, public ChipDebugger {
 public:
   bool property(unsigned id, string &name, string &value);
 
-  function<void ()> step_event;
+  function<bool ()> step_event;
 
   enum Usage {
     UsageRead  = 0x80,
@@ -11,6 +11,7 @@ public:
   };
   uint8 *usage;
   uint16 opcode_pc;
+  bool opcode_edge;
 
   void op_step();
   uint8 op_read(uint16 addr);

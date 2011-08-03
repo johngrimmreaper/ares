@@ -16,6 +16,10 @@ void PPU::serialize(serializer &s) {
   Processor::serialize(s);
   PPUcounter::serialize(s);
 
+  s.array(vram);
+  s.array(oam);
+  s.array(cgram);
+
   s.integer(ppu1_version);
   s.integer(ppu2_version);
 
@@ -81,7 +85,7 @@ void PPU::serialize(serializer &s) {
   bg2.serialize(s);
   bg3.serialize(s);
   bg4.serialize(s);
-  oam.serialize(s);
+  sprite.serialize(s);
   window.serialize(s);
   screen.serialize(s);
 }
@@ -105,6 +109,9 @@ void PPU::Background::serialize(serializer &s) {
   s.integer(regs.hoffset);
   s.integer(regs.voffset);
 
+  s.integer(cache.hoffset);
+  s.integer(cache.voffset);
+
   s.integer(output.main.priority);
   s.integer(output.main.palette);
   s.integer(output.main.tile);
@@ -116,14 +123,14 @@ void PPU::Background::serialize(serializer &s) {
   s.integer(x);
   s.integer(y);
 
-  s.integer(mosaic_vcounter);
-  s.integer(mosaic_voffset);
-  s.integer(mosaic_hcounter);
-  s.integer(mosaic_hoffset);
+  s.integer(mosaic.priority);
+  s.integer(mosaic.palette);
+  s.integer(mosaic.tile);
 
-  s.integer(mosaic_priority);
-  s.integer(mosaic_palette);
-  s.integer(mosaic_tile);
+  s.integer(mosaic.vcounter);
+  s.integer(mosaic.voffset);
+  s.integer(mosaic.hcounter);
+  s.integer(mosaic.hoffset);
 
   s.integer(tile_counter);
   s.integer(tile);

@@ -1,5 +1,8 @@
 class SMP : public Processor, public SMPcore {
 public:
+  static const uint8 iplrom[64];
+  uint8 apuram[64 * 1024];
+
   enum : bool { Threaded = true };
   alwaysinline void step(unsigned clocks);
   alwaysinline void synchronize_cpu();
@@ -20,8 +23,6 @@ private:
   #include "memory/memory.hpp"
   #include "timing/timing.hpp"
 
-  static const uint8 iplrom[64];
-
   struct {
     //timing
     unsigned clock_counter;
@@ -31,20 +32,20 @@ private:
     //$00f0
     uint8 clock_speed;
     uint8 timer_speed;
-    bool timers_enabled;
-    bool ram_disabled;
+    bool timers_enable;
+    bool ram_disable;
     bool ram_writable;
-    bool timers_disabled;
+    bool timers_disable;
 
     //$00f1
-    bool iplrom_enabled;
+    bool iplrom_enable;
 
     //$00f2
     uint8 dsp_addr;
 
     //$00f8,$00f9
-    uint8 ram0;
-    uint8 ram1;
+    uint8 ram00f8;
+    uint8 ram00f9;
   } status;
 
   static void Enter();

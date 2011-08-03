@@ -2,6 +2,7 @@ class Interface;
 
 class System : property<System> {
 public:
+  Interface *interface;
   enum class Region : unsigned { NTSC = 0, PAL = 1, Autodetect = 2 };
   enum class ExpansionPortDevice : unsigned { None = 0, BSX = 1 };
 
@@ -10,9 +11,10 @@ public:
 
   void init(Interface*);
   void term();
+  void load();
+  void unload();
   void power();
   void reset();
-  void unload();
 
   void frame();
   void scanline();
@@ -30,7 +32,6 @@ public:
   System();
 
 private:
-  Interface *interface;
   void runthreadtosave();
 
   void serialize(serializer&);
@@ -43,13 +44,13 @@ private:
   friend class Input;
 };
 
-#include <video/video.hpp>
-#include <audio/audio.hpp>
-#include <input/input.hpp>
+#include <snes/video/video.hpp>
+#include <snes/audio/audio.hpp>
+#include <snes/input/input.hpp>
 
-#include <config/config.hpp>
-#include <debugger/debugger.hpp>
-#include <interface/interface.hpp>
-#include <scheduler/scheduler.hpp>
+#include <snes/config/config.hpp>
+#include <snes/debugger/debugger.hpp>
+#include <snes/scheduler/scheduler.hpp>
+#include <snes/random/random.hpp>
 
 extern System system;

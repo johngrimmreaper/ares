@@ -6,6 +6,8 @@ void PPU::Screen::scanline() {
 }
 
 void PPU::Screen::run() {
+  if(ppu.vcounter() == 0) return;
+
   uint16 color;
   if(self.regs.pseudo_hires == false && self.regs.bgmode != 5 && self.regs.bgmode != 6) {
     color = get_pixel(0);
@@ -20,6 +22,8 @@ void PPU::Screen::run() {
 }
 
 uint16 PPU::Screen::get_pixel(bool swap) {
+  if(ppu.regs.overscan == false && ppu.vcounter() >= 225) return 0x0000;
+
   enum source_t { BG1, BG2, BG3, BG4, OAM, BACK };
   bool color_enable[] = { regs.bg1_color_enable, regs.bg2_color_enable, regs.bg3_color_enable, regs.bg4_color_enable, regs.oam_color_enable, regs.back_color_enable };
 
@@ -55,9 +59,9 @@ uint16 PPU::Screen::get_pixel(bool swap) {
     color_main = get_color(self.bg4.output.main.palette);
     source_main = BG4;
   }
-  if(self.oam.output.main.priority > priority_main) {
-    priority_main = self.oam.output.main.priority;
-    color_main = get_color(self.oam.output.main.palette);
+  if(self.sprite.output.main.priority > priority_main) {
+    priority_main = self.sprite.output.main.priority;
+    color_main = get_color(self.sprite.output.main.palette);
     source_main = OAM;
   }
   if(priority_main == 0) {
@@ -97,9 +101,9 @@ uint16 PPU::Screen::get_pixel(bool swap) {
     color_sub = get_color(self.bg4.output.sub.palette);
     source_sub = BG4;
   }
-  if(self.oam.output.sub.priority > priority_sub) {
-    priority_sub = self.oam.output.sub.priority;
-    color_sub = get_color(self.oam.output.sub.palette);
+  if(self.sprite.output.sub.priority > priority_sub) {
+    priority_sub = self.sprite.output.sub.priority;
+    color_sub = get_color(self.sprite.output.sub.palette);
     source_sub = OAM;
   }
   if(priority_sub == 0) {
@@ -130,7 +134,7 @@ uint16 PPU::Screen::get_pixel(bool swap) {
     color_main = 0x0000;
   }
 
-  bool color_exempt = (source_main == OAM && self.oam.output.main.palette < 192);
+  bool color_exempt = (source_main == OAM && self.sprite.output.main.palette < 192);
   if(!color_exempt && color_enable[source_main] && self.window.output.sub.color_enable) {
     bool halve = false;
     if(regs.color_halve && self.window.output.main.color_enable) {
@@ -173,7 +177,7 @@ uint16 PPU::Screen::addsub(unsigned x, unsigned y, bool halve) {
 uint16 PPU::Screen::get_color(unsigned palette) {
   palette <<= 1;
   self.regs.cgram_iaddr = palette;
-  return memory::cgram[palette + 0] + (memory::cgram[palette + 1] << 8);
+  return ppu.cgram[palette + 0] + (ppu.cgram[palette + 1] << 8);
 }
 
 uint16 PPU::Screen::get_direct_color(unsigned palette, unsigned tile) {
@@ -186,19 +190,19 @@ uint16 PPU::Screen::get_direct_color(unsigned palette, unsigned tile) {
 }
 
 void PPU::Screen::reset() {
-  regs.addsub_mode = 0;
-  regs.direct_color = 0;
-  regs.color_mode = 0;
-  regs.color_halve = 0;
-  regs.bg1_color_enable = 0;
-  regs.bg2_color_enable = 0;
-  regs.bg3_color_enable = 0;
-  regs.bg4_color_enable = 0;
-  regs.oam_color_enable = 0;
-  regs.back_color_enable = 0;
-  regs.color_r = 0;
-  regs.color_g = 0;
-  regs.color_b = 0;
+  regs.addsub_mode = random(false);
+  regs.direct_color = random(false);
+  regs.color_mode = random(false);
+  regs.color_halve = random(false);
+  regs.bg1_color_enable = random(false);
+  regs.bg2_color_enable = random(false);
+  regs.bg3_color_enable = random(false);
+  regs.bg4_color_enable = random(false);
+  regs.oam_color_enable = random(false);
+  regs.back_color_enable = random(false);
+  regs.color_r = random(0);
+  regs.color_g = random(0);
+  regs.color_b = random(0);
 }
 
 PPU::Screen::Screen(PPU &self) : self(self) {
