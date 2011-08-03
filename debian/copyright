@@ -1,8 +1,15 @@
-Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=135
-Name: bsnes
+Format: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=174
+Upstream-Name: bsnes
 Source: http://byuu.org/bsnes/
 
+Files: *
 Copyright: 2010, byuu
+License: GPL-2
+
+Files: debian/*
+Copyright: 2010, Brandon Barnes <winterknight@nerdshack.com>
+License: GPL-2
+
 License: GPL-2
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License version 2 as
@@ -19,6 +26,3 @@ License: GPL-2
  .
  On Debian systems, the complete text of the GNU General
  Public License version 2 can be found in /usr/share/common-licenses/GPL-2
-
-X-Debianized: This work was packaged for Debian by
- Brandon Barnes <winterknight@nerdshack.com> on Thursday, 18 Nov 2010
