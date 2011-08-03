@@ -1,11 +1,14 @@
-class CPU : public Processor, public CPUcore, public PPUcounter, public MMIO {
+class CPU : public Processor, public CPUcore, public PPUcounter {
 public:
+  uint8 wram[128 * 1024];
+
   enum : bool { Threaded = true };
   array<Processor*> coprocessors;
   alwaysinline void step(unsigned clocks);
   alwaysinline void synchronize_smp();
   void synchronize_ppu();
-  void synchronize_coprocessor();
+  void synchronize_coprocessors();
+  void synchronize_controllers();
 
   uint8 port_read(uint2 port) const;
   void port_write(uint2 port, uint8 data);
@@ -15,6 +18,7 @@ public:
   alwaysinline bool interrupt_pending() { return status.interrupt_pending; }
 
   void enter();
+  void enable();
   void power();
   void reset();
 
@@ -71,6 +75,11 @@ private:
     bool hdma_pending;
     bool hdma_mode;  //0 = init, 1 = run
 
+    //auto joypad polling
+    bool auto_joypad_active;
+    unsigned auto_joypad_counter;
+    unsigned auto_joypad_clock;
+
     //MMIO
     //$2140-217f
     uint8 port[4];
@@ -111,10 +120,10 @@ private:
     uint16 rdmpy;
 
     //$4218-$421f
-    uint8 joy1l, joy1h;
-    uint8 joy2l, joy2h;
-    uint8 joy3l, joy3h;
-    uint8 joy4l, joy4h;
+    uint16 joy1;
+    uint16 joy2;
+    uint16 joy3;
+    uint16 joy4;
   } status;
 
   struct ALU {

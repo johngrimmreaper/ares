@@ -1,14 +1,18 @@
 include nall/Makefile
 snes := snes
-profile := accuracy
-ui := ui-phoenix
+gameboy := gameboy
+profile := compatibility
+ui := ui
+
+# debugger
+options :=
 
 # compiler
 c       := $(compiler) -std=gnu99
 cpp     := $(subst cc,++,$(compiler)) -std=gnu++0x
-flags   := -O3 -fomit-frame-pointer -I. -I$(snes)
+flags   := -O3 -fomit-frame-pointer -I.
 link    :=
-objects :=
+objects := libco
 
 # profile-guided instrumentation
 # flags += -fprofile-generate
@@ -16,6 +20,8 @@ objects :=
 
 # profile-guided optimization
 # flags += -fprofile-use
+
+flags := $(flags) $(foreach o,$(call strupper,$(options)),-D$o)
 
 # platform
 ifeq ($(platform),x)
@@ -45,38 +51,12 @@ compile = \
 
 all: build;
 
-include $(snes)/Makefile
+obj/libco.o: libco/libco.c libco/*
+
 include $(ui)/Makefile
 
-objects := $(patsubst %,obj/%.o,$(objects))
-
 # targets
-build: ui_build $(objects)
-ifeq ($(platform),osx)
-	test -d ../bsnes.app || mkdir -p ../bsnes.app/Contents/MacOS
-	$(strip $(cpp) -o ../bsnes.app/Contents/MacOS/bsnes $(objects) $(link))
-else
-	$(strip $(cpp) -o out/bsnes $(objects) $(link))
-endif
-
-install:
-ifeq ($(platform),x)
-	install -D -m 755 out/bsnes $(DESTDIR)$(prefix)/bin/bsnes
-	install -D -m 644 data/bsnes.png $(DESTDIR)$(prefix)/share/pixmaps/bsnes.png
-	install -D -m 644 data/bsnes.desktop $(DESTDIR)$(prefix)/share/applications/bsnes.desktop
-	test -d ~/.bsnes || mkdir ~/.bsnes
-	cp data/cheats.xml ~/.bsnes/cheats.xml
-	chmod 777 ~/.bsnes ~/.bsnes/cheats.xml
-endif
-
-uninstall:
-ifeq ($(platform),x)
-	rm $(DESTDIR)$(prefix)/bin/bsnes
-	rm $(DESTDIR)$(prefix)/share/pixmaps/bsnes.png
-	rm $(DESTDIR)$(prefix)/share/applications/bsnes.desktop
-endif
-
-clean: ui_clean
+clean:
 	-@$(call delete,obj/*.o)
 	-@$(call delete,obj/*.a)
 	-@$(call delete,obj/*.so)
@@ -90,6 +70,6 @@ clean: ui_clean
 	-@$(call delete,*.manifest)
 
 archive-all:
-	tar -cjf bsnes.tar.bz2 data launcher libco nall obj out phoenix ruby snes ui-phoenix ui-qt Makefile cc.bat clean.bat sync.sh
+	tar -cjf bsnes.tar.bz2 data gameboy libco nall obj out phoenix ruby snes ui ui-gameboy ui-libsnes Makefile cc.bat clean.bat sync.sh
 
 help:;

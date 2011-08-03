@@ -8,10 +8,10 @@ class Background {
   struct Screen { enum { Main, Sub }; };
 
   struct Regs {
-    unsigned tiledata_addr;
-    unsigned screen_addr;
-    unsigned screen_size;
-    unsigned mosaic;
+    uint16 tiledata_addr;
+    uint16 screen_addr;
+    uint2 screen_size;
+    uint4 mosaic;
     bool tile_size;
 
     unsigned mode;
@@ -21,9 +21,14 @@ class Background {
     bool main_enable;
     bool sub_enable;
 
-    unsigned hoffset;
-    unsigned voffset;
+    uint16 hoffset;
+    uint16 voffset;
   } regs;
+
+  struct Cache {
+    uint16 hoffset;
+    uint16 voffset;
+  } cache;
 
   struct Output {
     struct Pixel {
@@ -33,18 +38,16 @@ class Background {
     } main, sub;
   } output;
 
+  struct Mosaic : Output::Pixel {
+    unsigned vcounter;
+    unsigned voffset;
+    unsigned hcounter;
+    unsigned hoffset;
+  } mosaic;
+
   struct {
     signed x;
     signed y;
-
-    unsigned mosaic_vcounter;
-    unsigned mosaic_voffset;
-    unsigned mosaic_hcounter;
-    unsigned mosaic_hoffset;
-
-    unsigned mosaic_priority;
-    uint8 mosaic_palette;
-    uint16 mosaic_tile;
 
     unsigned tile_counter;
     unsigned tile;
@@ -56,6 +59,7 @@ class Background {
 
   void frame();
   void scanline();
+  void begin();
   void run(bool screen);
   void reset();
 
@@ -63,6 +67,7 @@ class Background {
   unsigned get_tile_color();
   unsigned get_tile(unsigned x, unsigned y);
   signed clip(signed n);
+  void begin_mode7();
   void run_mode7();
 
   void serialize(serializer&);

@@ -45,11 +45,11 @@ namespace nall {
 
       void set(string s) {
         switch(type) {
-          case boolean_t:  *(bool*)data = (s == "true");      break;
-          case signed_t:   *(signed*)data = strsigned(s);     break;
-          case unsigned_t: *(unsigned*)data = strunsigned(s); break;
-          case double_t:   *(double*)data = strdouble(s);     break;
-          case string_t:   trim(s, "\""); *(string*)data = s; break;
+          case boolean_t:  *(bool*)data = (s == "true");     break;
+          case signed_t:   *(signed*)data = integer(s);      break;
+          case unsigned_t: *(unsigned*)data = decimal(s);    break;
+          case double_t:   *(double*)data = fp(s);           break;
+          case string_t:   s.trim("\""); *(string*)data = s; break;
         }
       }
     };
@@ -83,8 +83,8 @@ namespace nall {
 
           lstring part;
           part.qsplit(" = ", line[i]);
-          trim(part[0]);
-          trim(part[1]);
+          part[0].trim();
+          part[1].trim();
 
           for(unsigned n = 0; n < list.size(); n++) {
             if(part[0] == list[n].name) {
@@ -102,7 +102,7 @@ namespace nall {
 
     virtual bool save(const char *filename) const {
       file fp;
-      if(fp.open(filename, file::mode_write)) {
+      if(fp.open(filename, file::mode::write)) {
         for(unsigned i = 0; i < list.size(); i++) {
           string output;
           output << list[i].name << " = " << list[i].get();

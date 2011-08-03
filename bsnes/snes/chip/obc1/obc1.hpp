@@ -1,7 +1,8 @@
-class OBC1 : public Memory {
+class OBC1 {
 public:
   void init();
-  void enable();
+  void load();
+  void unload();
   void power();
   void reset();
 
@@ -9,8 +10,6 @@ public:
   void write(unsigned addr, uint8 data);
 
   void serialize(serializer&);
-  OBC1();
-  ~OBC1();
 
 private:
   uint8 ram_read(unsigned addr);

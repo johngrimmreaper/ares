@@ -1,13 +1,10 @@
 namespace SNES {
   namespace Info {
     static const char Name[] = "bsnes";
-    static const char Version[] = "072";
-    static const unsigned SerializerVersion = 14;
+    static const char Version[] = "080";
+    static const unsigned SerializerVersion = 21;
   }
 }
-
-//#define DEBUGGER
-#define CHEAT_SYSTEM
 
 #include <libco/libco.h>
 
@@ -30,7 +27,10 @@ namespace SNES {
 #include <nall/utility.hpp>
 #include <nall/varint.hpp>
 #include <nall/vector.hpp>
+#include <nall/gameboy/cartridge.hpp>
 using namespace nall;
+
+#include <gameboy/gameboy.hpp>
 
 #ifdef DEBUGGER
   #define debugvirtual virtual
@@ -39,21 +39,59 @@ using namespace nall;
 #endif
 
 namespace SNES {
-  typedef int8_t int8;
+  typedef int8_t  int8;
   typedef int16_t int16;
   typedef int32_t int32;
   typedef int64_t int64;
-  typedef uint8_t uint8;
+
+  typedef int_t<24> int24;
+
+  typedef uint8_t  uint8;
   typedef uint16_t uint16;
   typedef uint32_t uint32;
   typedef uint64_t uint64;
 
-  typedef uint_t<2> uint2;
-  typedef uint_t<3> uint3;
-  typedef uint_t<9> uint9;
+  typedef uint_t< 1> uint1;
+  typedef uint_t< 2> uint2;
+  typedef uint_t< 3> uint3;
+  typedef uint_t< 4> uint4;
+  typedef uint_t< 5> uint5;
+  typedef uint_t< 6> uint6;
+  typedef uint_t< 7> uint7;
+
+  typedef uint_t< 9> uint9;
   typedef uint_t<10> uint10;
+  typedef uint_t<11> uint11;
+  typedef uint_t<12> uint12;
+  typedef uint_t<13> uint13;
+  typedef uint_t<14> uint14;
+  typedef uint_t<15> uint15;
+
   typedef uint_t<17> uint17;
+  typedef uint_t<18> uint18;
+  typedef uint_t<19> uint19;
+  typedef uint_t<20> uint20;
+  typedef uint_t<21> uint21;
+  typedef uint_t<22> uint22;
+  typedef uint_t<23> uint23;
   typedef uint_t<24> uint24;
+  typedef uint_t<25> uint25;
+  typedef uint_t<26> uint26;
+  typedef uint_t<27> uint27;
+  typedef uint_t<28> uint28;
+  typedef uint_t<29> uint29;
+  typedef uint_t<30> uint30;
+  typedef uint_t<31> uint31;
+
+  typedef varuint_t varuint;
+
+  template<uint8 banklo, uint8 bankhi, uint16 addrlo, uint16 addrhi>
+  alwaysinline bool within(unsigned addr) {
+    static const unsigned lo = (banklo << 16) | addrlo;
+    static const unsigned hi = (bankhi << 16) | addrhi;
+    static const unsigned mask = ~(hi ^ lo);
+    return (addr & mask) == lo;
+  }
 
   struct Processor {
     cothread_t thread;
@@ -79,10 +117,10 @@ namespace SNES {
     virtual bool property(unsigned id, string &name, string &value) = 0;
   };
 
-  #include <memory/memory.hpp>
-  #include <cpu/core/core.hpp>
-  #include <smp/core/core.hpp>
-  #include <ppu/counter/counter.hpp>
+  #include <snes/memory/memory.hpp>
+  #include <snes/cpu/core/core.hpp>
+  #include <snes/smp/core/core.hpp>
+  #include <snes/ppu/counter/counter.hpp>
 
   #if defined(PROFILE_ACCURACY)
   #include "profile-accuracy.hpp"
@@ -92,14 +130,15 @@ namespace SNES {
   #include "profile-performance.hpp"
   #endif
 
-  #include <system/system.hpp>
-  #include <chip/chip.hpp>
-  #include <cartridge/cartridge.hpp>
-  #include <cheat/cheat.hpp>
+  #include <snes/controller/controller.hpp>
+  #include <snes/system/system.hpp>
+  #include <snes/chip/chip.hpp>
+  #include <snes/cartridge/cartridge.hpp>
+  #include <snes/cheat/cheat.hpp>
+  #include <snes/interface/interface.hpp>
 
-  #include <memory/memory-inline.hpp>
-  #include <ppu/counter/counter-inline.hpp>
-  #include <cheat/cheat-inline.hpp>
+  #include <snes/memory/memory-inline.hpp>
+  #include <snes/ppu/counter/counter-inline.hpp>
 }
 
 namespace nall {

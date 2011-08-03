@@ -91,8 +91,8 @@ struct Keyboard {
   static uint16_t decode(const char *name) {
     string s(name);
     if(!strbegin(name, "KB")) return 0;
-    ltrim(s, "KB");
-    unsigned id = strunsigned(s);
+    s.ltrim("KB");
+    unsigned id = decimal(s);
     auto pos = strpos(s, "::");
     if(!pos) return 0;
     s = substr(s, pos() + 2);
@@ -188,8 +188,8 @@ struct Mouse {
   static uint16_t decode(const char *name) {
     string s(name);
     if(!strbegin(name, "MS")) return 0;
-    ltrim(s, "MS");
-    unsigned id = strunsigned(s);
+    s.ltrim("MS");
+    unsigned id = decimal(s);
     auto pos = strpos(s, "::");
     if(!pos) return 0;
     s = substr(s, pos() + 2);
@@ -312,8 +312,8 @@ struct Joypad {
   static uint16_t decode(const char *name) {
     string s(name);
     if(!strbegin(name, "JP")) return 0;
-    ltrim(s, "JP");
-    unsigned id = strunsigned(s);
+    s.ltrim("JP");
+    unsigned id = decimal(s);
     auto pos = strpos(s, "::");
     if(!pos) return 0;
     s = substr(s, pos() + 2);

@@ -3,6 +3,15 @@
 
 namespace nall {
 
+static void istring(string &output) {
+}
+
+template<typename T, typename... Args>
+static void istring(string &output, const T &value, Args&&... args) {
+  output.append_(to_string(value));
+  istring(output, std::forward<Args>(args)...);
+}
+
 void string::reserve(unsigned size_) {
   if(size_ > size) {
     size = size_;
@@ -11,18 +20,25 @@ void string::reserve(unsigned size_) {
   }
 }
 
-unsigned string::length() const {
-  return strlen(data);
+template<typename... Args> string& string::assign(Args&&... args) {
+  *data = 0;
+  istring(*this, std::forward<Args>(args)...);
+  return *this;
 }
 
-string& string::assign(const char *s) {
+template<typename... Args> string& string::append(Args&&... args) {
+  istring(*this, std::forward<Args>(args)...);
+  return *this;
+}
+
+string& string::assign_(const char *s) {
   unsigned length = strlen(s);
   reserve(length);
   strcpy(data, s);
   return *this;
 }
 
-string& string::append(const char *s) {
+string& string::append_(const char *s) {
   unsigned length = strlen(data) + strlen(s);
   reserve(length);
   strcat(data, s);
@@ -63,15 +79,11 @@ string& string::operator=(string &&source) {
   return *this;
 }
 
-string::string() {
+template<typename... Args> string::string(Args&&... args) {
   size = 64;
   data = (char*)malloc(size + 1);
   *data = 0;
-}
-
-string::string(const char *value) {
-  size = strlen(value);
-  data = strdup(value);
+  istring(*this, std::forward<Args>(args)...);
 }
 
 string::string(const string &value) {
@@ -86,10 +98,10 @@ string::string(string &&source) {
 }
 
 string::~string() {
-  free(data);
+  if(data) free(data);
 }
 
-bool string::readfile(const char *filename) {
+bool string::readfile(const string &filename) {
   assign("");
 
   #if !defined(_WIN32)
@@ -112,11 +124,11 @@ bool string::readfile(const char *filename) {
   return true;
 }
 
-int lstring::find(const char *key) {
+optional<unsigned> lstring::find(const char *key) const {
   for(unsigned i = 0; i < size(); i++) {
-    if(operator[](i) == key) return i;
+    if(operator[](i) == key) return { true, i };
   }
-  return -1;
+  return { false, 0 };
 }
 
 inline lstring::lstring() {

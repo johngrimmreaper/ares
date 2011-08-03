@@ -2,7 +2,7 @@
 
 inline uint16 PPU::get_palette(uint8 index) {
   const unsigned addr = index << 1;
-  return memory::cgram[addr] + (memory::cgram[addr + 1] << 8);
+  return cgram[addr] + (cgram[addr + 1] << 8);
 }
 
 //p = 00000bgr <palette data>
@@ -96,13 +96,16 @@ inline void PPU::render_line_output() {
     }
   } else {
     for(unsigned x = 0, prev = 0; x < 256; x++) {
+      //blending is disabled below, as this should be done via video filtering
+      //blending code is left for reference purposes
+
       curr = luma[get_pixel_swap(x)];
-      *ptr++ = (prev + curr - ((prev ^ curr) & 0x0421)) >> 1;
-      prev = curr;
+      *ptr++ = curr;  //(prev + curr - ((prev ^ curr) & 0x0421)) >> 1;
+      //prev = curr;
 
       curr = luma[get_pixel_normal(x)];
-      *ptr++ = (prev + curr - ((prev ^ curr) & 0x0421)) >> 1;
-      prev = curr;
+      *ptr++ = curr;  //(prev + curr - ((prev ^ curr) & 0x0421)) >> 1;
+      //prev = curr;
     }
   }
 }

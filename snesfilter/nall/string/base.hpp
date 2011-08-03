@@ -12,15 +12,46 @@
 
 namespace nall {
   class string;
-  template<typename T> inline string to_string(T);
+  template<typename T> inline const char* to_string(T);
 
   class string {
   public:
     inline void reserve(unsigned);
+
+    template<typename... Args> inline string& assign(Args&&... args);
+    template<typename... Args> inline string& append(Args&&... args);
+    inline string& assign_(const char*);
+    inline string& append_(const char*);
+
+    inline bool readfile(const string&);
+
+    inline string& replace (const char*, const char*);
+    inline string& qreplace(const char*, const char*);
+
     inline unsigned length() const;
 
-    inline string& assign(const char*);
-    inline string& append(const char*);
+    inline bool equals(const char*) const;
+    inline bool iequals(const char*) const;
+
+    inline bool wildcard(const char*) const;
+    inline bool iwildcard(const char*) const;
+
+    inline bool beginswith(const char*) const;
+    inline bool ibeginswith(const char*) const;
+    inline bool endswith(const char*) const;
+    inline bool iendswith(const char*) const;
+
+    inline string& lower();
+    inline string& upper();
+    inline string& transform(const char *before, const char *after);
+
+    template<unsigned limit = 0> inline string& ltrim(const char *key = " ");
+    template<unsigned limit = 0> inline string& rtrim(const char *key = " ");
+    template<unsigned limit = 0> inline string& trim (const char *key = " ");
+
+    inline optional<unsigned> position(const char *key) const;
+    inline optional<unsigned> qposition(const char *key) const;
+
     template<typename T> inline string& operator= (T value);
     template<typename T> inline string& operator<<(T value);
 
@@ -38,15 +69,10 @@ namespace nall {
     inline string& operator=(const string&);
     inline string& operator=(string&&);
 
-    inline string();
-    inline string(const char*);
+    template<typename... Args> inline string(Args&&... args);
     inline string(const string&);
     inline string(string&&);
     inline ~string();
-
-    inline bool readfile(const char*);
-    inline string& replace (const char*, const char*);
-    inline string& qreplace(const char*, const char*);
 
   protected:
     char *data;
@@ -62,9 +88,9 @@ namespace nall {
   public:
     template<typename T> inline lstring& operator<<(T value);
 
-    inline int find(const char*);
-    inline void split (const char*, const char*, unsigned = 0);
-    inline void qsplit(const char*, const char*, unsigned = 0);
+    inline optional<unsigned> find(const char*) const;
+    template<unsigned limit = 0> inline void split (const char*, const char*);
+    template<unsigned limit = 0> inline void qsplit(const char*, const char*);
 
     lstring();
     lstring(std::initializer_list<string>);
@@ -73,7 +99,9 @@ namespace nall {
   //compare.hpp
   inline char chrlower(char c);
   inline char chrupper(char c);
-  inline int stricmp(const char *dest, const char *src);
+  inline int stricmp(const char *str1, const char *str2);
+  inline bool wildcard(const char *str, const char *pattern);
+  inline bool iwildcard(const char *str, const char *pattern);
   inline bool strbegin (const char *str, const char *key);
   inline bool stribegin(const char *str, const char *key);
   inline bool strend (const char *str, const char *key);
@@ -83,54 +111,52 @@ namespace nall {
   inline char* strlower(char *str);
   inline char* strupper(char *str);
   inline char* strtr(char *dest, const char *before, const char *after);
-  inline uintmax_t strhex     (const char *str);
-  inline intmax_t  strsigned  (const char *str);
-  inline uintmax_t strunsigned(const char *str);
-  inline uintmax_t strbin     (const char *str);
-  inline double    strdouble  (const char *str);
-
-  //match.hpp
-  inline bool match(const char *pattern, const char *str);
+  inline uintmax_t hex    (const char *str);
+  inline intmax_t  integer(const char *str);
+  inline uintmax_t decimal(const char *str);
+  inline uintmax_t binary (const char *str);
+  inline double    fp     (const char *str);
 
   //math.hpp
   inline bool strint (const char *str, int &result);
   inline bool strmath(const char *str, int &result);
 
+  //platform.hpp
+  inline string realpath(const char *name);
+  inline string userpath();
+  inline string currentpath();
+
   //strl.hpp
   inline unsigned strlcpy(char *dest, const char *src, unsigned length);
   inline unsigned strlcat(char *dest, const char *src, unsigned length);
 
+  //strpos.hpp
+  inline optional<unsigned> strpos(const char *str, const char *key);
+  inline optional<unsigned> qstrpos(const char *str, const char *key);
+
   //trim.hpp
-  inline char* ltrim(char *str, const char *key = " ");
-  inline char* rtrim(char *str, const char *key = " ");
-  inline char* trim (char *str, const char *key = " ");
-  inline char* ltrim_once(char *str, const char *key = " ");
-  inline char* rtrim_once(char *str, const char *key = " ");
-  inline char* trim_once (char *str, const char *key = " ");
+  template<unsigned limit = 0> inline char* ltrim(char *str, const char *key = " ");
+  template<unsigned limit = 0> inline char* rtrim(char *str, const char *key = " ");
+  template<unsigned limit = 0> inline char* trim (char *str, const char *key = " ");
 
   //utility.hpp
   inline unsigned strlcpy(string &dest, const char *src, unsigned length);
   inline unsigned strlcat(string &dest, const char *src, unsigned length);
   inline string substr(const char *src, unsigned start = 0, unsigned length = 0);
-  inline string& strlower(string &str);
-  inline string& strupper(string &str);
-  inline string& strtr(string &dest, const char *before, const char *after);
-  inline string& ltrim(string &str, const char *key = " ");
-  inline string& rtrim(string &str, const char *key = " ");
-  inline string& trim (string &str, const char *key = " ");
-  inline string& ltrim_once(string &str, const char *key = " ");
-  inline string& rtrim_once(string &str, const char *key = " ");
-  inline string& trim_once (string &str, const char *key = " ");
-  template<unsigned length = 0, char padding = '0'> inline string strhex(uintmax_t value);
-  template<unsigned length = 0, char padding = '0'> inline string strsigned(intmax_t value);
-  template<unsigned length = 0, char padding = '0'> inline string strunsigned(uintmax_t value);
-  template<unsigned length = 0, char padding = '0'> inline string strbin(uintmax_t value);
-  inline unsigned strdouble(char *str, double value);
-  inline string strdouble(double value);
+
+  inline string integer(intmax_t value);
+  template<unsigned length = 0> inline string linteger(intmax_t value);
+  template<unsigned length = 0> inline string rinteger(intmax_t value);
+  inline string decimal(uintmax_t value);
+  template<unsigned length = 0> inline string ldecimal(uintmax_t value);
+  template<unsigned length = 0> inline string rdecimal(uintmax_t value);
+  template<unsigned length = 0> inline string hex(uintmax_t value);
+  template<unsigned length = 0> inline string binary(uintmax_t value);
+  inline unsigned fp(char *str, double value);
+  inline string fp(double value);
 
   //variadic.hpp
-  template<typename... Args> inline string sprint(Args... args);
-  template<typename... Args> inline void print(Args... args);
+  template<typename... Args> inline void print(Args&&... args);
 };
 
 #endif

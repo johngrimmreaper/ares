@@ -1,3 +1,9 @@
+public:
+  uint8 mmio_read(unsigned addr);
+  void mmio_write(unsigned addr, uint8 data);
+
+private:
+
 struct {
   uint8 ppu1_mdr;
   uint8 ppu2_mdr;
@@ -16,7 +22,7 @@ struct {
 
   //$2100  INIDISP
   bool display_disable;
-  unsigned display_brightness;
+  uint4 display_brightness;
 
   //$2102  OAMADDL
   //$2103  OAMADDH
@@ -36,7 +42,7 @@ struct {
 
   //$2115  VMAIN
   bool vram_incmode;
-  uint8 vram_mapping;
+  uint2 vram_mapping;
   uint8 vram_incsize;
 
   //$2116  VMADDL
@@ -44,7 +50,7 @@ struct {
   uint16 vram_addr;
 
   //$211a  M7SEL
-  uint8 mode7_repeat;
+  uint2 mode7_repeat;
   bool mode7_vflip;
   bool mode7_hflip;
 
@@ -154,5 +160,3 @@ uint8 mmio_r213e();  //STAT77
 uint8 mmio_r213f();  //STAT78
 
 void mmio_reset();
-uint8 mmio_read(unsigned addr);
-void mmio_write(unsigned addr, uint8 data);

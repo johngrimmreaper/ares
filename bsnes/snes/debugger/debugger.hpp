@@ -19,10 +19,7 @@ public:
   unsigned breakpoint_hit;
   void breakpoint_test(Breakpoint::Source source, Breakpoint::Mode mode, unsigned addr, uint8 data);
 
-  bool step_cpu;
-  bool step_smp;
-
-  enum class MemorySource : unsigned { CPUBus, APURAM, VRAM, OAM, CGRAM };
+  enum class MemorySource : unsigned { CPUBus, APUBus, APURAM, VRAM, OAM, CGRAM };
   uint8 read(MemorySource, unsigned addr);
   void write(MemorySource, unsigned addr, uint8 data);
 

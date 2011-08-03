@@ -144,12 +144,12 @@ void PPU::Sprite::tilefetch() {
       unsigned pos = tiledata_addr + ((chry + ((chrx + mx) & 15)) << 5);
       uint16 addr = (pos & 0xffe0) + ((y & 7) * 2);
 
-      oam_tile[n].d0 = memory::vram[addr +  0];
-      oam_tile[n].d1 = memory::vram[addr +  1];
+      oam_tile[n].d0 = ppu.vram[addr +  0];
+      oam_tile[n].d1 = ppu.vram[addr +  1];
       self.add_clocks(2);
 
-      oam_tile[n].d2 = memory::vram[addr + 16];
-      oam_tile[n].d3 = memory::vram[addr + 17];
+      oam_tile[n].d2 = ppu.vram[addr + 16];
+      oam_tile[n].d3 = ppu.vram[addr + 17];
       self.add_clocks(2);
     }
   }
@@ -171,6 +171,7 @@ void PPU::Sprite::reset() {
     list[i].palette = 0;
     list[i].size = 0;
   }
+  synchronize();
 
   t.x = 0;
   t.y = 0;
@@ -193,13 +194,13 @@ void PPU::Sprite::reset() {
     }
   }
 
-  regs.main_enable = 0;
-  regs.sub_enable = 0;
-  regs.interlace = 0;
+  regs.main_enable = random(false);
+  regs.sub_enable = random(false);
+  regs.interlace = random(false);
 
-  regs.base_size = 0;
-  regs.nameselect = 0;
-  regs.tiledata_addr = 0;
+  regs.base_size = random(0);
+  regs.nameselect = random(0);
+  regs.tiledata_addr = random(0x0000);
   regs.first_sprite = 0;
 
   regs.priority0 = 0;
@@ -207,8 +208,8 @@ void PPU::Sprite::reset() {
   regs.priority2 = 0;
   regs.priority3 = 0;
 
-  regs.time_over = 0;
-  regs.range_over = 0;
+  regs.time_over = false;
+  regs.range_over = false;
 
   output.main.palette = 0;
   output.main.priority = 0;

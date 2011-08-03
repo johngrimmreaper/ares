@@ -1,4 +1,4 @@
-#include <snes.hpp>
+#include <snes/snes.hpp>
 
 #define CPU_CPP
 namespace SNES {
@@ -23,6 +23,9 @@ void CPU::step(unsigned clocks) {
     Processor &chip = *coprocessors[i];
     chip.clock -= clocks * (uint64)chip.frequency;
   }
+  input.port1->clock -= clocks * (uint64)input.port1->frequency;
+  input.port2->clock -= clocks * (uint64)input.port2->frequency;
+  synchronize_controllers();
 }
 
 void CPU::synchronize_smp() {
@@ -41,11 +44,16 @@ void CPU::synchronize_ppu() {
   }
 }
 
-void CPU::synchronize_coprocessor() {
+void CPU::synchronize_coprocessors() {
   for(unsigned i = 0; i < coprocessors.size(); i++) {
     Processor &chip = *coprocessors[i];
     if(chip.clock < 0) co_switch(chip.thread);
   }
+}
+
+void CPU::synchronize_controllers() {
+  if(input.port1->clock < 0) co_switch(input.port1->thread);
+  if(input.port2->clock < 0) co_switch(input.port2->thread);
 }
 
 void CPU::Enter() { cpu.enter(); }
@@ -88,6 +96,30 @@ void CPU::op_irq(uint16 vector) {
   regs.p.d = 0;
   rd.h = op_read(vector + 1);
   regs.pc.w = rd.w;
+}
+
+void CPU::enable() {
+  function<uint8 (unsigned)> read = { &CPU::mmio_read, (CPU*)&cpu };
+  function<void (unsigned, uint8)> write = { &CPU::mmio_write, (CPU*)&cpu };
+
+  bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x2140, 0x2183, read, write);
+  bus.map(Bus::MapMode::Direct, 0x80, 0xbf, 0x2140, 0x2183, read, write);
+
+  bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x4016, 0x4017, read, write);
+  bus.map(Bus::MapMode::Direct, 0x80, 0xbf, 0x4016, 0x4017, read, write);
+
+  bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x4200, 0x421f, read, write);
+  bus.map(Bus::MapMode::Direct, 0x80, 0xbf, 0x4200, 0x421f, read, write);
+
+  bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x4300, 0x437f, read, write);
+  bus.map(Bus::MapMode::Direct, 0x80, 0xbf, 0x4300, 0x437f, read, write);
+
+  read = [](unsigned addr) { return cpu.wram[addr]; };
+  write = [](unsigned addr, uint8 data) { cpu.wram[addr] = data; };
+
+  bus.map(Bus::MapMode::Linear, 0x00, 0x3f, 0x0000, 0x1fff, read, write, 0x000000, 0x002000);
+  bus.map(Bus::MapMode::Linear, 0x80, 0xbf, 0x0000, 0x1fff, read, write, 0x000000, 0x002000);
+  bus.map(Bus::MapMode::Linear, 0x7e, 0x7f, 0x0000, 0xffff, read, write);
 }
 
 void CPU::power() {

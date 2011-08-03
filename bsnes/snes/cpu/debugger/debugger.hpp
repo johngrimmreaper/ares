@@ -2,7 +2,7 @@ class CPUDebugger : public CPU, public ChipDebugger {
 public:
   bool property(unsigned id, string &name, string &value);
 
-  function<void ()> step_event;
+  function<bool ()> step_event;
 
   enum Usage {
     UsageRead  = 0x80,
@@ -12,7 +12,8 @@ public:
     UsageFlagX = 0x01,
   };
   uint8 *usage;
-  uint32 opcode_pc;  //points to the current opcode, used to backtrace on read/write breakpoints
+  uint24 opcode_pc;  //points to the current opcode, used to backtrace on read/write breakpoints
+  bool opcode_edge;  //true right before an opcode execues, used to skip over opcodes
 
   void op_step();
   uint8 op_read(uint32 addr);
