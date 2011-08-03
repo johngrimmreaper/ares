@@ -25,10 +25,8 @@ override_dh_auto_clean:
 	-rm bsnes/out/bsnes
 
 override_dh_auto_build:
-	mkdir bsnes/obj
-	dh_auto_build -Dbsnes --parallel -- \
-		flags="-I. -Isnes -DPROFILE_COMPATIBILITY $(flags)" compiler=gcc profile=compatibility
-	dh_auto_build -Dsnesreader --parallel -- flags="-I. -Iobj -fPIC $(flags)"
+	mkdir -p bsnes/obj bsnes/out
+	dh_auto_build -Dbsnes
 
 override_dh_auto_install:
 	dh_auto_install -pbsnes -Dbsnes -- prefix="/usr" DESTDIR="../debian/bsnes"
