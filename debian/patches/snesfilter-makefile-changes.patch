@@ -1,0 +1,17 @@
+Description: Install filters to /usr/lib/games instead of user home.
+Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
+
+--- a/snesfilter/Makefile
++++ b/snesfilter/Makefile
+@@ -45,9 +45,8 @@
+ build: $(objects)
+ 
+ install:
+-	mkdir -p ~/.config/bsnes/filters
+-	chmod 777 ~/.config/bsnes/filters
+-	cp out/*.filter ~/.config/bsnes/filters
++	mkdir -p $(DESTDIR)$(prefix)/lib/games/bsnes/filters
++	install -D -m 644 out/*.filter $(DESTDIR)$(prefix)/lib/games/bsnes/filters
+ 
+ clean:
+ 	rm out/*.filter

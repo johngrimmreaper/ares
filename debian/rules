@@ -5,19 +5,24 @@
 
 # We have to clean manually because the Makefile does not support distclean,
 # and does not remove compiled bsnes binary
+# Don't use make clean for snesfilter because it creates an error if called
+# without files to delete.
 override_dh_auto_clean:
 	make -Cbsnes clean
 	rm -rf bsnes/obj bsnes/out
+	rm -rf snesfilter/out
 
 override_dh_auto_build:
-	mkdir -p bsnes/obj bsnes/out
+	mkdir -p bsnes/obj bsnes/out snesfilter/out
 	dh_auto_build -Dbsnes -- profile=compatibility
 	make -Cbsnes clean
 	dh_auto_build -Dbsnes -- profile=accuracy
 	make -Cbsnes clean
 	dh_auto_build -Dbsnes -- profile=performance
+	dh_auto_build -Dsnesfilter
 
 override_dh_auto_install:
 	dh_auto_install -pbsnes -Dbsnes -- profile=compatibility prefix="/usr" DESTDIR="../debian/bsnes"
 	dh_auto_install -pbsnes -Dbsnes -- profile=accuracy prefix="/usr" DESTDIR="../debian/bsnes"
 	dh_auto_install -pbsnes -Dbsnes -- profile=performance prefix="/usr" DESTDIR="../debian/bsnes"
+	dh_auto_install -pbsnes -Dsnesfilter -- prefix="/usr" DESTDIR="../debian/bsnes"

@@ -23,4 +23,17 @@ for shader in $(ls /usr/share/games/bsnes/shaders/*.OpenGL.shader)
     fi
 done
 
+if test ! -d $HOME/.config/bsnes/filters
+  then
+    mkdir -p $HOME/.config/bsnes/filters
+fi
+
+for filter in $(ls /usr/lib/games/bsnes/filters/*.filter)
+  do
+    if test ! -f $HOME/.config/bsnes/${filter##*/}
+      then
+        cp $filter $HOME/.config/bsnes/filters
+    fi
+done
+
 bsnes-bin "$@"
