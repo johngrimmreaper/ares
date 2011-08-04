@@ -1,16 +1,18 @@
 Source: bsnes
 Section: games
 Priority: optional
-Maintainer: Brandon Barnes <winterknight@nerdshack.com>
+Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
+Uploaders: Tobias Hansen <tobias.han@gmx.de>
 Build-Depends: debhelper (>= 7.0.50~), libqt4-dev, libsdl1.2-dev, libpulse-dev,
                libopenal-dev, libao-dev, libxv-dev, libbz2-dev, zlib1g-dev
 Standards-Version: 3.9.2
+Vcs-Git: git://git.debian.org/git/pkg-games/bsnes.git
+Vcs-Browser: http://git.debian.org/?p=pkg-games/bsnes.git
 Homepage: http://byuu.org/bsnes/
 
 Package: bsnes
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: bsnes-snesreader
 Description: Accurate SNES/SuperFamicom emulator
  bsnes is an emulator that focuses on accuracy, debugging functionality, and
  clean code. bsnes does not include speed and game-specific hacks for
