@@ -10,4 +10,17 @@ if test ! -f $HOME/.config/bsnes/cheats.xml
     cp /usr/share/games/bsnes/cheats.xml $HOME/.config/bsnes
 fi
 
+if test ! -d $HOME/.config/bsnes/shaders
+  then
+    mkdir -p $HOME/.config/bsnes/shaders
+fi
+
+for shader in $(ls /usr/share/games/bsnes/shaders/*.OpenGL.shader)
+  do
+    if test ! -f $HOME/.config/bsnes/${shader##*/}
+      then
+        cp $shader $HOME/.config/bsnes/shaders
+    fi
+done
+
 bsnes-bin "$@"
