@@ -22,7 +22,7 @@ endif
 # and does not remove compiled bsnes binary
 override_dh_auto_clean:
 	cd bsnes && make clean
-	-rm bsnes/out/bsnes
+	rm -rf bsnes/obj bsnes/out
 
 override_dh_auto_build:
 	mkdir -p bsnes/obj bsnes/out
@@ -30,4 +30,3 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	dh_auto_install -pbsnes -Dbsnes -- prefix="/usr" DESTDIR="../debian/bsnes"
-	install -D -p -m 644 debian/bsnes.xpm debian/bsnes/usr/share/pixmaps/bsnes.xpm

@@ -1,9 +1,14 @@
-* don't strip binaries in Makefile
-* install in /usr/games, not /usr/bin
-* install cheats.xml into /usr/share/games/bsnes/, not ~/.bsnes
+Description: Various changes to the upstream makefiles
+
+* Don't strip binaries in Makefile.
+* Install in /usr/games, not /usr/bin.
+* Install cheats.xml into /usr/share/games/bsnes/, not ~/.bsnes.
+
+Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
+
 --- a/bsnes/Makefile
 +++ b/bsnes/Makefile
-@@ -19,7 +19,7 @@
+@@ -25,7 +25,7 @@
  
  # platform
  ifeq ($(platform),x)
@@ -12,29 +17,21 @@
  else ifeq ($(platform),osx)
  else ifeq ($(platform),win)
    link += -mwindows
-@@ -61,12 +61,10 @@
+--- a/bsnes/ui/Makefile
++++ b/bsnes/ui/Makefile
+@@ -92,13 +92,11 @@
  
  install:
  ifeq ($(platform),x)
 -	install -D -m 755 out/bsnes $(DESTDIR)$(prefix)/bin/bsnes
 +	install -D -m 755 out/bsnes $(DESTDIR)$(prefix)/games/bsnes
+ endif
  	install -D -m 644 data/bsnes.png $(DESTDIR)$(prefix)/share/pixmaps/bsnes.png
  	install -D -m 644 data/bsnes.desktop $(DESTDIR)$(prefix)/share/applications/bsnes.desktop
--	test -d ~/.bsnes || mkdir ~/.bsnes
--	cp data/cheats.xml ~/.bsnes/cheats.xml
--	chmod 777 ~/.bsnes ~/.bsnes/cheats.xml
+-	mkdir -p ~/.config/bsnes
+-	cp data/cheats.xml ~/.config/bsnes/cheats.xml
+-	chmod 777 ~/.config/bsnes ~/.config/bsnes/cheats.xml
 +	install -D -m 644 data/cheats.xml $(DESTDIR)$(prefix)/share/games/bsnes/cheats.xml
- endif
  
  uninstall:
---- a/snesreader/Makefile
-+++ b/snesreader/Makefile
-@@ -10,7 +10,7 @@
- 
  ifeq ($(platform),x)
-   flags := -fPIC $(flags)
--  link += -s
-+  link +=
- else ifeq ($(platform),osx)
-   flags := -fPIC $(flags)
- endif
