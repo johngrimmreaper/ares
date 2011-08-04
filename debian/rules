@@ -1,32 +1,23 @@
 #!/usr/bin/make -f
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
-
-# This has to be exported to make some magic below work.
-export DH_OPTIONS=
-#export DH_OPTIONS=-v
-
-flags = -g
-
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	flags += -O0
-else
-	flags += -O3 -fomit-frame-pointer
-endif
-
 %:
 	dh $@
 
 # We have to clean manually because the Makefile does not support distclean,
 # and does not remove compiled bsnes binary
 override_dh_auto_clean:
-	cd bsnes && make clean
+	make -Cbsnes clean
 	rm -rf bsnes/obj bsnes/out
 
 override_dh_auto_build:
 	mkdir -p bsnes/obj bsnes/out
-	dh_auto_build -Dbsnes
+	dh_auto_build -Dbsnes -- profile=compatibility
+	make -Cbsnes clean
+	dh_auto_build -Dbsnes -- profile=accuracy
+	make -Cbsnes clean
+	dh_auto_build -Dbsnes -- profile=performance
 
 override_dh_auto_install:
-	dh_auto_install -pbsnes -Dbsnes -- prefix="/usr" DESTDIR="../debian/bsnes"
+	dh_auto_install -pbsnes -Dbsnes -- profile=compatibility prefix="/usr" DESTDIR="../debian/bsnes"
+	dh_auto_install -pbsnes -Dbsnes -- profile=accuracy prefix="/usr" DESTDIR="../debian/bsnes"
+	dh_auto_install -pbsnes -Dbsnes -- profile=performance prefix="/usr" DESTDIR="../debian/bsnes"
