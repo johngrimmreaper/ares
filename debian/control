@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Tobias Hansen <tobias.han@gmx.de>
 Build-Depends: debhelper (>= 7.0.50~), libqt4-dev, libsdl1.2-dev, libpulse-dev,
-               libopenal-dev, libao-dev, libxv-dev, libbz2-dev, zlib1g-dev
+               libopenal-dev, libao-dev, libxv-dev
 Standards-Version: 3.9.2
 Vcs-Git: git://git.debian.org/git/pkg-games/bsnes.git
 Vcs-Browser: http://git.debian.org/?p=pkg-games/bsnes.git
