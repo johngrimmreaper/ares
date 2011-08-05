@@ -1,5 +1,5 @@
-bsnes (0.080-1) UNRELEASED; urgency=low
+bsnes (0.080-1) unstable; urgency=low
 
   * Initial release (Closes: #598968)
 
- -- Tobias Hansen <tobias.han@gmx.de>  Wed, 03 Aug 2011 19:59:10 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Fri, 05 Aug 2011 14:02:01 +0200
