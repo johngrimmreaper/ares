@@ -5,6 +5,8 @@ Source: http://byuu.org/bsnes/
 Files: *
 Copyright: 2010, byuu
 License: GPL-2
+Comment:
+ The license is stated at http://code.google.com/p/bsnes/.
 
 Files: debian/*
 Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>, 2011 Tobias Hansen <tobias.han@gmx.de>
