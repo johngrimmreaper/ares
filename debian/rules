@@ -11,21 +11,18 @@ override_dh_auto_clean:
 	make -Cbsnes clean
 	rm -rf bsnes/obj bsnes/out
 	rm -rf snesfilter/out
-	rm -f snespurify/snespurify-qt
-	chmod 644 snespurify/cc-qt.sh
-	if test -f snespurify/phoenix/qt/qt.moc.bak; then mv -f snespurify/phoenix/qt/qt.moc.bak snespurify/phoenix/qt/qt.moc; fi
+	rm -f snespurify/snespurify-gtk
+	chmod 644 snespurify/cc-gtk.sh
 
-# Create backup of qt.moc, because it gets changed during build.
 override_dh_auto_build:
 	mkdir -p bsnes/obj bsnes/out snesfilter/out
 	dh_auto_build -Dbsnes -- profile=compatibility
-#	make -Cbsnes clean
+	make -Cbsnes clean
 	dh_auto_build -Dbsnes -- profile=accuracy
-#	make -Cbsnes clean
+	make -Cbsnes clean
 	dh_auto_build -Dbsnes -- profile=performance
 	dh_auto_build -Dsnesfilter
-	mv -f snespurify/phoenix/qt/qt.moc snespurify/phoenix/qt/qt.moc.bak
-	cd snespurify && chmod 755 cc-qt.sh && ./cc-qt.sh
+	cd snespurify && chmod 755 cc-gtk.sh && ./cc-gtk.sh
 
 override_dh_auto_install:
 	dh_auto_install -pbsnes -Dbsnes -- profile=compatibility prefix="/usr" DESTDIR="../debian/bsnes"
