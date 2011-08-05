@@ -1,4 +1,4 @@
-.TH bsnes 6 "November 20, 2010"
+.TH bsnes 6 "August 5, 2011"
 .SH NAME
 bsnes \- Accurate SNES/Super Famicom emulator
 .SH SYNOPSIS
@@ -97,11 +97,21 @@ internet multiplay is not currently supported nor planned.
 .br
 * zones
 
+.SH PROFILES
+
+bsnes comes with three profiles, where "accuracy" and "compatibility" are focused on accuracy in emulating the SNES (compatibility makes minor tradeoffs in favor of speed) and "performance" is focused on using less resources. Which profile to use can be set with:
+
+# update-alternatives --config bsnes-bin
+
+.SH SEE ALSO
+
+\fBsnespurify-gtk\fR(6)
+
 .SH MORE INFO
 Website: http://byuu.org/bsnes/
 
 .SH BSNES AUTHOR
 byuu
 
-.SH MAN PAGE AUTHOR
-Brandon Barnes
+.SH MAN PAGE AUTHORS
+Brandon Barnes, Tobias Hansen

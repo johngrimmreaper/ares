@@ -1,2 +1,11 @@
-?package(bsnes):needs="X11" section="Games/Tools" \
-  title="bsnes" command="/usr/games/bsnes" icon="/usr/share/pixmaps/bsnes.xpm"
+?package(bsnes): needs="X11" \
+                 section="Games/Tools" \
+                 title="bsnes" \
+                 command="/usr/games/bsnes" \
+                 icon="/usr/share/pixmaps/bsnes.xpm"
+
+?package(bsnes): needs="X11" \
+                 section="Games/Tools" \
+                 title="snespurify" \
+                 command="/usr/games/snespurify-gtk" \
+                 icon="/usr/share/pixmaps/bsnes.xpm"
