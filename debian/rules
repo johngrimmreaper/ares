@@ -23,6 +23,7 @@ override_dh_auto_build:
 	dh_auto_build -Dbsnes -- profile=performance
 	dh_auto_build -Dsnesfilter
 	cd snespurify && chmod 755 cc-gtk.sh && ./cc-gtk.sh
+	chmod 644 snesshader/*.OpenGL.shader
 
 override_dh_auto_install:
 	dh_auto_install -pbsnes -Dbsnes -- profile=compatibility prefix="/usr" DESTDIR="../debian/bsnes"
