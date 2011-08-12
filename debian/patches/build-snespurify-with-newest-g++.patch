@@ -1,6 +1,7 @@
-Description: Build snespurify-gtk with g++-4.6 instead of g++-4.5
+Description: Build snespurify-gtk with newest g++ instead of g++-4.5
  Otherwise it will segfault and corrupt the ROM when attempting
- to remove a header from a ROM.
+ to remove a header from a ROM. Also g++-4.5 is not in Debian
+ unstable anymore.
 Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
 
 --- a/snespurify/cc-gtk.sh
@@ -9,7 +10,7 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 -g++-4.5 -std=gnu++0x -I. -O3 -fomit-frame-pointer -c phoenix/phoenix.cpp `pkg-config --cflags gtk+-2.0` -DPHOENIX_GTK
 -g++-4.5 -std=gnu++0x -I. -O3 -fomit-frame-pointer -c snespurify.cpp -DPHOENIX_GTK
 -g++-4.5 -s -o snespurify-gtk snespurify.o phoenix.o `pkg-config --libs gtk+-2.0` -lX11
-+g++-4.6 -std=gnu++0x -I. -O3 -fomit-frame-pointer -c phoenix/phoenix.cpp `pkg-config --cflags gtk+-2.0` -DPHOENIX_GTK
-+g++-4.6 -std=gnu++0x -I. -O3 -fomit-frame-pointer -c snespurify.cpp -DPHOENIX_GTK
-+g++-4.6 -s -o snespurify-gtk snespurify.o phoenix.o `pkg-config --libs gtk+-2.0` -lX11
++g++ -std=gnu++0x -I. -O3 -fomit-frame-pointer -c phoenix/phoenix.cpp `pkg-config --cflags gtk+-2.0` -DPHOENIX_GTK
++g++ -std=gnu++0x -I. -O3 -fomit-frame-pointer -c snespurify.cpp -DPHOENIX_GTK
++g++ -s -o snespurify-gtk snespurify.o phoenix.o `pkg-config --libs gtk+-2.0` -lX11
  rm *.o

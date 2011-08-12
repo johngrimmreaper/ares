@@ -1,2 +1,2 @@
-build-snespurify-with-g++-4.6.patch
+build-snespurify-with-newest-g++.patch
 misc-makefile-changes.patch
