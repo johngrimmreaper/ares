@@ -1,9 +1,9 @@
 bsnes (0.081-1) unstable; urgency=low
 
   * New upstream release.
-  * Fix FTBFS due to hardwired gcc-4.5.
+  * Fix FTBFS due to hardwired gcc-4.5. (Closes: #637694)
 
- -- Tobias Hansen <tobias.han@gmx.de>  Fri, 12 Aug 2011 20:06:13 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Sat, 13 Aug 2011 22:22:15 +0200
 
 bsnes (0.080-1) unstable; urgency=low
 
