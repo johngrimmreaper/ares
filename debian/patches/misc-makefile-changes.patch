@@ -9,7 +9,7 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 
 --- a/bsnes/Makefile
 +++ b/bsnes/Makefile
-@@ -25,7 +25,7 @@
+@@ -29,7 +29,7 @@
  
  # platform
  ifeq ($(platform),x)
