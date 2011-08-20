@@ -3,10 +3,10 @@ Upstream-Name: bsnes
 Source: http://byuu.org/bsnes/
 
 Files: *
-Copyright: 2004-2011 byuu, Nach, blargg, krom, BearOso, RedDwarf, OV2, vladitx
+Copyright: 2004-2011 byuu, Nach, blargg, krom, BearOso, RedDwarf, OV2, vladitx, Andreas Naive
 License: GPL-2
 Comment:
- The license is stated at http://code.google.com/p/bsnes/.
+ The license is stated in the file bsnes/snes/snes.hpp.
 
 Files: debian/*
 Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>, 2011 Tobias Hansen <tobias.han@gmx.de>
@@ -21,9 +21,10 @@ Files: bsnes/snes/chip/spc7110/*
 Copyright: Copyright (c) 2008-2010, byuu and neviksti
 License: ISC
 
-Files: bsnes/snes/chip/sdd1/sdd1emu.*
-Copyright: 2003-2004 Andreas Naive
-License: PD
+Files: bsnes/nall/inflate.hpp
+       snespurify/nall/inflate.hpp
+Copyright: Mark Adler, byuu
+License: Zlib
 
 License: GPL-2
  This program is free software; you can redistribute it and/or modify
@@ -70,11 +71,21 @@ License: ISC
  action of contract, negligence or other tortious action, arising out of
  or in connection with the use or performance of this software.
 
-License: PD
- This code is Public Domain. There is no copyright holded by the author.
- Said this, the author wish to explicitly emphasize his inalienable moral rights
- over this piece of intelectual work and the previous research that made it
- possible, as recognized by most of the copyright laws around the world.
+License: Zlib
+ zlib License
  .
- This code is provided 'as-is', with no warranty, expressed or implied.
- No responsability is assumed by the author in connection with it.
+ This software is provided 'as-is', without any express or implied
+ warranty.  In no event will the authors be held liable for any damages
+ arising from the use of this software.
+ .
+ Permission is granted to anyone to use this software for any purpose,
+ including commercial applications, and to alter it and redistribute it
+ freely, subject to the following restrictions:
+ .
+ 1. The origin of this software must not be misrepresented; you must not
+    claim that you wrote the original software. If you use this software
+    in a product, an acknowledgment in the product documentation would be
+    appreciated but is not required.
+ 2. Altered source versions must be plainly marked as such, and must not be
+    misrepresented as being the original software.
+ 3. This notice may not be removed or altered from any source distribution.
