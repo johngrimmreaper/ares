@@ -1,9 +1,16 @@
-bsnes (0.082-1) unstable; urgency=low
+bsnes (0.082-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+  * Fix FTBFS on kfreebsd due to missing build-dep libasound2-dev.
+
+ -- Tobias Hansen <tobias.han@gmx.de>  Wed, 07 Sep 2011 21:17:26 +0200
+
+bsnes (0.081-2) unstable; urgency=low
 
   * New upstream release.
   * Fix FTBFS due to hardwired gcc-4.5. (Closes: #637694)
 
- -- Tobias Hansen <tobias.han@gmx.de>  Sat, 20 Aug 2011 22:59:49 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Sat, 13 Aug 2011 23:36:22 +0200
 
 bsnes (0.080-1) unstable; urgency=low
 
