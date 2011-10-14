@@ -1,9 +1,16 @@
-bsnes (0.082-1) UNRELEASED; urgency=low
+bsnes (0.083-1) UNRELEASED; urgency=low
 
   * New upstream release.
-  * Fix FTBFS on kfreebsd due to missing build-dep libasound2-dev.
+  * Create symlinks instead of copying files in startscript. (Closes: #642348)
+  * Fix FTBFS on kfreebsd due to enabled ALSA and missing check for 
+    __FreeBSD_kernel__. (Closes: #640912)
+  * Add Build-Depends: gcc (>= 4.6), because building with gcc 4.5 causes a bug.
+  * Mention update-alternatives in package description.
+  * Add bugfix for snespurify crashing when scanning a broken zip file.
+  * Main license changed to GPL-3.
+  * Mention new functionality in snespurify man page.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Wed, 07 Sep 2011 21:17:26 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Fri, 14 Oct 2011 23:48:57 +0200
 
 bsnes (0.081-2) unstable; urgency=low
 
