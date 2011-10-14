@@ -1,4 +1,4 @@
-bsnes (0.083-1) UNRELEASED; urgency=low
+bsnes (0.083-1) unstable; urgency=low
 
   * New upstream release.
   * Create symlinks instead of copying files in startscript. (Closes: #642348)
@@ -10,7 +10,7 @@ bsnes (0.083-1) UNRELEASED; urgency=low
   * Main license changed to GPL-3.
   * Mention new functionality in snespurify man page.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Fri, 14 Oct 2011 23:48:57 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Sat, 15 Oct 2011 00:30:23 +0200
 
 bsnes (0.081-2) unstable; urgency=low
 
