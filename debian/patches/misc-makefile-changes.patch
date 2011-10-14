@@ -2,43 +2,38 @@ Description: Various changes to the upstream makefiles
 
 * Don't strip binaries in Makefile.
 * Install in /usr/games, not /usr/bin.
-* Install cheats.xml into /usr/share/games/bsnes/, not ~/.bsnes.
-* Attach profile name to binary.
+* Install cheats.bml into /usr/share/games/bsnes/, not ~/.config/bsnes.
+* Name bsnes.png and bsnes.desktop explicitly.
 
 Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
 
 --- a/bsnes/Makefile
 +++ b/bsnes/Makefile
-@@ -29,7 +29,7 @@
- 
- # platform
+@@ -31,7 +31,7 @@
  ifeq ($(platform),x)
+   # tree vectorization causes code generation errors with Linux/GCC 4.6.1
+   flags += -fno-tree-vectorize
 -  link += -s -ldl -lX11 -lXext
 +  link += -ldl -lX11 -lXext
  else ifeq ($(platform),osx)
  else ifeq ($(platform),win)
-   link += -mwindows
+   link += $(if $(findstring console,$(options)),-mconsole,-mwindows)
 --- a/bsnes/ui/Makefile
 +++ b/bsnes/ui/Makefile
-@@ -89,18 +89,16 @@
- 	test -d ../bsnes.app || mkdir -p ../bsnes.app/Contents/MacOS
- 	$(strip $(cpp) -o ../bsnes.app/Contents/MacOS/bsnes $(objects) $(link))
- else
--	$(strip $(cpp) -o out/bsnes $(objects) $(link))
-+	$(strip $(cpp) -o out/bsnes-$(profile) $(objects) $(link))
- endif
+@@ -76,12 +76,10 @@
  
  install:
  ifeq ($(platform),x)
--	install -D -m 755 out/bsnes $(DESTDIR)$(prefix)/bin/bsnes
-+	install -D -m 755 out/bsnes-$(profile) $(DESTDIR)$(prefix)/games/bsnes-$(profile)
+-	install -D -m 755 out/$(name) $(DESTDIR)$(prefix)/bin/$(name)
+-	mkdir -p ~/.config/$(name)
+-	install -D -m 644 data/$(name).png $(DESTDIR)$(prefix)/share/pixmaps/$(name).png
+-	install -D -m 644 data/$(name).desktop $(DESTDIR)$(prefix)/share/applications/$(name).desktop
+-	cp data/cheats.bml ~/.config/$(name)/cheats.bml
+-	chmod 777 ~/.config/$(name) ~/.config/$(name)/cheats.bml
++	install -D -m 755 out/$(name) $(DESTDIR)$(prefix)/games/$(name)
++	install -D -m 644 data/bsnes.png $(DESTDIR)$(prefix)/share/pixmaps/bsnes.png
++	install -D -m 644 data/bsnes.desktop $(DESTDIR)$(prefix)/share/applications/bsnes.desktop
++	install -D -m 644 data/cheats.bml $(DESTDIR)$(prefix)/share/games/bsnes/cheats.bml
  endif
- 	install -D -m 644 data/bsnes.png $(DESTDIR)$(prefix)/share/pixmaps/bsnes.png
- 	install -D -m 644 data/bsnes.desktop $(DESTDIR)$(prefix)/share/applications/bsnes.desktop
--	mkdir -p ~/.config/bsnes
--	cp data/cheats.xml ~/.config/bsnes/cheats.xml
--	chmod 777 ~/.config/bsnes ~/.config/bsnes/cheats.xml
-+	install -D -m 644 data/cheats.xml $(DESTDIR)$(prefix)/share/games/bsnes/cheats.xml
  
  uninstall:
- ifeq ($(platform),x)
