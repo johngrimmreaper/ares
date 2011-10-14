@@ -4,6 +4,7 @@ Description: Various changes to the upstream makefiles
 * Install in /usr/games, not /usr/bin.
 * Install cheats.bml into /usr/share/games/bsnes/, not ~/.config/bsnes.
 * Name bsnes.png and bsnes.desktop explicitly.
+* Include ALSA audio backend only on Linux.
 
 Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
 
@@ -20,7 +21,21 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
    link += $(if $(findstring console,$(options)),-mconsole,-mwindows)
 --- a/bsnes/ui/Makefile
 +++ b/bsnes/ui/Makefile
-@@ -76,12 +76,10 @@
+@@ -19,8 +19,12 @@
+   endif
+ 
+   ruby := video.glx video.xv video.sdl
+-  ruby += audio.alsa audio.openal audio.oss audio.pulseaudio audio.pulseaudiosimple audio.ao
++  ruby += audio.openal audio.oss audio.pulseaudio audio.pulseaudiosimple audio.ao
+   ruby += input.sdl input.x
++
++  ifneq ($(findstring Linux,$(uname)),)
++    ruby += audio.alsa
++  endif
+ else ifeq ($(platform),osx)
+   phoenix_compile = $(call compile,-DPHOENIX_QT)
+   link +=
+@@ -76,12 +80,10 @@
  
  install:
  ifeq ($(platform),x)
