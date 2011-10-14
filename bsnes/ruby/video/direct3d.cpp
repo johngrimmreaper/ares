@@ -24,7 +24,7 @@ public:
   LPDIRECT3DTEXTURE9      texture;
   LPDIRECT3DSURFACE9      surface;
   LPD3DXEFFECT            effect;
-  string                  shader_source_xml;
+  string                  shader_source_markup;
 
   bool lost;
   unsigned iwidth, iheight;
@@ -268,7 +268,7 @@ public:
     //failure to do so causes scaling issues on some video drivers.
     if(state.width != rd.right || state.height != rd.bottom) {
       init();
-      set_shader(shader_source_xml);
+      set_shader(shader_source_markup);
       return;
     }
 
@@ -336,26 +336,14 @@ public:
     }
 
     if(!source || !*source) {
-      shader_source_xml = "";
+      shader_source_markup = "";
       return;
     }
-    shader_source_xml = source;
+    shader_source_markup = source;
 
-    bool is_hlsl = false;
-    string shader_source;
-    xml_element document = xml_parse(shader_source_xml);
-    foreach(head, document.element) {
-      if(head.name == "shader") {
-        foreach(attribute, head.attribute) {
-          if(attribute.name == "language" && attribute.content == "HLSL") is_hlsl = true;
-        }
-        foreach(element, head.element) {
-          if(element.name == "source") {
-            if(is_hlsl) shader_source = element.parse();
-          }
-        }
-      }
-    }
+    BML::Document document(shader_source_markup);
+    bool is_hlsl = document["shader"]["language"].value == "HLSL";
+    string shader_source = document["shader"].value;
     if(shader_source == "") return;
 
     HMODULE d3dx;
@@ -406,7 +394,7 @@ public:
     presentation.BackBufferHeight       = 0;
 
     if(lpd3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, settings.handle,
-      D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, &device) != D3D_OK) {
+      D3DCREATE_FPU_PRESERVE | D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, &device) != D3D_OK) {
       return false;
     }
 
