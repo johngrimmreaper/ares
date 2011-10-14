@@ -16,16 +16,16 @@ override_dh_auto_clean:
 
 override_dh_auto_build:
 	mkdir -p bsnes/obj bsnes/out snesfilter/out
-	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=compatibility
+	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=compatibility name=bsnes-compatibility
 	make -Cbsnes clean
-	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=accuracy
+	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=accuracy name=bsnes-accuracy
 	make -Cbsnes clean
-	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=performance
+	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=performance name=bsnes-performance
 	dh_auto_build -Dsnesfilter -- compiler=gcc
 	cd snespurify && chmod 755 cc-gtk.sh && ./cc-gtk.sh
 	chmod 644 snesshader/*.OpenGL.shader
 
 override_dh_auto_install:
-	dh_auto_install -pbsnes -Dbsnes -- profile=compatibility prefix="/usr" DESTDIR="../debian/bsnes"
-	dh_auto_install -pbsnes -Dbsnes -- profile=accuracy prefix="/usr" DESTDIR="../debian/bsnes"
-	dh_auto_install -pbsnes -Dbsnes -- profile=performance prefix="/usr" DESTDIR="../debian/bsnes"
+	dh_auto_install -pbsnes -Dbsnes -- name=bsnes-compatibility prefix="/usr" DESTDIR="../debian/bsnes"
+	dh_auto_install -pbsnes -Dbsnes -- name=bsnes-accuracy prefix="/usr" DESTDIR="../debian/bsnes"
+	dh_auto_install -pbsnes -Dbsnes -- name=bsnes-performance prefix="/usr" DESTDIR="../debian/bsnes"
