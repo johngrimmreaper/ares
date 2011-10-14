@@ -12,8 +12,7 @@ Files: debian/*
 Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>, 2011 Tobias Hansen <tobias.han@gmx.de>
 License: GPL-2
 
-Files: snesfilter/NTSC/snes_ntsc/*
-       bsnes/snes/alt/dsp/*
+Files: bsnes/snes/alt/dsp/*
 Copyright: Copyright (C) 2006-2007 Shay Green
 License: LGPL-2.1+
 
