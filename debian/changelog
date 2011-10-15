@@ -9,8 +9,9 @@ bsnes (0.083-1) unstable; urgency=low
   * Add bugfix for snespurify crashing when scanning a broken zip file.
   * Main license changed to GPL-3.
   * Mention new functionality in snespurify man page.
+  * Build with -O1 + flags from -O3 instead of -O3.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Sat, 15 Oct 2011 00:30:23 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Sun, 16 Oct 2011 00:45:33 +0200
 
 bsnes (0.081-2) unstable; urgency=low
 
