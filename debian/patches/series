@@ -3,3 +3,4 @@ misc-makefile-changes.patch
 detect-non-linux-archs.patch
 snespurify-dont-crash-on-bad-zip-files.patch
 reduce-optimization.patch
+detect-endianness.patch
