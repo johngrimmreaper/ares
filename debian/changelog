@@ -1,3 +1,10 @@
+bsnes (0.083-2) unstable; urgency=low
+
+  * Properly detect endianness on all architectures. (Closes: #645710)
+  * Escape minuses in man pages.
+
+ -- Tobias Hansen <tobias.han@gmx.de>  Tue, 18 Oct 2011 02:11:24 +0200
+
 bsnes (0.083-1) unstable; urgency=low
 
   * New upstream release.
