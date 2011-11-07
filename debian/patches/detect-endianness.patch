@@ -13,7 +13,7 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
  struct Intrinsics {
    enum class Compiler : unsigned { GCC, VisualC, Unknown };
    enum class Platform : unsigned { X, OSX, Windows, Unknown };
-@@ -43,18 +45,18 @@
+@@ -45,11 +47,11 @@
  
  /* Endian detection */
  
@@ -27,14 +27,6 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
    #define ENDIAN_MSB
    #define ARCH_MSB
    Intrinsics::Endian Intrinsics::endian() { return Intrinsics::Endian::MSB; }
- #else
-   #define ENDIAN_UNKNOWN
-   #define ARCH_UNKNOWN
--  Intrinsics::Endian Intrinsics::endia() { return Intrinsics::Endian::Unknown; }
-+  Intrinsics::Endian Intrinsics::endian() { return Intrinsics::Endian::Unknown; }
- #endif
- 
- #endif
 --- a/snesfilter/nall/detect.hpp
 +++ b/snesfilter/nall/detect.hpp
 @@ -1,6 +1,8 @@
