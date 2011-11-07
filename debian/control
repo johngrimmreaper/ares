@@ -28,3 +28,6 @@ Description: Accurate SNES/SuperFamicom emulator
  system resources. Which profile to use can be set with:
  .
  # update-alternatives --config bsnes-bin
+ .
+ Although not as polished as the SNES emulation (yet), there is also support
+ for NES, Gameboy and Gameboy Color games.

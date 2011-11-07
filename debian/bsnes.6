@@ -19,7 +19,8 @@ code, rather than speed and special features. It is meant as a reference
 emulator to document how the underlying hardware works. It is thus very useful
 for development and research. And while it can be used for general purpose
 gaming, it will require significantly more powerful hardware than a typical
-emulator.
+emulator. Although not as polished as the SNES emulation (yet), there is also
+support for NES, Gameboy and Gameboy Color games.
 
 .SH Supported Filetypes
 
@@ -35,14 +36,11 @@ Sufami Turbo cartridge \-\- ROM image.
 .B SRM, PSR:
 non\-volatile memory, often used to save game data \-\- (P)SRAM image.
 
-.B RTC:
-real\-time clock non\-volatile memory.
+.B GB/GBC:
+Gameboy (Color) cartridge \-\- ROM image.
 
-.B UPS:
-patch data, used to dynamically modify cartridge of same base filename upon load.
-
-.B CHT:
-plain\-text list of "Game Genie" / "Pro Action Replay" codes.
+.B NES/FC:
+NES cartridge \-\- ROM image.
 
 .SH Known Limitations
 
@@ -55,50 +53,6 @@ this emulator. As a result, most BS\-X software will not function correctly.
 
 .B Netplay:
 internet multiplay is not currently supported nor planned.
-
-.SH Contributors
-
-* Andreas Naive
-.br
-* anomie
-.br
-* _Demo_
-.br
-* Derrick Sobodash
-.br
-* DMV27
-.br
-* FirebrandX
-.br
-* FitzRoy
-.br
-* GIGO
-.br
-* Jonas Quinn
-.br
-* kode54
-.br
-* krom
-.br
-* Matthew Callis
-.br
-* Nach
-.br
-* neviksti
-.br
-* Overload
-.br
-* RedDwarf
-.br
-* Richard Bannister
-.br
-* Shay Green
-.br
-* tetsuo55
-.br
-* TRAC
-.br
-* zones
 
 .SH PROFILES
 
