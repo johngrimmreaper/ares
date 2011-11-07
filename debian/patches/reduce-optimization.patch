@@ -14,9 +14,9 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 -flags   := -O3 -fomit-frame-pointer -I.
 +flags   := -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
 +-falign-labels -fcaller-saves -fcrossjumping -fcse-follow-jumps \
-+-fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize \
++-fcse-skip-blocks -fdelete-null-pointer-checks \
 +-fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions \
-+-findirect-inlining -fipa-sra -foptimize-sibling-calls -fpartial-inlining \
++-findirect-inlining -foptimize-sibling-calls \
 +-fpeephole2 -fregmove -freorder-blocks -freorder-functions \
 +-frerun-cse-after-loop -fsched-interblock -fsched-spec -fschedule-insns \
 +-fschedule-insns2 -fstrict-aliasing -fstrict-overflow -ftree-switch-conversion \
@@ -32,9 +32,9 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 -g++ -std=gnu++0x -I. -O3 -fomit-frame-pointer -c snespurify.cpp
 +g++ -std=gnu++0x -I. -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
 +-falign-labels -fcaller-saves -fcrossjumping -fcse-follow-jumps \
-+-fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize \
++-fcse-skip-blocks -fdelete-null-pointer-checks \
 +-fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions \
-+-findirect-inlining -fipa-sra -foptimize-sibling-calls -fpartial-inlining \
++-findirect-inlining -foptimize-sibling-calls \
 +-fpeephole2 -fregmove -freorder-blocks -freorder-functions \
 +-frerun-cse-after-loop -fsched-interblock -fsched-spec -fschedule-insns \
 +-fschedule-insns2 -fstrict-aliasing -fstrict-overflow -ftree-switch-conversion \
@@ -43,9 +43,9 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 +`pkg-config --cflags gtk+-2.0` -DPHOENIX_GTK
 +g++ -std=gnu++0x -I. -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
 +-falign-labels -fcaller-saves -fcrossjumping -fcse-follow-jumps \
-+-fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize \
++-fcse-skip-blocks -fdelete-null-pointer-checks \
 +-fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions \
-+-findirect-inlining -fipa-sra -foptimize-sibling-calls -fpartial-inlining \
++-findirect-inlining -foptimize-sibling-calls \
 +-fpeephole2 -fregmove -freorder-blocks -freorder-functions \
 +-frerun-cse-after-loop -fsched-interblock -fsched-spec -fschedule-insns \
 +-fschedule-insns2 -fstrict-aliasing -fstrict-overflow -ftree-switch-conversion \

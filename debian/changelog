@@ -1,8 +1,9 @@
 bsnes (0.084-1) UNRELEASED; urgency=low
 
   * New upstream release.
+  * Remove optimization flags not available on alpha.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Mon, 07 Nov 2011 22:44:16 +0100
+ -- Tobias Hansen <tobias.han@gmx.de>  Mon, 07 Nov 2011 23:50:12 +0100
 
 bsnes (0.083-2) unstable; urgency=low
 
