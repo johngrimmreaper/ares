@@ -1,7 +1,11 @@
 bsnes (0.084-1) unstable; urgency=low
 
+  [ Tobias Hansen ]
   * New upstream release.
   * Remove optimization flags not available on alpha.
+
+  [ Gonéri Le Bouder ]
+  * Add: DM-Upload-Allowed: yes
 
  -- Tobias Hansen <tobias.han@gmx.de>  Wed, 09 Nov 2011 23:55:12 +0100
 

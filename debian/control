@@ -15,6 +15,7 @@ Standards-Version: 3.9.2
 Vcs-Git: git://git.debian.org/git/pkg-games/bsnes.git
 Vcs-Browser: http://git.debian.org/?p=pkg-games/bsnes.git
 Homepage: http://byuu.org/bsnes/
+DM-Upload-Allowed: yes
 
 Package: bsnes
 Architecture: any
