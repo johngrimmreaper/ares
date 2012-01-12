@@ -2,7 +2,7 @@ Description: Various changes to the upstream makefiles
 
 * Don't strip binaries in Makefile.
 * Install in /usr/games, not /usr/bin.
-* Install cheats.bml into /usr/share/games/bsnes/, not ~/.config/bsnes.
+* Install cheats.xml into /usr/share/games/bsnes/, not ~/.config/bsnes.
 * Name bsnes.png and bsnes.desktop explicitly.
 * Include ALSA audio backend only on Linux.
 
@@ -10,10 +10,10 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 
 --- a/bsnes/Makefile
 +++ b/bsnes/Makefile
-@@ -31,7 +31,7 @@
+@@ -29,7 +29,7 @@
+ 
+ # platform
  ifeq ($(platform),x)
-   # tree vectorization causes code generation errors with Linux/GCC 4.6.1
-   flags += -fno-tree-vectorize
 -  link += -s -ldl -lX11 -lXext
 +  link += -ldl -lX11 -lXext
  else ifeq ($(platform),osx)
@@ -21,9 +21,9 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
    link += $(if $(findstring console,$(options)),-mconsole,-mwindows)
 --- a/bsnes/ui/Makefile
 +++ b/bsnes/ui/Makefile
-@@ -19,8 +19,12 @@
-   endif
- 
+@@ -11,8 +11,12 @@
+ # platform
+ ifeq ($(platform),x)
    ruby := video.glx video.xv video.sdl
 -  ruby += audio.alsa audio.openal audio.oss audio.pulseaudio audio.pulseaudiosimple audio.ao
 +  ruby += audio.openal audio.oss audio.pulseaudio audio.pulseaudiosimple audio.ao
@@ -33,9 +33,9 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 +    ruby += audio.alsa
 +  endif
  else ifeq ($(platform),osx)
-   phoenix_compile = $(call compile,-DPHOENIX_QT)
-   link +=
-@@ -76,12 +80,10 @@
+   ruby :=
+   ruby += audio.openal
+@@ -66,12 +70,10 @@
  
  install:
  ifeq ($(platform),x)
@@ -43,12 +43,12 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 -	mkdir -p ~/.config/$(name)
 -	install -D -m 644 data/$(name).png $(DESTDIR)$(prefix)/share/pixmaps/$(name).png
 -	install -D -m 644 data/$(name).desktop $(DESTDIR)$(prefix)/share/applications/$(name).desktop
--	cp data/cheats.bml ~/.config/$(name)/cheats.bml
--	chmod 777 ~/.config/$(name) ~/.config/$(name)/cheats.bml
+-	cp data/cheats.xml ~/.config/$(name)/cheats.xml
+-	chmod 777 ~/.config/$(name) ~/.config/$(name)/cheats.xml
 +	install -D -m 755 out/$(name) $(DESTDIR)$(prefix)/games/$(name)
 +	install -D -m 644 data/bsnes.png $(DESTDIR)$(prefix)/share/pixmaps/bsnes.png
 +	install -D -m 644 data/bsnes.desktop $(DESTDIR)$(prefix)/share/applications/bsnes.desktop
-+	install -D -m 644 data/cheats.bml $(DESTDIR)$(prefix)/share/games/bsnes/cheats.bml
++	install -D -m 644 data/cheats.xml $(DESTDIR)$(prefix)/share/games/bsnes/cheats.xml
  endif
  
  uninstall:

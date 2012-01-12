@@ -11,8 +11,8 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
  # compiler
  c       := $(compiler) -std=gnu99
  cpp     := $(subst cc,++,$(compiler)) -std=gnu++0x
--flags   := -O3 -fomit-frame-pointer -I.
-+flags   := -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
+-flags   := -I. -O3 -fomit-frame-pointer
++flags   := -I. -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
 +-falign-labels -fcaller-saves -fcrossjumping -fcse-follow-jumps \
 +-fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize \
 +-fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions \
@@ -21,7 +21,7 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 +-frerun-cse-after-loop -fsched-interblock -fsched-spec -fschedule-insns \
 +-fschedule-insns2 -fstrict-aliasing -fstrict-overflow -ftree-switch-conversion \
 +-ftree-pre -ftree-vrp -finline-functions -funswitch-loops -fpredictive-commoning \
-+-fgcse-after-reload -fipa-cp-clone -fomit-frame-pointer -I.
++-fgcse-after-reload -fipa-cp-clone -fomit-frame-pointer
  link    :=
  objects := libco
  

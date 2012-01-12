@@ -27,29 +27,6 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
    #define ENDIAN_MSB
    #define ARCH_MSB
    Intrinsics::Endian Intrinsics::endian() { return Intrinsics::Endian::MSB; }
---- a/snesfilter/nall/detect.hpp
-+++ b/snesfilter/nall/detect.hpp
-@@ -1,6 +1,8 @@
- #ifndef NALL_DETECT_HPP
- #define NALL_DETECT_HPP
- 
-+#include <endian.h>
-+
- /* Compiler detection */
- 
- #if defined(__GNUC__)
-@@ -21,9 +23,9 @@
- 
- /* Endian detection */
- 
--#if defined(__i386__) || defined(__amd64__) || defined(_M_IX86) || defined(_M_AMD64)
-+#if __BYTE_ORDER == __LITTLE_ENDIAN
-   #define ARCH_LSB
--#elif defined(__powerpc__) || defined(_M_PPC) || defined(__BIG_ENDIAN__)
-+#elif __BYTE_ORDER == __BIG_ENDIAN
-   #define ARCH_MSB
- #endif
- 
 --- a/snespurify/nall/detect.hpp
 +++ b/snespurify/nall/detect.hpp
 @@ -1,6 +1,8 @@
@@ -73,3 +50,28 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
    #define ARCH_MSB
  #endif
  
+--- a/snesfilter/nall/intrinsics.hpp
++++ b/snesfilter/nall/intrinsics.hpp
+@@ -1,6 +1,8 @@
+ #ifndef NALL_INTRINSICS_HPP
+ #define NALL_INTRINSICS_HPP
+ 
++#include <endian.h>
++
+ struct Intrinsics {
+   enum class Compiler : unsigned { GCC, VisualC, Unknown };
+   enum class Platform : unsigned { X, OSX, Windows, Unknown };
+@@ -45,11 +47,11 @@
+ 
+ /* Endian detection */
+ 
+-#if defined(__i386__) || defined(__amd64__) || defined(_M_IX86) || defined(_M_AMD64)
++#if __BYTE_ORDER == __LITTLE_ENDIAN
+   #define ENDIAN_LSB
+   #define ARCH_LSB
+   Intrinsics::Endian Intrinsics::endian() { return Intrinsics::Endian::LSB; }
+-#elif defined(__powerpc__) || defined(_M_PPC) || defined(__BIG_ENDIAN__)
++#elif __BYTE_ORDER == __BIG_ENDIAN
+   #define ENDIAN_MSB
+   #define ARCH_MSB
+   Intrinsics::Endian Intrinsics::endian() { return Intrinsics::Endian::MSB; }
