@@ -1,3 +1,4 @@
+declare-functions-in-smp-hpp.patch
 build-snespurify-with-newest-g++.patch
 misc-makefile-changes.patch
 detect-non-linux-archs.patch

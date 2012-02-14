@@ -1,8 +1,9 @@
 bsnes (0.086-1) unstable; urgency=low
 
   * New upstream release.
+  * Add patch to fix build of bsnes-performance.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Tue, 14 Feb 2012 21:01:45 +0100
+ -- Tobias Hansen <tobias.han@gmx.de>  Tue, 14 Feb 2012 21:41:12 +0100
 
 bsnes (0.085-1) unstable; urgency=low
 

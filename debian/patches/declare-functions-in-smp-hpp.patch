@@ -1,0 +1,14 @@
+Description: Add two function declarations, otherwise the performance build fails.
+Origin: http://board.byuu.org/viewtopic.php?p=55276#p55276
+
+--- a/bsnes/snes/alt/smp/smp.hpp
++++ b/bsnes/snes/alt/smp/smp.hpp
+@@ -21,6 +21,8 @@
+   SMP();
+   ~SMP();
+ 
++  uint8 disassemble_read(uint16 addr);
++  uint16 relb(int8 offset, int op_len);
+   void disassemble_opcode(char *output, uint16 addr);
+ 
+ //private:
