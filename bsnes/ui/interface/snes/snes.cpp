@@ -30,14 +30,25 @@ bool InterfaceSNES::cartridgeLoaded() {
   return SNES::cartridge.loaded();
 }
 
-bool InterfaceSNES::loadCartridge(const string &basename) {
+bool InterfaceSNES::loadFile(string &filename, uint8_t *&data, unsigned &size) {
+  if(filename.endswith("/")) {
+    filename.rtrim<1>("/");
+    filename.append("/", notdir(filename));
+  }
+  if(file::read(filename, data, size) == false) return false;
+  filename = nall::basename(filename);
+  interface->applyPatch(filename, data, size);
+  return true;
+}
+
+bool InterfaceSNES::loadCartridge(string basename) {
   uint8_t *data;
   unsigned size;
-  if(interface->loadFile(basename, data, size) == false) return false;
+  if(loadFile(basename, data, size) == false) return false;
 
   interface->unloadCartridge();
-  interface->baseName = nall::basename(basename);
-  interface->slotName = { nall::basename(basename) };
+  interface->baseName = basename;
+  interface->slotName = { basename };
 
   string markup;
   markup.readfile({ interface->baseName, ".xml" });
@@ -55,16 +66,16 @@ bool InterfaceSNES::loadCartridge(const string &basename) {
   return true;
 }
 
-bool InterfaceSNES::loadSatellaviewSlottedCartridge(const string &basename, const string &slotname) {
+bool InterfaceSNES::loadSatellaviewSlottedCartridge(string basename, string slotname) {
   uint8_t *data[2];
   unsigned size[2];
-  if(interface->loadFile(basename, data[0], size[0]) == false) return false;
-  interface->loadFile(slotname, data[1], size[1]);
+  if(loadFile(basename, data[0], size[0]) == false) return false;
+  loadFile(slotname, data[1], size[1]);
 
   interface->unloadCartridge();
-  interface->baseName = nall::basename(basename);
-  if(data[1]) interface->baseName.append("+", nall::basename(notdir(slotname)));
-  interface->slotName = { nall::basename(basename), nall::basename(slotname) };
+  interface->baseName = basename;
+  if(data[1]) interface->baseName.append("+", notdir(slotname));
+  interface->slotName = { basename, slotname };
 
   string markup;
   markup.readfile({ interface->baseName, ".xml" });
@@ -84,16 +95,16 @@ bool InterfaceSNES::loadSatellaviewSlottedCartridge(const string &basename, cons
   return true;
 }
 
-bool InterfaceSNES::loadSatellaviewCartridge(const string &basename, const string &slotname) {
+bool InterfaceSNES::loadSatellaviewCartridge(string basename, string slotname) {
   uint8_t *data[2];
   unsigned size[2];
-  if(interface->loadFile(basename, data[0], size[0]) == false) return false;
-  interface->loadFile(slotname, data[1], size[1]);
+  if(loadFile(basename, data[0], size[0]) == false) return false;
+  loadFile(slotname, data[1], size[1]);
 
   interface->unloadCartridge();
-  interface->baseName = nall::basename(basename);
-  if(data[1]) interface->baseName.append("+", nall::basename(notdir(slotname)));
-  interface->slotName = { nall::basename(basename), nall::basename(slotname) };
+  interface->baseName = basename;
+  if(data[1]) interface->baseName.append("+", notdir(slotname));
+  interface->slotName = { basename, slotname };
 
   string markup;
   markup.readfile({ interface->baseName, ".xml" });
@@ -113,19 +124,19 @@ bool InterfaceSNES::loadSatellaviewCartridge(const string &basename, const strin
   return true;
 }
 
-bool InterfaceSNES::loadSufamiTurboCartridge(const string &basename, const string &slotAname, const string &slotBname) {
+bool InterfaceSNES::loadSufamiTurboCartridge(string basename, string slotAname, string slotBname) {
   uint8_t *data[3];
   unsigned size[3];
-  if(interface->loadFile(basename, data[0], size[0]) == false) return false;
-  interface->loadFile(slotAname, data[1], size[1]);
-  interface->loadFile(slotBname, data[2], size[2]);
+  if(loadFile(basename, data[0], size[0]) == false) return false;
+  loadFile(slotAname, data[1], size[1]);
+  loadFile(slotBname, data[2], size[2]);
 
   interface->unloadCartridge();
-  interface->baseName = nall::basename(basename);
-  if(data[1] && data[2]) interface->baseName = { nall::basename(slotAname), "+", nall::basename(notdir(slotBname)) };
-  else if(data[1]) interface->baseName = nall::basename(slotAname);
-  else if(data[2]) interface->baseName = nall::basename(slotBname);
-  interface->slotName = { nall::basename(basename), nall::basename(slotAname), nall::basename(slotBname) };
+  interface->baseName = basename;
+  if(data[1] && data[2]) interface->baseName = { slotAname, "+", notdir(slotBname) };
+  else if(data[1]) interface->baseName = slotAname;
+  else if(data[2]) interface->baseName = slotBname;
+  interface->slotName = { basename, slotAname, slotBname };
 
   string markup;
   markup.readfile({ interface->baseName, ".xml" });
@@ -147,16 +158,16 @@ bool InterfaceSNES::loadSufamiTurboCartridge(const string &basename, const strin
   return true;
 }
 
-bool InterfaceSNES::loadSuperGameBoyCartridge(const string &basename, const string &slotname) {
+bool InterfaceSNES::loadSuperGameBoyCartridge(string basename, string slotname) {
   uint8_t *data[2];
   unsigned size[2];
-  if(interface->loadFile(basename, data[0], size[0]) == false) return false;
-  interface->loadFile(slotname, data[1], size[1]);
+  if(loadFile(basename, data[0], size[0]) == false) return false;
+  loadFile(slotname, data[1], size[1]);
 
   interface->unloadCartridge();
-  interface->baseName = nall::basename(basename);
-  if(data[1]) interface->baseName = nall::basename(slotname);
-  interface->slotName = { nall::basename(basename), nall::basename(slotname) };
+  interface->baseName = basename;
+  if(data[1]) interface->baseName = slotname;
+  interface->slotName = { basename, slotname };
 
   string markup;
   markup.readfile({ interface->baseName, ".xml" });
@@ -317,9 +328,9 @@ int16_t InterfaceSNES::inputPoll(bool port, SNES::Input::Device device, unsigned
     if(device == SNES::Input::Device::Joypad) return inputManager->snes.port1.gamepad.poll(id);
     if(device == SNES::Input::Device::Multitap) {
       if(index == 0) return inputManager->snes.port1.multitap1.poll(id);
-      if(index == 1) return inputManager->snes.port1.multitap1.poll(id);
-      if(index == 2) return inputManager->snes.port1.multitap1.poll(id);
-      if(index == 3) return inputManager->snes.port1.multitap1.poll(id);
+      if(index == 1) return inputManager->snes.port1.multitap2.poll(id);
+      if(index == 2) return inputManager->snes.port1.multitap3.poll(id);
+      if(index == 3) return inputManager->snes.port1.multitap4.poll(id);
     }
     if(device == SNES::Input::Device::Mouse) return inputManager->snes.port1.mouse.poll(id);
   }
@@ -328,9 +339,9 @@ int16_t InterfaceSNES::inputPoll(bool port, SNES::Input::Device device, unsigned
     if(device == SNES::Input::Device::Joypad) return inputManager->snes.port2.gamepad.poll(id);
     if(device == SNES::Input::Device::Multitap) {
       if(index == 0) return inputManager->snes.port2.multitap1.poll(id);
-      if(index == 1) return inputManager->snes.port2.multitap1.poll(id);
-      if(index == 2) return inputManager->snes.port2.multitap1.poll(id);
-      if(index == 3) return inputManager->snes.port2.multitap1.poll(id);
+      if(index == 1) return inputManager->snes.port2.multitap2.poll(id);
+      if(index == 2) return inputManager->snes.port2.multitap3.poll(id);
+      if(index == 3) return inputManager->snes.port2.multitap4.poll(id);
     }
     if(device == SNES::Input::Device::Mouse) return inputManager->snes.port2.mouse.poll(id);
     if(device == SNES::Input::Device::SuperScope) return inputManager->snes.port2.superScope.poll(id);
