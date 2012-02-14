@@ -7,7 +7,7 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
 
 --- a/bsnes/Makefile
 +++ b/bsnes/Makefile
-@@ -12,7 +12,16 @@
+@@ -11,7 +11,16 @@
  # compiler
  c       := $(compiler) -std=gnu99
  cpp     := $(subst cc,++,$(compiler)) -std=gnu++0x
