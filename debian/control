@@ -32,3 +32,6 @@ Description: Accurate SNES/SuperFamicom emulator
  .
  Although not as polished as the SNES emulation (yet), there is also support
  for NES, Gameboy and Gameboy Color games.
+ .
+ This package also contains the debugger laevateinn and snespurify, a tool
+ for preparing SNES ROMs for usage with bsnes.

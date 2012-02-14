@@ -4,3 +4,5 @@ snesshader/*.OpenGL.shader usr/share/games/bsnes/shaders
 snesfilter/out/*.filter usr/lib/games/bsnes/filters
 snespurify/snespurify-gtk usr/games
 debian/snespurify.desktop usr/share/applications
+bsnes/out/laevateinn usr/games
+debian/laevateinn.desktop usr/share/applications

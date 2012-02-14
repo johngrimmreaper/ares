@@ -1,9 +1,10 @@
 bsnes (0.086-1) unstable; urgency=low
 
   * New upstream release.
+  * Include laevateinn, the bsnes debugger.
   * Add patch to fix build of bsnes-performance.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Tue, 14 Feb 2012 21:41:12 +0100
+ -- Tobias Hansen <tobias.han@gmx.de>  Tue, 14 Feb 2012 23:25:41 +0100
 
 bsnes (0.085-1) unstable; urgency=low
 
