@@ -1,0 +1,52 @@
+Description: Use dpkg-buildflags.
+
+* Use the flags from CFLAGS, CPPFLAGS and LDFLAGS. They are set in the rules file.
+* Also don't strip symbols from the binaries (option -s removed).
+
+Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
+
+--- a/bsnes/Makefile
++++ b/bsnes/Makefile
+@@ -11,8 +11,8 @@
+ # compiler
+ c       := $(compiler) -std=gnu99
+ cpp     := $(subst cc,++,$(compiler)) -std=gnu++0x
+-flags   := -I. -O3 -fomit-frame-pointer
+-link    :=
++flags   := -I. $(CFLAGS) $(CPPFLAGS)
++link    := $(LDFLAGS)
+ objects := libco
+ 
+ # profile-guided optimization mode
+@@ -28,7 +28,7 @@
+ 
+ # platform
+ ifeq ($(platform),x)
+-  link += -s -ldl -lX11 -lXext
++  link += -ldl -lX11 -lXext
+ else ifeq ($(platform),osx)
+ else ifeq ($(platform),win)
+   link += $(if $(findstring console,$(options)),-mconsole,-mwindows)
+--- a/snespurify/cc-gtk.sh
++++ b/snespurify/cc-gtk.sh
+@@ -1,4 +1,4 @@
+-g++ -std=gnu++0x -I. -O3 -fomit-frame-pointer -c phoenix/phoenix.cpp `pkg-config --cflags gtk+-2.0` -DPHOENIX_GTK
+-g++ -std=gnu++0x -I. -O3 -fomit-frame-pointer -c snespurify.cpp
+-g++ -s -o snespurify-gtk snespurify.o phoenix.o `pkg-config --libs gtk+-2.0` -lX11
++g++ -std=gnu++0x -I. $CFLAGS $CPPFLAGS -c phoenix/phoenix.cpp `pkg-config --cflags gtk+-2.0` -DPHOENIX_GTK
++g++ -std=gnu++0x -I. $CFLAGS $CPPFLAGS -c snespurify.cpp
++g++ $LDFLAGS -o snespurify-gtk snespurify.o phoenix.o `pkg-config --libs gtk+-2.0` -lX11
+ rm *.o
+--- a/snesfilter/Makefile
++++ b/snesfilter/Makefile
+@@ -2,8 +2,8 @@
+ 
+ c       := $(compiler) -std=gnu99
+ cpp     := $(subst cc,++,$(compiler)) -std=gnu++0x
+-flags   := -fPIC -I. -Iobj -O3 -fomit-frame-pointer
+-link    := -s
++flags   := -fPIC -I. -Iobj $(CFLAGS) $(CPPFLAGS)
++link    := $(LDFLAGS)
+ objects :=
+ 
+ ifeq ($(platform),x)

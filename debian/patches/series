@@ -3,5 +3,5 @@ build-snespurify-with-newest-g++.patch
 misc-makefile-changes.patch
 detect-non-linux-archs.patch
 snespurify-dont-crash-on-bad-zip-files.patch
-reduce-optimization.patch
+use-dpkg-buildflags.patch
 detect-endianness.patch

@@ -8,17 +8,6 @@ Description: Various changes to the upstream makefiles
 
 Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
 
---- a/bsnes/Makefile
-+++ b/bsnes/Makefile
-@@ -28,7 +28,7 @@
- 
- # platform
- ifeq ($(platform),x)
--  link += -s -ldl -lX11 -lXext
-+  link += -ldl -lX11 -lXext
- else ifeq ($(platform),osx)
- else ifeq ($(platform),win)
-   link += $(if $(findstring console,$(options)),-mconsole,-mwindows)
 --- a/bsnes/ui/Makefile
 +++ b/bsnes/ui/Makefile
 @@ -11,8 +11,12 @@

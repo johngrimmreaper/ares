@@ -1,5 +1,22 @@
 #!/usr/bin/make -f
 
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+CFLAGS += -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
+-falign-labels -fcaller-saves -fcrossjumping -fcse-follow-jumps \
+-fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize \
+-fexpensive-optimizations -fgcse -fgcse-lm -finline-small-functions \
+-findirect-inlining -fipa-sra -foptimize-sibling-calls -fpartial-inlining \
+-fpeephole2 -fregmove -freorder-blocks -freorder-functions \
+-frerun-cse-after-loop -fsched-interblock -fsched-spec -fschedule-insns \
+-fschedule-insns2 -fstrict-aliasing -fstrict-overflow -ftree-switch-conversion \
+-ftree-pre -ftree-vrp -finline-functions -funswitch-loops -fpredictive-commoning \
+-fgcse-after-reload -fipa-cp-clone -fomit-frame-pointer
+# With gcc-4.6 4.6.1-15 on Debian unstable i386-kfreebsd something in -O2
+# that can't be controlled by a flag causes problems with the bsnes GUI.
+# The bsnes GUI doesn't show up at all, snespurify-gtk crashes all the time.
+# Using -O1 and enabling all additional flags from -O3 works fine.
+
 %:
 	dh $@
 
