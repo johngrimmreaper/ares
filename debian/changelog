@@ -3,9 +3,10 @@ bsnes (0.086-1) unstable; urgency=low
   * New upstream release.
   * Include laevateinn, the bsnes debugger.
   * Add patch to fix build of bsnes-performance.
+  * Change to debhelper compat level 9.
   * Enable hardening buildflags via dpkg-buildflags.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Thu, 01 Mar 2012 22:36:55 +0100
+ -- Tobias Hansen <tobias.han@gmx.de>  Fri, 02 Mar 2012 00:03:56 +0100
 
 bsnes (0.085-1) unstable; urgency=low
 
