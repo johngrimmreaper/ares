@@ -1,2 +1,4 @@
+debian/laevateinn.png usr/share/pixmaps
+debian/laevateinn.xpm usr/share/pixmaps
 bsnes/out/laevateinn usr/games
 debian/laevateinn.desktop usr/share/applications
