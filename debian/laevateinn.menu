@@ -1,0 +1,5 @@
+?package(bsnes): needs="X11" \
+                 section="Games/Tools" \
+                 title="laevateinn" \
+                 command="/usr/games/laevateinn" \
+                 icon="/usr/share/pixmaps/bsnes.xpm"

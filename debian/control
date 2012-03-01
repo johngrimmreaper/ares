@@ -21,6 +21,7 @@ DM-Upload-Allowed: yes
 Package: bsnes
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: laevateinn
 Description: Accurate SNES/SuperFamicom emulator
  bsnes is an emulator that focuses on accuracy, debugging functionality, and
  clean code. bsnes does not include speed and game-specific hacks for
@@ -34,5 +35,13 @@ Description: Accurate SNES/SuperFamicom emulator
  Although not as polished as the SNES emulation (yet), there is also support
  for NES, Gameboy and Gameboy Color games.
  .
- This package also contains the debugger laevateinn and snespurify, a tool
- for preparing SNES ROMs for usage with bsnes.
+ This package also contains snespurify, a tool for preparing SNES ROMs for
+ usage with bsnes.
+
+Package: laevateinn
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: bsnes
+Description: bsnes SNES/SuperFamicom debugger
+ laevateinn is a debugger for SNES/SuperFamicom games based on the bsnes 
+ emulator. It is intended for developers creating or modifying SNES games.
