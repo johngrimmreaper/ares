@@ -37,7 +37,7 @@ override_dh_auto_build:
 	make -Cbsnes clean
 	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=performance name=bsnes-performance
 	make -Cbsnes clean
-	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk ui=ui-debugger
+	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk target=debugger
 	dh_auto_build -Dsnesfilter -- compiler=gcc
 	cd snespurify && chmod 755 cc-gtk.sh && ./cc-gtk.sh
 	chmod 644 snesshader/*.OpenGL.shader
