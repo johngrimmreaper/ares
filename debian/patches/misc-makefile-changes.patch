@@ -8,8 +8,8 @@ Description: Various changes to the upstream makefiles
 
 Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
 
---- a/bsnes/ui/Makefile
-+++ b/bsnes/ui/Makefile
+--- a/bsnes/target-ui/Makefile
++++ b/bsnes/target-ui/Makefile
 @@ -11,8 +11,12 @@
  # platform
  ifeq ($(platform),x)
