@@ -1,3 +1,9 @@
+bsnes (0.087-2) unstable; urgency=low
+
+  * Use OpenAL for laevateinns audio on non-Linux archs.
+
+ -- Tobias Hansen <tobias.han@gmx.de>  Sun, 11 Mar 2012 18:33:27 +0100
+
 bsnes (0.087-1) unstable; urgency=low
 
   * New upstream release.
