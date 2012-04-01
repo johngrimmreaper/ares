@@ -1,8 +1,9 @@
 bsnes (0.087-2) unstable; urgency=low
 
-  * Use OpenAL for laevateinns audio on non-Linux archs.
+  * debian/patches/misc-makefile-changes.patch:
+    - Changed. Use OpenAL for laevateinns audio on non-Linux archs.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Sun, 11 Mar 2012 18:33:27 +0100
+ -- Tobias Hansen <tobias.han@gmx.de>  Sun, 01 Apr 2012 13:49:52 +0200
 
 bsnes (0.087-1) unstable; urgency=low
 
@@ -13,10 +14,30 @@ bsnes (0.087-1) unstable; urgency=low
 bsnes (0.086-1) unstable; urgency=low
 
   * New upstream release.
-  * Include laevateinn, the bsnes debugger.
-  * Add patch to fix build of bsnes-performance.
-  * Change to debhelper compat level 9.
-  * Enable hardening buildflags via dpkg-buildflags.
+  * Include laevateinn, the bsnes debugger:
+    - New package laetvateinn.
+    - Create debian/laevateinn.6, debian/laevateinn.desktop,
+      debian/laevateinn.menu, debian/laevateinn.xpm,
+      and debian/laevateinn.png.
+  * debian/bsnes.6:
+    - Reference laevateinn(6).
+  * Add Suggests: laevateinn to bsnes package.
+  * debian/patches/declare-functions-in-smp-hpp.patch:
+    - Added. Needed to fix FTBFS of bsnes-performance.
+  * debian/patches/use-dpkg-buildflags.patch:
+    - Added. Makefiles have to be modified to support CFLAGS.
+  * debian/patches/reduce-optimization.patch:
+    - Removed. With dpkg-buildflags, the optimization flags
+      can now be set in debian/rules. 
+  * debian/patches/misc-makefile-changes.patch:
+    - Updated to address upstream changes.
+  * Adopt new standards:
+    - Standards-Version 3.9.3
+    - debhelper compat level 9
+    - copyright format 1.0
+  * Enable (default) hardening buildflags via dpkg-buildflags.
+    No optional ones for now, because they could impact performance,
+    which is crucial for bsnes.
 
  -- Tobias Hansen <tobias.han@gmx.de>  Fri, 02 Mar 2012 00:03:56 +0100
 
