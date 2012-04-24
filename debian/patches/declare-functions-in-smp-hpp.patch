@@ -3,7 +3,7 @@ Origin: http://board.byuu.org/viewtopic.php?p=55276#p55276
 
 --- a/bsnes/snes/alt/smp/smp.hpp
 +++ b/bsnes/snes/alt/smp/smp.hpp
-@@ -21,6 +21,8 @@
+@@ -20,6 +20,8 @@
    SMP();
    ~SMP();
  

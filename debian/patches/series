@@ -1,5 +1,3 @@
-declare-functions-in-smp-hpp.patch
-build-snespurify-with-newest-g++.patch
 misc-makefile-changes.patch
 detect-non-linux-archs.patch
 snespurify-dont-crash-on-bad-zip-files.patch

@@ -1,10 +1,10 @@
 Description: Add checks to prevent crashing of snespurify when scanning broken zip files.
 Origin: http://board.byuu.org/viewtopic.php?p=44755#p44755
 
---- a/snespurify/nall/zip.hpp
-+++ b/snespurify/nall/zip.hpp
-@@ -39,7 +39,7 @@
-     const uint8_t *footer = data + size - 22;
+--- a/purify/nall/zip.hpp
++++ b/purify/nall/zip.hpp
+@@ -47,7 +47,7 @@
+     }
      const uint8_t *directory = data + read(footer + 16, 4);
  
 -    while(true) {
@@ -12,7 +12,7 @@ Origin: http://board.byuu.org/viewtopic.php?p=44755#p44755
        unsigned signature = read(directory + 0, 4);
        if(signature != 0x02014b50) break;
  
-@@ -48,10 +48,12 @@
+@@ -56,10 +56,12 @@
        file.crc32 = read(directory + 16, 4);
        file.csize = read(directory + 20, 4);
        file.size  = read(directory + 24, 4);
@@ -25,7 +25,7 @@ Origin: http://board.byuu.org/viewtopic.php?p=44755#p44755
  
        char *filename = new char[namelength + 1];
        memcpy(filename, directory + 46, namelength);
-@@ -60,9 +62,11 @@
+@@ -68,9 +70,11 @@
        delete[] filename;
  
        unsigned offset = read(directory + 42, 4);

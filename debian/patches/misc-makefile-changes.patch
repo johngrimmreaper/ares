@@ -1,16 +1,12 @@
 Description: Various changes to the upstream makefiles
 
-* Don't strip binaries in Makefile.
-* Install in /usr/games, not /usr/bin.
-* Install cheats.xml into /usr/share/games/bsnes/, not ~/.config/bsnes.
-* Name bsnes.png and bsnes.desktop explicitly.
 * Include ALSA audio backend only on Linux.
 
 Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
 
 --- a/bsnes/target-ui/Makefile
 +++ b/bsnes/target-ui/Makefile
-@@ -11,8 +11,12 @@
+@@ -15,8 +15,12 @@
  # platform
  ifeq ($(platform),x)
    ruby := video.glx video.xv video.sdl
@@ -24,26 +20,9 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
  else ifeq ($(platform),osx)
    ruby :=
    ruby += audio.openal
-@@ -66,12 +70,10 @@
- 
- install:
- ifeq ($(platform),x)
--	install -D -m 755 out/$(name) $(DESTDIR)$(prefix)/bin/$(name)
--	mkdir -p ~/.config/$(name)
--	install -D -m 644 data/$(name).png $(DESTDIR)$(prefix)/share/pixmaps/$(name).png
--	install -D -m 644 data/$(name).desktop $(DESTDIR)$(prefix)/share/applications/$(name).desktop
--	cp data/cheats.xml ~/.config/$(name)/cheats.xml
--	chmod 777 ~/.config/$(name) ~/.config/$(name)/cheats.xml
-+	install -D -m 755 out/$(name) $(DESTDIR)$(prefix)/games/$(name)
-+	install -D -m 644 data/bsnes.png $(DESTDIR)$(prefix)/share/pixmaps/bsnes.png
-+	install -D -m 644 data/bsnes.desktop $(DESTDIR)$(prefix)/share/applications/bsnes.desktop
-+	install -D -m 644 data/cheats.xml $(DESTDIR)$(prefix)/share/games/bsnes/cheats.xml
- endif
- 
- uninstall:
 --- a/bsnes/target-debugger/Makefile
 +++ b/bsnes/target-debugger/Makefile
-@@ -10,7 +10,11 @@
+@@ -13,7 +13,11 @@
  
  # platform
  ifeq ($(platform),x)
@@ -56,15 +35,3 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
  else ifeq ($(platform),osx)
    ruby := audio.openal
  else ifeq ($(platform),win)
-@@ -66,11 +70,8 @@
- install:
- ifeq ($(platform),x)
- 	install -D -m 755 out/$(name) $(DESTDIR)$(prefix)/bin/$(name)
--	mkdir -p ~/.config/$(name)
- #	install -D -m 644 data/$(name).png $(DESTDIR)$(prefix)/share/pixmaps/$(name).png
- #	install -D -m 644 data/$(name).desktop $(DESTDIR)$(prefix)/share/applications/$(name).desktop
--	cp data/cheats.xml ~/.config/$(name)/cheats.xml
--	chmod 777 ~/.config/$(name) ~/.config/$(name)/cheats.xml
- endif
- 
- uninstall:
