@@ -1,6 +1,24 @@
 bsnes (0.088-1) unstable; urgency=low
 
   * New upstream release.
+  * debian/rules:
+    - Don't use the install targets of the makefiles anymore.
+  * debian/patches/misc-makefile-changes.patch:
+    - Removed. Installation is now done in debian/bsnes.install
+      and debian/rules.
+    - Disabling ALSA is now done in
+      debian/patches/disable-alsa-on-non-linux.patch.
+  * debian/patches/disable-alsa-on-non-linux.patch:
+    - Added. This is what is left of
+      debian/patches/misc-makefile-changes.patch.
+  * debian/patches/build-snespurify-with-newest-g++.patch:
+    - Removed. Obsolete since purify uses a makefile now.
+  * debian/patches/use-dpkg-buildflags.patch:
+    - Changed. Cope with purify using a makefile.
+  * debian/patches/detect-endianness.patch
+    debian/patches/detect-non-linux-archs.patch
+    debian/patches/snespurify-dont-crash-on-bad-zip-files.patch:
+    - Changed. Address upstream changes.
 
  -- Tobias Hansen <tobias.han@gmx.de>  Tue, 24 Apr 2012 21:29:57 +0200
 

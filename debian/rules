@@ -23,30 +23,26 @@ CFLAGS += -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
 # Don't use make clean for snesfilter because it creates an error if called
 # without files to delete.
 override_dh_auto_clean:
-	make -Cbsnes clean
+	$(MAKE) -Cbsnes clean
 	rm -rf bsnes/obj bsnes/out
 	rm -rf snesfilter/out
-	rm -f snespurify/snespurify-gtk
-	chmod 644 snespurify/cc-gtk.sh
+	$(MAKE) -Cpurify clean
+	rm -f purify/purify
 
 override_dh_auto_build:
 	mkdir -p bsnes/obj bsnes/out snesfilter/out
 	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=compatibility name=bsnes-compatibility
-	make -Cbsnes clean
+	$(MAKE) -Cbsnes clean
 	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=accuracy name=bsnes-accuracy
-	make -Cbsnes clean
+	$(MAKE) -Cbsnes clean
 	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=performance name=bsnes-performance
-	make -Cbsnes clean
+	$(MAKE) -Cbsnes clean
 	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk target=debugger
 	dh_auto_build -Dsnesfilter -- compiler=gcc
-	cd snespurify && chmod 755 cc-gtk.sh && ./cc-gtk.sh
+	dh_auto_build -Dpurify -- compiler=gcc phoenix=gtk
 	chmod 644 snesshader/*.OpenGL.shader
 
 override_dh_auto_install:
-	install -D -m 755 bsnes/out/bsnes-compatibility debian/bsnes/usr/games/bsnes-compatibility
-	install -D -m 755 bsnes/out/bsnes-accuracy debian/bsnes/usr/games/bsnes-accuracy
-	install -D -m 755 bsnes/out/bsnes-performance debian/bsnes/usr/games/bsnes-performance
-	install -D -m 755 bsnes/out/laevateinn debian/bsnes/usr/games/laevateinn
 	install -D -m 644 bsnes/data/bsnes.png debian/bsnes/usr/share/pixmaps/bsnes.png
 	install -D -m 644 bsnes/data/bsnes.desktop debian/bsnes/usr/share/applications/bsnes.desktop
 	install -D -m 644 bsnes/data/cheats.xml debian/bsnes/usr/share/games/bsnes/cheats.xml
