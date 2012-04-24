@@ -1,7 +1,4 @@
-Description: Various changes to the upstream makefiles
-
-* Include ALSA audio backend only on Linux.
-
+Description: Include ALSA audio backend only on Linux.
 Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
 
 --- a/bsnes/target-ui/Makefile
