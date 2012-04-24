@@ -6,6 +6,6 @@
 
 ?package(bsnes): needs="X11" \
                  section="Games/Tools" \
-                 title="snespurify" \
-                 command="/usr/games/snespurify-gtk" \
+                 title="bsnes-purify" \
+                 command="/usr/games/bsnes-purify" \
                  icon="/usr/share/pixmaps/bsnes.xpm"

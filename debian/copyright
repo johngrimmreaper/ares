@@ -22,7 +22,7 @@ License: ISC
 
 Files: bsnes/nall/inflate.hpp
        snesfilter/nall/inflate.hpp
-       snespurify/nall/inflate.hpp
+       purify/nall/inflate.hpp
 Copyright: Mark Adler, byuu
 License: Zlib
 

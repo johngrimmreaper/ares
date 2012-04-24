@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=snespurify
+Name=bsnes-purify
 Comment=Tool for resolving problems with SNES ROMs
-Exec=snespurify-gtk
+Exec=bsnes-purify
 Icon=bsnes
 Terminal=false
 Type=Application

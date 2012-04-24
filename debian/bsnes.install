@@ -5,5 +5,4 @@ debian/bsnes.xpm usr/share/pixmaps
 debian/startscript/bsnes usr/games
 snesshader/*.OpenGL.shader usr/share/games/bsnes/shaders
 snesfilter/out/*.filter usr/lib/games/bsnes/filters
-purify/purify usr/games
-debian/snespurify.desktop usr/share/applications
+debian/bsnes-purify.desktop usr/share/applications

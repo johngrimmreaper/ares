@@ -46,3 +46,4 @@ override_dh_auto_install:
 	install -D -m 644 bsnes/data/bsnes.png debian/bsnes/usr/share/pixmaps/bsnes.png
 	install -D -m 644 bsnes/data/bsnes.desktop debian/bsnes/usr/share/applications/bsnes.desktop
 	install -D -m 644 bsnes/data/cheats.xml debian/bsnes/usr/share/games/bsnes/cheats.xml
+	install -D -m 755 purify/purify debian/bsnes/usr/games/bsnes-purify
