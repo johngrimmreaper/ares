@@ -3,13 +3,13 @@ Upstream-Name: bsnes
 Source: http://byuu.org/bsnes/
 
 Files: *
-Copyright: 2004-2011 byuu, Nach, blargg, krom, BearOso, RedDwarf, OV2, vladitx, Andreas Naive, Ryphecha
+Copyright: 2004-2012 byuu, Nach, blargg, krom, BearOso, RedDwarf, OV2, vladitx, Andreas Naive, Ryphecha
 License: GPL-3
 Comment:
  The license is stated in the file bsnes/snes/snes.hpp.
 
 Files: debian/*
-Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>, 2011 Tobias Hansen <tobias.han@gmx.de>
+Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>, 2011-2012 Tobias Hansen <tobias.han@gmx.de>
 License: GPL-2
 
 Files: bsnes/snes/alt/dsp/*
