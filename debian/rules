@@ -23,10 +23,10 @@ CFLAGS += -O1 -fthread-jumps -falign-functions  -falign-jumps -falign-loops \
 # Don't use make clean for snesfilter because it creates an error if called
 # without files to delete.
 override_dh_auto_clean:
-	$(MAKE) -Cbsnes clean
+	$(MAKE) --directory=bsnes clean
 	rm -rf bsnes/obj bsnes/out
 	rm -rf snesfilter/out
-	$(MAKE) -Cpurify clean
+	$(MAKE) --directory=purify clean
 	rm -f purify/purify
 
 override_dh_auto_build:
