@@ -33,4 +33,19 @@ for filter in $(ls /usr/lib/games/bsnes/filters/*.filter)
     ln -s -f $filter $HOME/.config/bsnes/filters
 done
 
+find /usr/share/games/bsnes -type d -regex ".*\.s[fy][cs]" | while read sdir
+  do
+    if test ! -d "$HOME/.config/bsnes/${sdir##*/}"
+      then
+        mkdir "$HOME/.config/bsnes/${sdir##*/}"
+    fi
+    for sfile in $(ls "$sdir")
+      do
+        if test ! -f "$HOME/.config/bsnes/${sdir##*/}/${sfile##*/}"
+          then
+            ln -s "$sdir/$sfile" "$HOME/.config/bsnes/${sdir##*/}"
+        fi
+    done
+done
+
 bsnes-bin "$@"
