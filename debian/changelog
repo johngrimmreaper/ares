@@ -1,8 +1,24 @@
 bsnes (0.088-1) unstable; urgency=low
 
+  [Gregor Herrmann]
+  * Fix "FTBFS: ./ruby/audio/alsa.cpp:4:28: fatal error:
+    alsa/asoundlib.h: No such file or directory":
+    build-depend on libasound2-dev (linux) (Closes: #669447)
+
+  [Tobias Hansen]
   * New upstream release.
+    - Adds Game Boy Advance support.
+    - Compiles with gcc 4.7. (Closes: #667122)
   * debian/rules:
     - Don't use the install targets of the makefiles anymore.
+    - Check DEB_BUILD_OPTIONS for 'testbuild', build only
+      bsnes-compatibility when found to allow for fast test builds.
+  * Install new system folders to /usr/share/games/bsnes.
+    - Copy folders and symlink to files in debian/startscript/bsnes. 
+  * debian/bsnes.6:
+    - Mention Game Boy Advance support.
+    - Mention system folders and bios image required for GBA emulation.
+  * Rename snespurify to bsnes-purify.
   * debian/patches/misc-makefile-changes.patch:
     - Removed. Installation is now done in debian/bsnes.install
       and debian/rules.
@@ -19,8 +35,11 @@ bsnes (0.088-1) unstable; urgency=low
     debian/patches/detect-non-linux-archs.patch
     debian/patches/snespurify-dont-crash-on-bad-zip-files.patch:
     - Changed. Address upstream changes.
+  * debian/patches/declare-functions-in-smp-hpp.patch:
+    - Removed. FTBFS was fixed upstream.
+  * debian/watch: look for .tar.xz file.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Tue, 24 Apr 2012 21:29:57 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Fri, 04 May 2012 23:28:39 +0200
 
 bsnes (0.087-1) unstable; urgency=low
 

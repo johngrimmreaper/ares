@@ -10,6 +10,7 @@ Build-Depends: debhelper (>= 9),
                libopenal-dev,
                libao-dev,
                libxv-dev,
+               libasound2-dev [linux-any],
                gcc (>= 4.6)
 Standards-Version: 3.9.3
 Vcs-Git: git://git.debian.org/git/pkg-games/bsnes.git
