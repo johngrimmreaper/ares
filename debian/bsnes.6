@@ -20,7 +20,7 @@ emulator to document how the underlying hardware works. It is thus very useful
 for development and research. And while it can be used for general purpose
 gaming, it will require significantly more powerful hardware than a typical
 emulator. Although not as polished as the SNES emulation (yet), there is also
-support for NES, Gameboy and Gameboy Color games.
+support for NES, Gameboy, Gameboy Color and Gameboy Advance games.
 
 .SH Supported Filetypes
 
@@ -36,8 +36,8 @@ Sufami Turbo cartridge \-\- ROM image.
 .B SRM, PSR:
 non\-volatile memory, often used to save game data \-\- (P)SRAM image.
 
-.B GB/GBC:
-Gameboy (Color) cartridge \-\- ROM image.
+.B GB/GBC/GBA:
+Gameboy (Color/Advance) cartridge \-\- ROM image.
 
 .B NES/FC:
 NES cartridge \-\- ROM image.
@@ -59,6 +59,10 @@ internet multiplay is not currently supported nor planned.
 bsnes comes with three profiles, where "accuracy" and "compatibility" are focused on accuracy in emulating the SNES (compatibility makes minor tradeoffs in favor of speed) and "performance" is focused on using less resources. Which profile to use can be set with:
 
 # update\-alternatives \-\-config bsnes\-bin
+
+.SH SYSTEM FOLDERS
+
+bsnes does not only need ROMs containing games, but also data that was originally stored in chips belonging to the consoles. The files containing this data are organized in system folders. The system folders contain system info and firmware/BIOS images and are located in "$HOME/.config/bsnes". For example, to play GBA games, a GBA bios image is required. The file has to be named "bios.rom" and placed inside the "Game Boy Advance.sys" folder in "$HOME/.config/bsnes". The checksum of the file has to match the one given in "/usr/share/bsnes/Game Boy Advance.sys/manifest.xml".
 
 .SH SEE ALSO
 
