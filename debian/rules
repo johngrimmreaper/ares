@@ -26,8 +26,6 @@ override_dh_auto_clean:
 	$(MAKE) --directory=bsnes clean
 	rm -rf bsnes/obj bsnes/out
 	rm -rf snesfilter/out
-	$(MAKE) --directory=purify clean
-	rm -f purify/purify
 
 override_dh_auto_build:
 	mkdir -p bsnes/obj bsnes/out snesfilter/out
@@ -46,14 +44,12 @@ else
 	cp bsnes/out/bsnes-compatibility bsnes/out/laevateinn-bin
 endif
 	dh_auto_build -Dsnesfilter -- compiler=gcc
-	dh_auto_build -Dpurify -- compiler=gcc phoenix=gtk
 	chmod 644 snesshader/*.OpenGL.shader
 
 override_dh_auto_install:
 	install -D -m 644 bsnes/data/bsnes.png debian/bsnes/usr/share/pixmaps/bsnes.png
 	install -D -m 644 bsnes/data/bsnes.desktop debian/bsnes/usr/share/applications/bsnes.desktop
 	install -D -m 644 bsnes/data/cheats.xml debian/bsnes/usr/share/games/bsnes/cheats.xml
-	install -D -m 755 purify/purify debian/bsnes/usr/games/bsnes-purify
 	cp -R bsnes/profile/* debian/bsnes/usr/share/games/bsnes
 	chmod 644 debian/bsnes/usr/share/games/bsnes/*/*
 	mkdir -p debian/laevateinn/usr/share/games/laevateinn
