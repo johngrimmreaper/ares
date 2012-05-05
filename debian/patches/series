@@ -3,3 +3,4 @@ detect-non-linux-archs.patch
 snespurify-dont-crash-on-bad-zip-files.patch
 use-dpkg-buildflags.patch
 detect-endianness.patch
+remove-march=native-build-flag.patch

@@ -1,3 +1,11 @@
+bsnes (0.088-2) unstable; urgency=low
+
+  * debian/patches/remove-march=native-build-flag.patch:
+    - Added. This build flag causes binaries that don't work on all processors
+      and is not supported on all architectures.
+
+ -- Tobias Hansen <tobias.han@gmx.de>  Sat, 05 May 2012 13:10:27 +0200
+
 bsnes (0.088-1) unstable; urgency=low
 
   [Gregor Herrmann]
