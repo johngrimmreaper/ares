@@ -8,7 +8,9 @@ bsnes (0.088-1) unstable; urgency=low
   [Tobias Hansen]
   * New upstream release.
     - Adds Game Boy Advance support.
+    - Removes snespurify sources.
     - Compiles with gcc 4.7. (Closes: #667122)
+  * snespurify removed from package bsnes.
   * debian/rules:
     - Don't use the install targets of the makefiles anymore.
     - Check DEB_BUILD_OPTIONS for 'testbuild', build only
@@ -45,7 +47,7 @@ bsnes (0.088-1) unstable; urgency=low
     - Removed. FTBFS was fixed upstream.
   * debian/watch: look for .tar.xz file.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Sat, 05 May 2012 10:42:47 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Sat, 05 May 2012 11:00:20 +0200
 
 bsnes (0.087-1) unstable; urgency=low
 
