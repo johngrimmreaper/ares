@@ -3,9 +3,3 @@
                  title="bsnes" \
                  command="/usr/games/bsnes" \
                  icon="/usr/share/pixmaps/bsnes.xpm"
-
-?package(bsnes): needs="X11" \
-                 section="Games/Tools" \
-                 title="bsnes-purify" \
-                 command="/usr/games/bsnes-purify" \
-                 icon="/usr/share/pixmaps/bsnes.xpm"

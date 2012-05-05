@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=bsnes-purify
-Comment=Tool for resolving problems with SNES ROMs
-Exec=bsnes-purify
-Icon=bsnes
-Terminal=false
-Type=Application
-Categories=Game;FileTools;
