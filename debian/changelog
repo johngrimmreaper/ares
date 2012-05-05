@@ -13,8 +13,12 @@ bsnes (0.088-1) unstable; urgency=low
     - Don't use the install targets of the makefiles anymore.
     - Check DEB_BUILD_OPTIONS for 'testbuild', build only
       bsnes-compatibility when found to allow for fast test builds.
-  * Install new system folders to /usr/share/games/bsnes.
-    - Copy folders and symlink to files in debian/startscript/bsnes. 
+  * Install new system folders to /usr/share/games/bsnes and 
+    /usr/share/games/laevateinn.
+    - Copy folders and symlink to files in debian/startscript/bsnes.
+    - Rename laevateinn binary to laevateinn-bin, create wrapper script
+      laevateinn to copy folders and symlink to files also for laevateinn.
+    - Create man page for laevateinn-bin. 
   * debian/bsnes.6:
     - Mention Game Boy Advance support.
     - Mention system folders and bios image required for GBA emulation.
@@ -39,7 +43,7 @@ bsnes (0.088-1) unstable; urgency=low
     - Removed. FTBFS was fixed upstream.
   * debian/watch: look for .tar.xz file.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Fri, 04 May 2012 23:28:39 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Sat, 05 May 2012 09:25:47 +0200
 
 bsnes (0.087-1) unstable; urgency=low
 

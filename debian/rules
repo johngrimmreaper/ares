@@ -39,11 +39,11 @@ ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) -Cbsnes clean
 	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk profile=performance name=bsnes-performance
 	$(MAKE) -Cbsnes clean
-	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk target=debugger
+	dh_auto_build -Dbsnes -- compiler=gcc phoenix=gtk target=debugger name=laevateinn-bin
 else
 	cp bsnes/out/bsnes-compatibility bsnes/out/bsnes-accuracy
 	cp bsnes/out/bsnes-compatibility bsnes/out/bsnes-performance
-	cp bsnes/out/bsnes-compatibility bsnes/out/laevateinn
+	cp bsnes/out/bsnes-compatibility bsnes/out/laevateinn-bin
 endif
 	dh_auto_build -Dsnesfilter -- compiler=gcc
 	dh_auto_build -Dpurify -- compiler=gcc phoenix=gtk
@@ -56,3 +56,6 @@ override_dh_auto_install:
 	install -D -m 755 purify/purify debian/bsnes/usr/games/bsnes-purify
 	cp -R bsnes/profile/* debian/bsnes/usr/share/games/bsnes
 	chmod 644 debian/bsnes/usr/share/games/bsnes/*/*
+	mkdir -p debian/laevateinn/usr/share/games/laevateinn
+	cp -R bsnes/profile/* debian/laevateinn/usr/share/games/laevateinn
+	chmod 644 debian/laevateinn/usr/share/games/laevateinn/*/*
