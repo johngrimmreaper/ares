@@ -22,6 +22,8 @@ bsnes (0.088-1) unstable; urgency=low
   * debian/bsnes.6:
     - Mention Game Boy Advance support.
     - Mention system folders and bios image required for GBA emulation.
+    - Add note that files with wrong extensions or copier headers can't be
+      opened.
   * Rename snespurify to bsnes-purify.
   * debian/patches/misc-makefile-changes.patch:
     - Removed. Installation is now done in debian/bsnes.install
@@ -43,7 +45,7 @@ bsnes (0.088-1) unstable; urgency=low
     - Removed. FTBFS was fixed upstream.
   * debian/watch: look for .tar.xz file.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Sat, 05 May 2012 09:25:47 +0200
+ -- Tobias Hansen <tobias.han@gmx.de>  Sat, 05 May 2012 10:42:47 +0200
 
 bsnes (0.087-1) unstable; urgency=low
 
