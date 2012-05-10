@@ -1,0 +1,49 @@
+Description: Purify: Fix header checks and input handling
+ * Add parantheses to fix checks for headers.
+ * Accept folder names entered without trailing slash.
+Author: Tobias Hansen <tobias.han@gmx.de>
+
+--- a/purify/purify.cpp
++++ b/purify/purify.cpp
+@@ -88,7 +88,7 @@
+ //<superFamicom>
+ 
+ void Application::scanSuperFamicom(const string &filename, uint8_t *data, unsigned size) {
+-  if(size & 32767 == 512) size -= 512, data += 512;
++  if((size & 32767) == 512) size -= 512, data += 512;
+ 
+   string sha256 = nall::sha256(data, size);
+   database.print(sha256, "{}");
+@@ -97,7 +97,7 @@
+ }
+ 
+ void Application::outputSuperFamicom(const string &filename, uint8_t *data, unsigned size) {
+-  if(size & 32767 == 512) size -= 512, data += 512;
++  if((size & 32767) == 512) size -= 512, data += 512;
+ 
+   string markup = SuperFamicomCartridge(data, size).markup;
+   string path = {target, nall::basename(filename), ".sfc/"};
+@@ -238,15 +238,20 @@
+ int main(int argc, char **argv) {
+   Application *application = new Application;
+ 
++  string source = argv[2];
++  if(!source.endswith("/")) source.append("/");
++
+   if(argc == 4 && cstring{argv[1]} == "scan") {
+-    application->source = argv[2];
++    application->source = source;
+     application->target = argv[3];
+     application->scanDirectory();
+   }
+ 
+   else if(argc == 4 && cstring{argv[1]} == "output") {
+-    application->source = argv[2];
+-    application->target = argv[3];
++    application->source = source;
++    string target = argv[3];
++    if(!target.endswith("/")) target.append("/");
++    application->target = target;
+     application->outputDirectory();
+   }
+ 
