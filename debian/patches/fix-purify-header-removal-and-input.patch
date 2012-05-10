@@ -5,6 +5,24 @@ Author: Tobias Hansen <tobias.han@gmx.de>
 
 --- a/purify/purify.cpp
 +++ b/purify/purify.cpp
+@@ -60,7 +60,7 @@
+ //<famicom>
+ 
+ void Application::scanFamicom(const string &filename, uint8_t *data, unsigned size) {
+-  if(size & 255 != 16) return print("* ", filename, " missing iNES header\n");
++  if((size & 255) != 16) return print("* ", filename, " missing iNES header\n");
+ 
+   string sha256 = nall::sha256(data, size);
+   database.print(sha256, "{}");
+@@ -72,7 +72,7 @@
+ }
+ 
+ void Application::outputFamicom(const string &filename, uint8_t *data, unsigned size) {
+-  if(size & 255 != 16) return print("* ", filename, " missing iNES header\n");
++  if((size & 255) != 16) return print("* ", filename, " missing iNES header\n");
+ 
+   string markup = FamicomCartridge(data, size).markup;
+   string path = {target, nall::basename(filename), ".fc/"};
 @@ -88,7 +88,7 @@
  //<superFamicom>
  
