@@ -33,10 +33,10 @@ Description: Accurate SNES/SuperFamicom emulator
  # update-alternatives --config bsnes-bin
  .
  Although not as polished as the SNES emulation (yet), there is also support
- for NES, Gameboy and Gameboy Color games.
+ for NES, Gameboy, Gameboy Color and Gameboy Advance games.
  .
- This package also contains bsnes-purify, a tool for preparing SNES ROMs for
- usage with bsnes.
+ This package also contains bsnes-purify, a command line tool for preparing
+ ROMs for usage with bsnes.
 
 Package: laevateinn
 Architecture: any

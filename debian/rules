@@ -46,7 +46,7 @@ else
 	cp bsnes/out/bsnes-compatibility bsnes/out/laevateinn-bin
 endif
 	dh_auto_build -Dsnesfilter -- compiler=gcc
-	dh_auto_build -Dpurify -- compiler=gcc phoenix=gtk
+	dh_auto_build -Dpurify -- compiler=gcc
 	chmod 644 snesshader/*.OpenGL.shader
 
 override_dh_auto_install:
