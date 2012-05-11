@@ -1,3 +1,21 @@
+bsnes (0.088-3) unstable; urgency=low
+
+  * Add bsnes-purify to the bsnes package.
+    A command line tool that replaces snespurify and adds:
+    - support for ROMs of other systems than SNES
+    - creates cartridge folders for ROMs (folders for all data
+      belonging to a game - will be mandatory starting from bsnes 0.089)
+  * debian/bsnes-purify.6
+    - Added. Manual page for bsnes-purify.
+  * debian/patches/fix-purify-header-removal-and-input.patch:
+    - Added. Header detection was broken and the tool didn't
+      accept folder names without trailing slash.
+  * debian/changelog:
+    - Remove wrong line "Rename snespurify to bsnes-purify."
+      from 0.088-1 entry.
+
+ -- Tobias Hansen <tobias.han@gmx.de>  Fri, 11 May 2012 13:15:13 +0200
+
 bsnes (0.088-2) unstable; urgency=low
 
   * debian/patches/remove-march=native-build-flag.patch:
@@ -34,7 +52,6 @@ bsnes (0.088-1) unstable; urgency=low
     - Mention system folders and bios image required for GBA emulation.
     - Add note that files with wrong extensions or copier headers can't be
       opened.
-  * Rename snespurify to bsnes-purify.
   * debian/patches/misc-makefile-changes.patch:
     - Removed. Installation is now done in debian/bsnes.install
       and debian/rules.
