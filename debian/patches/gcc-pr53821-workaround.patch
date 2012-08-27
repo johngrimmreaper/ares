@@ -1,0 +1,15 @@
+Description: Work around gcc bug PR c++/53821
+ This bug is present in Wheezys gcc-4.7 4.7.1-2.
+ It is fixed in gcc-4.7 4.7.1-3.
+Author: Tobias Hansen <tobias.han@gmx.de>
+
+--- a/bsnes/nall/sort.hpp
++++ b/bsnes/nall/sort.hpp
+@@ -69,6 +69,7 @@
+   }
+ 
+   template<typename T>
++  inline
+   void sort(T list[], unsigned size) {
+     return sort(list, size, [](const T &l, const T &r) { return l < r; });
+   }
