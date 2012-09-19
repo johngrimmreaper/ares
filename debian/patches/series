@@ -5,4 +5,3 @@ use-dpkg-buildflags.patch
 detect-endianness.patch
 remove-march=native-build-flag.patch
 fix-purify-header-removal-and-input.patch
-gcc-pr53821-workaround.patch
