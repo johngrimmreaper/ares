@@ -5,8 +5,10 @@ bsnes (0.088-5) unstable; urgency=low
     - Purify also files with uppercase suffix.
   * Add missing epoch to versioned Build-Depends on gcc (Closes: #687197).
   * Remove workaround for g++ bug PR c++/53821, which is now fixed in wheezy.
+  * Change my email address in Uploaders to the debian.org one.
+  * Remove DMUA flag.
 
- -- Tobias Hansen <tobias.han@gmx.de>  Wed, 19 Sep 2012 10:52:02 +0200
+ -- Tobias Hansen <thansen@debian.org>  Sun, 23 Sep 2012 19:57:50 +0200
 
 bsnes (0.088-4) unstable; urgency=low
 
