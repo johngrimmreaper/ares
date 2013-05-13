@@ -1,4 +1,4 @@
-Source: bsnes
+Source: higan
 Section: games
 Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
@@ -13,8 +13,8 @@ Build-Depends: debhelper (>= 9),
                libasound2-dev [linux-any],
                gcc (>= 4:4.6)
 Standards-Version: 3.9.3
-Vcs-Git: git://git.debian.org/git/pkg-games/bsnes.git
-Vcs-Browser: http://git.debian.org/?p=pkg-games/bsnes.git
+Vcs-Git: git://git.debian.org/git/pkg-games/higan.git
+Vcs-Browser: http://git.debian.org/?p=pkg-games/higan.git
 Homepage: http://byuu.org/bsnes/
 
 Package: bsnes
