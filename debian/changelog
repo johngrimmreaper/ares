@@ -1,3 +1,12 @@
+higan (092-1) UNRELEASED; urgency=low
+
+  * New upstream release
+  * Program was renamed to higan.
+    - Rename package.
+    - New packaging git repository
+
+ -- Tobias Hansen <thansen@debian.org>  Tue, 14 May 2013 00:18:11 +0200
+
 bsnes (0.088-5) unstable; urgency=low
 
   * Fix issues with bsnes-purify (Closes: #687034):
