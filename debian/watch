@@ -1,7 +1,3 @@
 version=3
-opts=\
-uversionmangle=s/^/0./,\
-downloadurlmangle=s|.*[?]name=(.*?)&.*|http://bsnes.googlecode.com/files/$1|,\
-filenamemangle=s|[^/]+[?]name=(.*?)&.*|$1| \
-http://code.google.com/p/bsnes/downloads/detail[?]name=bsnes_v([0-9.]+)-source.tar.xz&.*
+http://byuu.org/higan/release/higan_v([0-9.]+)-source.tar.xz
 
