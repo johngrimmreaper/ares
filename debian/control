@@ -12,35 +12,40 @@ Build-Depends: debhelper (>= 9),
                libxv-dev,
                libasound2-dev [linux-any],
                gcc (>= 4:4.6)
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Vcs-Git: git://git.debian.org/git/pkg-games/higan.git
 Vcs-Browser: http://git.debian.org/?p=pkg-games/higan.git
-Homepage: http://byuu.org/bsnes/
+Homepage: http://byuu.org/higan/
 
-Package: bsnes
+Package: higan
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: laevateinn
 Description: Accurate SNES/SuperFamicom emulator
- bsnes is an emulator that focuses on accuracy, debugging functionality, and
- clean code. bsnes does not include speed and game-specific hacks for
+ higan is an emulator that focuses on accuracy, debugging functionality, and
+ clean code. It does not include speed and game-specific hacks for
  compatibility, and as a result the minimum system requirements are very high.
+ higan was formerly known as bsnes.
  .
  There are three profiles that differ in the amount of accuracy and required
  system resources. Which profile to use can be set with:
  .
- # update-alternatives --config bsnes-bin
+ # update-alternatives --config higan-bin
  .
  Although not as polished as the SNES emulation (yet), there is also support
  for NES, Gameboy, Gameboy Color and Gameboy Advance games.
- .
- This package also contains bsnes-purify, a command line tool for preparing
- ROMs for usage with bsnes.
 
 Package: laevateinn
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: bsnes
-Description: bsnes SNES/SuperFamicom debugger
- laevateinn is a debugger for SNES/SuperFamicom games based on the bsnes 
+Recommends: higan
+Description: higan SNES/SuperFamicom debugger
+ laevateinn is a debugger for SNES/SuperFamicom games based on the higan 
  emulator. It is intended for developers creating or modifying SNES games.
+
+Package: bsnes
+Depends: higan, ${misc:Depends}
+Architecture: all
+Section: oldlibs
+Description: transitional dummy package
+ This is a transitional dummy package. It can safely be removed.
