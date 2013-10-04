@@ -1,6 +1,6 @@
 string Ananke::createBsxSatellaviewDatabase(vector<uint8_t> &buffer, Markup::Node &document, const string &manifest) {
   string pathname = {
-    userpath(), "Emulation/BS-X Satellaview/",
+    libraryPath, "BS-X Satellaview/",
     document["release/information/name"].text(),
     " (", document["release/information/region"].text(), ")",
     " (", document["release/information/revision"].text(), ")",
@@ -17,19 +17,21 @@ string Ananke::createBsxSatellaviewDatabase(vector<uint8_t> &buffer, Markup::Nod
   file::write({pathname, "manifest.bml"}, markup);
   file::write({pathname, "program.rom"}, buffer);
 
-  return "";
+  return pathname;
 }
 
 string Ananke::createBsxSatellaviewHeuristic(vector<uint8_t> &buffer) {
   string pathname = {
-    userpath(), "Emulation/BS-X Satellaview/",
+    libraryPath, "BS-X Satellaview/",
     nall::basename(information.name),
-    " (!).bs/"
+    ".bs/"
   };
   directory::create(pathname);
 
   file::write({pathname, "manifest.bml"}, {
-    "cartridge\n"
+    "unverified\n",
+    "\n",
+    "cartridge\n",
     "  rom name=program.rom size=0x", hex(buffer.size()), " type=FlashROM\n",
     "\n",
     "information\n",
@@ -37,7 +39,7 @@ string Ananke::createBsxSatellaviewHeuristic(vector<uint8_t> &buffer) {
   });
   file::write({pathname, "program.rom"}, buffer);
 
-  return "";
+  return pathname;
 }
 
 string Ananke::openBsxSatellaview(vector<uint8_t> &buffer) {
@@ -57,4 +59,14 @@ string Ananke::openBsxSatellaview(vector<uint8_t> &buffer) {
   }
 
   return createBsxSatellaviewHeuristic(buffer);
+}
+
+string Ananke::syncBsxSatellaview(const string &pathname) {
+  auto buffer = file::read({pathname, "program.rom"});
+  if(buffer.size() == 0) return "";
+
+  directory::remove(pathname);
+  information.path = pathname;
+  information.name = notdir(string{pathname}.rtrim<1>("/"));
+  return openBsxSatellaview(buffer);
 }

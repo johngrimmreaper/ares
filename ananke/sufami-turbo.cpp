@@ -8,7 +8,7 @@ void Ananke::copySufamiTurboSaves(const string &pathname) {
 
 string Ananke::createSufamiTurboDatabase(vector<uint8_t> &buffer, Markup::Node &document, const string &manifest) {
   string pathname = {
-    userpath(), "Emulation/Sufami Turbo/",
+    libraryPath, "Sufami Turbo/",
     document["release/information/name"].text(),
     " (", document["release/information/region"].text(), ")",
     " (", document["release/information/revision"].text(), ")",
@@ -26,18 +26,20 @@ string Ananke::createSufamiTurboDatabase(vector<uint8_t> &buffer, Markup::Node &
   file::write({pathname, "program.rom"}, buffer);
   copySufamiTurboSaves(pathname);
 
-  return "";
+  return pathname;
 }
 
 string Ananke::createSufamiTurboHeuristic(vector<uint8_t> &buffer) {
   string pathname = {
-    userpath(), "Emulation/Sufami Turbo/",
+    libraryPath, "Sufami Turbo/",
     nall::basename(information.name),
-    " (!).st/"
+    ".st/"
   };
   directory::create(pathname);
 
   file::write({pathname, "manifest.bml"}, {
+    "unverified\n",
+    "\n",
     "cartridge\n",
     "  rom name=program.rom size=0x", hex(buffer.size()), "\n",
     "  ram name=save.ram size=0x2000\n",
@@ -48,7 +50,7 @@ string Ananke::createSufamiTurboHeuristic(vector<uint8_t> &buffer) {
   file::write({pathname, "program.rom"}, buffer);
   copySufamiTurboSaves(pathname);
 
-  return "";
+  return pathname;
 }
 
 string Ananke::openSufamiTurbo(vector<uint8_t> &buffer) {
@@ -68,4 +70,21 @@ string Ananke::openSufamiTurbo(vector<uint8_t> &buffer) {
   }
 
   return createSufamiTurboHeuristic(buffer);
+}
+
+string Ananke::syncSufamiTurbo(const string &pathname) {
+  auto buffer = file::read({pathname, "program.rom"});
+  if(buffer.size() == 0) return "";
+
+  auto save = file::read({pathname, "save.ram"});
+  if(save.size() == 0) save = file::read({pathname, "save.rwm"});
+
+  directory::remove(pathname);
+  information.path = pathname;
+  information.name = notdir(string{pathname}.rtrim<1>("/"));
+  string outputPath = openSufamiTurbo(buffer);
+
+  if(save.size()) file::write({outputPath, "save.ram"}, save);
+
+  return outputPath;
 }

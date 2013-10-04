@@ -8,14 +8,14 @@ void Ananke::copyFamicomSaves(const string &pathname) {
 
 string Ananke::createFamicomHeuristic(vector<uint8_t> &buffer) {
   string pathname = {
-    userpath(), "Emulation/Famicom/",
+    libraryPath, "Famicom/",
     nall::basename(information.name),
-    " (!).fc/"
+    ".fc/"
   };
   directory::create(pathname);
 
   FamicomCartridge info(buffer.data(), buffer.size());
-  string markup = info.markup();
+  string markup = {"unverified\n\n", info.markup};
   markup.append("\ninformation\n  title: ", nall::basename(information.name), "\n");
   if(!information.manifest.empty()) markup = information.manifest;  //override with embedded beat manifest, if one exists
 
@@ -29,4 +29,11 @@ string Ananke::createFamicomHeuristic(vector<uint8_t> &buffer) {
 
 string Ananke::openFamicom(vector<uint8_t> &buffer) {
   return createFamicomHeuristic(buffer);
+}
+
+//this currently cannot work:
+//game folders discard iNES header required for heuristic detection
+//a games database of all commercial Famicom software will be required
+string Ananke::syncFamicom(const string &pathname) {
+  return "";
 }
