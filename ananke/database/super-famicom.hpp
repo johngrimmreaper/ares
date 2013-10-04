@@ -1,6 +1,6 @@
 string SuperFamicom = R"(
 
-database revision=2013-01-14
+database revision=2013-01-22
 
 release
   cartridge region=NTSC
@@ -164,7 +164,7 @@ release
     map id=rom address=00-1f,80-9f:8000-ffff
     map id=rom address=40-5f,c0-df:0000-ffff
     map id=ram address=20-3f,a0-bf:6000-7fff mask=0xe000
-    bsxslot
+    satellaview
       map id=rom address=20-3f,a0-bf:8000-ffff
       map id=rom address=60-7d,e0-ff:0000-ffff
   information
@@ -185,13 +185,12 @@ release
     rom name=program.rom size=0x40000
     map id=rom address=00-1f,80-9f:8000-ffff mask=0x8000
     sufamiturbo
-      slot id=A
-        map id=rom address=20-3f,a0-bf:8000-ffff mask=0x8000
-        map id=ram address=60-6f,e0-ef:0000-ffff
-      slot id=B
-        map id=rom address=40-5f,c0-df:0000-7fff mask=0x8000
-        map id=rom address=40-5f,c0-df:8000-ffff mask=0x8000
-        map id=ram address=70-7d,f0-ff:0000-ffff
+      map id=rom address=20-3f,a0-bf:8000-ffff mask=0x8000
+      map id=ram address=60-6f,e0-ef:0000-ffff
+    sufamiturbo
+      map id=rom address=40-5f,c0-df:0000-7fff mask=0x8000
+      map id=rom address=40-5f,c0-df:8000-ffff mask=0x8000
+      map id=ram address=70-7d,f0-ff:0000-ffff
   information
     title:    スーファミターボ
     name:     Sufami Turbo
@@ -208,10 +207,10 @@ release
     board type=LJ3M revision=01
     rom name=program.rom size=0x600000
     ram name=save.ram size=0x2000
-    map id=rom address=00-3f:8000-ffff offset=0x400000
-    map id=rom address=40-7d:0000-ffff offset=0x400000
-    map id=rom address=80-bf:8000-ffff offset=0x000000 mask=0xc00000
-    map id=rom address=c0-ff:0000-ffff offset=0x000000 mask=0xc00000
+    map id=rom address=00-3f:8000-ffff base=0x400000
+    map id=rom address=40-7d:0000-ffff base=0x400000
+    map id=rom address=80-bf:8000-ffff mask=0xc00000
+    map id=rom address=c0-ff:0000-ffff mask=0xc00000
     map id=ram address=80-bf:6000-7fff mask=0xe000
   information
     title:    テイルズ オブ ファンタジア
