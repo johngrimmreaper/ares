@@ -1,0 +1,14 @@
+Description: Use the gcc version available.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/nall/Makefile
++++ b/nall/Makefile
+@@ -44,7 +44,7 @@
+     flags := -w -stdlib=libc++
+     link := -lc++ -lobjc
+   else
+-    compiler := g++-4.7
++    compiler := g++
+     flags :=
+     link :=
+   endif
