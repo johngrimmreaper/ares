@@ -2,7 +2,7 @@
 
 set -e
 
-update-alternatives --install /usr/games/higan-bin higan-bin /usr/games/higan-compatibility 70
+update-alternatives --install /usr/games/higan-bin higan-bin /usr/games/higan-balanced 70
 update-alternatives --install /usr/games/higan-bin higan-bin /usr/games/higan-accuracy 40
 update-alternatives --install /usr/games/higan-bin higan-bin /usr/games/higan-performance 40
 

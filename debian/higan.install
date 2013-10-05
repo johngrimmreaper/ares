@@ -1,4 +1,4 @@
-out/higan-compatibility usr/games
+out/higan-balanced usr/games
 out/higan-accuracy usr/games
 out/higan-performance usr/games
 debian/higan.xpm usr/share/pixmaps

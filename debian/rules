@@ -11,7 +11,7 @@ override_dh_auto_clean:
 
 override_dh_auto_build:
 	mkdir -p obj out
-	dh_auto_build -- profile=compatibility name=higan-compatibility
+	dh_auto_build -- profile=balanced name=higan-balanced
 # Allow for building higan only once when testing stuff with the build option testbuild.
 ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) clean
@@ -21,9 +21,9 @@ ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) clean
 	dh_auto_build -- options=debugger name=laevateinn-bin
 else
-	cp out/higan-compatibility out/higan-accuracy
-	cp out/higan-compatibility out/higan-performance
-	cp out/higan-compatibility out/laevateinn-bin
+	cp out/higan-balanced out/higan-accuracy
+	cp out/higan-balanced out/higan-performance
+	cp out/higan-balanced out/laevateinn-bin
 endif
 
 override_dh_auto_install:
