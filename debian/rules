@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@
+	dh $@ --parallel
 
 # We have to clean manually because the Makefile does not support distclean,
 # and does not remove compiled higan binary
@@ -39,3 +39,5 @@ override_dh_auto_install:
 	mkdir -p debian/higan/usr/share/games/higan/Video\ Shaders
 	cp -R shaders/*.shader debian/higan/usr/share/games/higan/Video\ Shaders
 	chmod 644 debian/higan/usr/share/games/higan/Video\ Shaders/*/*
+
+override_dh_auto_test:
