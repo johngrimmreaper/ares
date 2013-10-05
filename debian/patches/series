@@ -4,3 +4,4 @@ use-dpkg-buildflags.patch
 detect-endianness.patch
 remove-march=native-build-flag.patch
 generic-gcc.patch
+change-sharedpath.patch
