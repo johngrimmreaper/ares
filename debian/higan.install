@@ -1,7 +1,5 @@
-bsnes/out/bsnes-compatibility usr/games
-bsnes/out/bsnes-accuracy usr/games
-bsnes/out/bsnes-performance usr/games
-debian/bsnes.xpm usr/share/pixmaps
-debian/startscript/bsnes usr/games
-snesshader/*.OpenGL.shader usr/share/games/bsnes/shaders
-snesfilter/out/*.filter usr/lib/games/bsnes/filters
+out/higan-compatibility usr/games
+out/higan-accuracy usr/games
+out/higan-performance usr/games
+debian/higan.xpm usr/share/pixmaps
+debian/startscript/higan usr/games

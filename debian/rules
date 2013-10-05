@@ -36,3 +36,6 @@ override_dh_auto_install:
 	mkdir -p debian/laevateinn/usr/share/games/laevateinn
 	cp -R profile/* debian/laevateinn/usr/share/games/laevateinn
 	chmod 644 debian/laevateinn/usr/share/games/laevateinn/*/*
+	mkdir -p debian/higan/usr/share/games/higan/Video\ Shaders
+	cp -R shaders/*.shader debian/higan/usr/share/games/higan/Video\ Shaders
+	chmod 644 debian/higan/usr/share/games/higan/Video\ Shaders/*/*
