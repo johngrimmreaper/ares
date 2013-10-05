@@ -4,7 +4,7 @@
 	dh $@
 
 # We have to clean manually because the Makefile does not support distclean,
-# and does not remove compiled bsnes binary
+# and does not remove compiled higan binary
 override_dh_auto_clean:
 	$(MAKE) clean
 	rm -rf obj out
@@ -12,7 +12,7 @@ override_dh_auto_clean:
 override_dh_auto_build:
 	mkdir -p obj out
 	dh_auto_build -- profile=compatibility name=higan-compatibility
-# Allow for building bsnes only once when testing stuff with the build option testbuild.
+# Allow for building higan only once when testing stuff with the build option testbuild.
 ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) clean
 	dh_auto_build -- profile=accuracy name=higan-accuracy
@@ -21,18 +21,18 @@ ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) clean
 	dh_auto_build -- options=debugger name=laevateinn-bin
 else
-	cp bsnes/out/higan-compatibility bsnes/out/higan-accuracy
-	cp bsnes/out/higan-compatibility bsnes/out/higan-performance
-	cp bsnes/out/higan-compatibility bsnes/out/laevateinn-bin
+	cp out/higan-compatibility out/higan-accuracy
+	cp out/higan-compatibility out/higan-performance
+	cp out/higan-compatibility out/laevateinn-bin
 endif
 
 override_dh_auto_install:
-	install -D -m 644 bsnes/data/bsnes.png debian/bsnes/usr/share/pixmaps/bsnes.png
-	install -D -m 644 bsnes/data/bsnes.desktop debian/bsnes/usr/share/applications/bsnes.desktop
-	install -D -m 644 bsnes/data/cheats.xml debian/bsnes/usr/share/games/bsnes/cheats.xml
-	install -D -m 755 purify/purify debian/bsnes/usr/games/bsnes-purify
-	cp -R bsnes/profile/* debian/bsnes/usr/share/games/bsnes
-	chmod 644 debian/bsnes/usr/share/games/bsnes/*/*
+	install -D -m 644 data/higan.png debian/higan/usr/share/pixmaps/higan.png
+	install -D -m 644 data/higan512.png debian/higan/usr/share/pixmaps/higan512.png
+	install -D -m 644 data/higan.desktop debian/higan/usr/share/applications/higan.desktop
+	install -D -m 644 data/cheats.bml debian/higan/usr/share/games/higan/cheats.bml
+	cp -R profile/* debian/higan/usr/share/games/higan
+	chmod 644 debian/higan/usr/share/games/higan/*/*
 	mkdir -p debian/laevateinn/usr/share/games/laevateinn
-	cp -R bsnes/profile/* debian/laevateinn/usr/share/games/laevateinn
+	cp -R profile/* debian/laevateinn/usr/share/games/laevateinn
 	chmod 644 debian/laevateinn/usr/share/games/laevateinn/*/*
