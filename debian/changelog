@@ -7,6 +7,25 @@ higan (093-1) UNRELEASED; urgency=low
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 14 May 2013 00:18:11 +0200
 
+bsnes (0.088-7) unstable; urgency=low
+
+  * Make filters non-executable.
+    (Closes: #715586, #715589, #715595, #715596, #715601)
+  * Use canonical Vcs-* fields (with anonscm.d.o).
+
+ -- Tobias Hansen <thansen@debian.org>  Sun, 14 Jul 2013 11:58:28 +0200
+
+bsnes (0.088-6) unstable; urgency=low
+
+  * Added missing X11 lib to link, fixing FTBFS. (Closes: #713712)
+  * Do not assume /usr/games is in $PATH, call the full path of
+    the alternatives links /usr/share/bsnes-bin and laevateinn-bin
+    from the start scripts. (Closes: #692163)
+  * Bump Standards-Version to 3.9.4, no changes needed.
+  * Use dh --parallel.
+
+ -- Tobias Hansen <thansen@debian.org>  Sat, 22 Jun 2013 19:45:44 +0200
+
 bsnes (0.088-5) unstable; urgency=low
 
   * Fix issues with bsnes-purify (Closes: #687034):
