@@ -17,3 +17,14 @@ Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/
  objects := libco
  
  # profile-guided optimization mode
+--- a/ananke/Makefile
++++ b/ananke/Makefile
+@@ -2,7 +2,7 @@
+ include ../phoenix/Makefile
+ 
+ path := /usr/local/lib
+-flags := $(flags) -O3 -fomit-frame-pointer -I..
++flags := $(flags) -O3 -fomit-frame-pointer $(CFLAGS) $(CPPFLAGS) -I..
+ 
+ all:
+ 	$(compiler) $(cppflags) $(flags) -fPIC -o obj/ananke.o -c ananke.cpp

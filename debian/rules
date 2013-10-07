@@ -7,10 +7,11 @@
 # and does not remove compiled higan binary
 override_dh_auto_clean:
 	$(MAKE) clean
-	rm -rf obj out
+	$(MAKE) --directory=ananke clean
+	rm -rf obj out ananke/obj
 
 override_dh_auto_build:
-	mkdir -p obj out
+	mkdir -p obj out ananke/obj
 	dh_auto_build -- profile=balanced name=higan-balanced
 # Allow for building higan only once when testing stuff with the build option testbuild.
 ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
@@ -25,6 +26,7 @@ else
 	cp out/higan-balanced out/higan-performance
 	cp out/higan-balanced out/laevateinn-bin
 endif
+	$(MAKE) --directory=ananke
 
 override_dh_auto_install:
 	install -D -m 644 data/higan.png debian/higan/usr/share/pixmaps/higan.png
@@ -36,5 +38,9 @@ override_dh_auto_install:
 	mkdir -p debian/higan/usr/share/games/higan/Video\ Shaders
 	cp -R shaders/*.shader debian/higan/usr/share/games/higan/Video\ Shaders
 	chmod 644 debian/higan/usr/share/games/higan/Video\ Shaders/*/*
+	install -D -m 644 ananke/libananke.so debian/higan/usr/lib/games/higan/libananke.so.1
+
+override_dh_link:
+	dh_link usr/lib/games/higan/libananke.so.1 usr/lib/games/higan/libananke.so
 
 override_dh_auto_test:
