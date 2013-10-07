@@ -30,7 +30,7 @@ Description: Accurate SNES/SuperFamicom emulator
  There are three profiles that differ in the amount of accuracy and required
  system resources. Which profile to use can be set with:
  .
- # update-alternatives --config higan-bin
+ # update-alternatives --config higan
  .
  Although not as polished as the SNES emulation (yet), there is also support
  for NES, Gameboy, Gameboy Color and Gameboy Advance games.
