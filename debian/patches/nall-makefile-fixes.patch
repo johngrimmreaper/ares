@@ -19,10 +19,10 @@ Author: Tobias Hansen <thansen@debian.org>
    endif
  
 -  cflags := -x c -std=gnu99
-+  cflags := -x c -std=gnu99 $(CFLAGS)
++  cflags := -x c -std=gnu99 $(CFLAGS) $(CPPFLAGS)
    objcflags := -x objective-c -std=gnu99
 -  cppflags := -x c++ -std=gnu++11
-+  cppflags := -x c++ -std=gnu++11 $(CPPFLAGS)
++  cppflags := -x c++ -std=gnu++11 $(CFLAGS) $(CPPFLAGS)
    objcppflags := -x objective-c++ -std=gnu++11
  endif
  
