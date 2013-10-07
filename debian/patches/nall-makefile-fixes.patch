@@ -1,14 +1,18 @@
-Description: Use dpkg-buildflags.
+Description: nall/Makefile fixes
 
+* Use the gcc version available.
 * Use the flags from CFLAGS, CPPFLAGS and LDFLAGS. They are set in the rules file.
 
 Author: Tobias Hansen <thansen@debian.org>
 
 --- a/nall/Makefile
 +++ b/nall/Makefile
-@@ -46,12 +46,12 @@
+@@ -44,14 +44,14 @@
+     flags := -w -stdlib=libc++
+     link := -lc++ -lobjc
    else
-     compiler := g++-4.7
+-    compiler := g++-4.7
++    compiler := g++
      flags :=
 -    link :=
 +    link := $(LDFLAGS)
