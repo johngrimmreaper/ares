@@ -35,14 +35,6 @@ Description: Accurate SNES/SuperFamicom emulator
  Although not as polished as the SNES emulation (yet), there is also support
  for NES, Gameboy, Gameboy Color and Gameboy Advance games.
 
-Package: laevateinn
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: higan
-Description: higan SNES/SuperFamicom debugger
- laevateinn is a debugger for SNES/SuperFamicom games based on the higan 
- emulator. It is intended for developers creating or modifying SNES games.
-
 Package: bsnes
 Depends: higan, ${misc:Depends}
 Architecture: all

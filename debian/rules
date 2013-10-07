@@ -19,12 +19,9 @@ ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
 	dh_auto_build -- profile=accuracy name=higan-accuracy
 	$(MAKE) clean
 	dh_auto_build -- profile=performance name=higan-performance
-	$(MAKE) clean
-	dh_auto_build -- options=debugger name=laevateinn-bin
 else
 	cp out/higan-balanced out/higan-accuracy
 	cp out/higan-balanced out/higan-performance
-	cp out/higan-balanced out/laevateinn-bin
 endif
 	$(MAKE) --directory=ananke
 
