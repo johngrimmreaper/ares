@@ -2,29 +2,23 @@ Description: Use dpkg-buildflags.
 
 * Use the flags from CFLAGS, CPPFLAGS and LDFLAGS. They are set in the rules file.
 
-Origin: http://anonscm.debian.org/gitweb/?p=pkg-games/bsnes.git;a=tree;f=debian/patches
+Author: Tobias Hansen <thansen@debian.org>
 
---- a/Makefile
-+++ b/Makefile
-@@ -13,8 +13,8 @@
- # console := true
+--- a/nall/Makefile
++++ b/nall/Makefile
+@@ -46,12 +46,12 @@
+   else
+     compiler := g++-4.7
+     flags :=
+-    link :=
++    link := $(LDFLAGS)
+   endif
  
- # compiler
--flags   += -I. -O3 -fomit-frame-pointer
--link    +=
-+flags   += -I. -O3 -fomit-frame-pointer $(CFLAGS) $(CPPFLAGS)
-+link    += $(LDFLAGS)
- objects := libco
+-  cflags := -x c -std=gnu99
++  cflags := -x c -std=gnu99 $(CFLAGS)
+   objcflags := -x objective-c -std=gnu99
+-  cppflags := -x c++ -std=gnu++11
++  cppflags := -x c++ -std=gnu++11 $(CPPFLAGS)
+   objcppflags := -x objective-c++ -std=gnu++11
+ endif
  
- # profile-guided optimization mode
---- a/ananke/Makefile
-+++ b/ananke/Makefile
-@@ -2,7 +2,7 @@
- include ../phoenix/Makefile
- 
- path := /usr/local/lib
--flags := $(flags) -O3 -fomit-frame-pointer -I..
-+flags := $(flags) -O3 -fomit-frame-pointer $(CFLAGS) $(CPPFLAGS) -I..
- 
- all:
- 	$(compiler) $(cppflags) $(flags) -fPIC -o obj/ananke.o -c ananke.cpp
