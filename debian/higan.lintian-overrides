@@ -1,0 +1,5 @@
+# False positive. The command higan is created via alternatives system.
+higan: desktop-command-not-in-package
+
+# False positive. The command higan is created via alternatives system.
+higan: menu-command-not-in-package
