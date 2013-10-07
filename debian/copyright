@@ -12,6 +12,19 @@ Files: debian/*
 Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>, 2011-2012 Tobias Hansen <tobias.han@gmx.de>
 License: GPL-2
 
+Files: debian/userguide/*
+Copyright: 2013 byuu
+License: ISC
+Comment:
+ This is the higan user guide as it appeared on byuu.org in the
+ beginning of 2013. I removed the homepage menu and changed the links
+ to be relative. byuu wrote me in a private mail:
+ .
+ "User guide is already out of date, but sure, you can have it as public
+ domain or ISC or FDL or whatever doesn't obligate me to anything."
+ .
+ -- Tobias Hansen <thansen@debian.org>  Tue, 08 Oct 2013
+
 Files: bsnes/snes/alt/dsp/*
 Copyright: Copyright (C) 2006-2007 Shay Green
 License: LGPL-2.1+
