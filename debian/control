@@ -20,7 +20,6 @@ Homepage: http://byuu.org/higan/
 Package: higan
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Suggests: laevateinn
 Description: Accurate SNES/SuperFamicom emulator
  higan is an emulator that focuses on accuracy, debugging functionality, and
  clean code. It does not include speed and game-specific hacks for
