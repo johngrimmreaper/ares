@@ -1,6 +1,6 @@
 higan (093-1) UNRELEASED; urgency=low
 
-  * New upstream release
+  * New upstream release (Closes: #697130, #698848, #709979)
   * Program was renamed to higan.
     - Rename package.
     - New packaging git repository
