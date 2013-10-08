@@ -1,8 +1,8 @@
-.TH bsnes 6 "August 5, 2011"
+.TH higan 6 "October 8, 2013"
 .SH NAME
-bsnes \- Accurate SNES/Super Famicom emulator
+higan \- Accurate Nintendo multi-system emulator
 .SH SYNOPSIS
-.B bsnes
+.B higan
 <ROM location>
 .SH OPTIONS
 <ROM location> \-\- from the command line, you can supply the name of a ROM file as
@@ -13,7 +13,7 @@ F11 \-\- toggle fullscreen mode
 
 .SH DESCRIPTION
 
-bsnes is a Super Nintendo / Super Famicom emulator that strives to provide the
+higan is a Nintendo multi-system emulator that strives to provide the
 most faithful hardware emulation possible. It focuses on accuracy and clean
 code, rather than speed and special features. It is meant as a reference
 emulator to document how the underlying hardware works. It is thus very useful
@@ -42,7 +42,7 @@ Gameboy (Color/Advance) cartridge \-\- ROM image.
 .B NES/FC:
 NES cartridge \-\- ROM image.
 
-Note that bsnes can not open ROMs with different filename extensions or with copier headers.
+Note that higan can not open ROMs with different filename extensions or with copier headers.
 
 .SH Known Limitations
 
@@ -58,22 +58,22 @@ internet multiplay is not currently supported nor planned.
 
 .SH PROFILES
 
-bsnes comes with three profiles, where "accuracy" and "compatibility" are focused on accuracy in emulating the SNES (compatibility makes minor tradeoffs in favor of speed) and "performance" is focused on using less resources. Which profile to use can be set with:
+higan comes with three profiles, where "accuracy" is focused on accuracy in emulating the SNES at all costs, "balanced" makes minor tradeoffs in favor of speed and is considerably faster and "performance" is focused on using less resources. Which profile to use can be set with:
 
-# update\-alternatives \-\-config bsnes\-bin
+# update\-alternatives \-\-config higan
 
 .SH SYSTEM FOLDERS
 
-bsnes does not only need ROMs containing games, but also data that was originally stored in chips belonging to the consoles. The files containing this data are organized in system folders. The system folders contain system info and firmware/BIOS images and are located in "$HOME/.config/bsnes". For example, to play GBA games, a GBA bios image is required. The file has to be named "bios.rom" and placed inside the "Game Boy Advance.sys" folder in "$HOME/.config/bsnes". The checksum of the file has to match the one given in "/usr/share/bsnes/Game Boy Advance.sys/manifest.xml".
+higan does not only need ROMs containing games, but also data that was originally stored in chips belonging to the consoles. The files containing this data are organized in system folders. The system folders contain system info and firmware/BIOS images and are located in "$HOME/.config/higan". For example, to play GBA games, a GBA bios image is required. The file has to be named "bios.rom" and placed inside the "Game Boy Advance.sys" folder in "$HOME/.config/higan". The checksum of the file has to match the one given in "/usr/share/higan/Game Boy Advance.sys/manifest.xml".
 
 .SH SEE ALSO
 
-\fBbsnes\-purify\fR(6)
+higan User Guide: /usr/share/doc/higan/higan_user_guide.html
 
 .SH MORE INFO
-Website: http://byuu.org/bsnes/
+Website: http://byuu.org/higan/
 
-.SH BSNES AUTHOR
+.SH HIGAN AUTHOR
 byuu
 
 .SH MAN PAGE AUTHORS

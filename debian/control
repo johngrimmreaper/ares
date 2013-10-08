@@ -20,7 +20,7 @@ Homepage: http://byuu.org/higan/
 Package: higan
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Accurate SNES/SuperFamicom emulator
+Description: Accurate Nintendo multi-system emulator
  higan is an emulator that focuses on accuracy, debugging functionality, and
  clean code. It does not include speed and game-specific hacks for
  compatibility, and as a result the minimum system requirements are very high.
