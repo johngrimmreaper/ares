@@ -1,15 +1,34 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: bsnes
-Source: http://byuu.org/bsnes/
+Upstream-Name: higan
+Source: http://byuu.org/higan/
 
 Files: *
-Copyright: 2004-2012 byuu, Nach, blargg, krom, BearOso, RedDwarf, OV2, vladitx, Andreas Naive, Ryphecha
+Copyright: 2004-2013 byuu
 License: GPL-3
 Comment:
- The license is stated in the file bsnes/snes/snes.hpp.
+ The license is stated in the file sfc/sfc.hpp.
+
+Files: gba/*
+Copyright: 2011-2013 byuu, Cydrak
+License: GPL-3
+Comment:
+ The license is stated in the file gba/gba.hpp.
+
+Files: gb/*
+Copyright: 2010-2013 byuu
+License: GPL-3
+Comment:
+ The license is stated in the file gb/gb.hpp.
+
+Files: fc/*
+Copyright: 2011-2013 byuu, Ryphecha
+License: GPL-3
+Comment:
+ The license is stated in the file fc/fc.hpp.
 
 Files: debian/*
-Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>, 2011-2012 Tobias Hansen <tobias.han@gmx.de>
+Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>
+           2011-2013 Tobias Hansen <thansen@debian.org>
 License: GPL-2
 
 Files: debian/userguide/*
@@ -25,18 +44,20 @@ Comment:
  .
  -- Tobias Hansen <thansen@debian.org>  Tue, 08 Oct 2013
 
-Files: bsnes/snes/alt/dsp/*
-Copyright: Copyright (C) 2006-2007 Shay Green
+Files: sfc/alt/dsp/*
+Copyright: Copyright (C) 2006-2013 byuu, Shay Green
 License: LGPL-2.1+
 
-Files: bsnes/snes/chip/spc7110/*
-Copyright: Copyright (c) 2008-2010, byuu and neviksti
+Files: sfc/chip/sdd1/decomp.*
+Copyright: byuu, Andreas Naive
+License: GPL-3
+
+Files: sfc/chip/spc7110/*
+Copyright: Copyright (c) 2008-2013, byuu, neviksti
 License: ISC
 
-Files: bsnes/nall/inflate.hpp
-       snesfilter/nall/inflate.hpp
-       purify/nall/inflate.hpp
-Copyright: Mark Adler, byuu
+Files: nall/inflate.hpp
+Copyright: byuu, Mark Adler
 License: Zlib
 
 License: GPL-3
