@@ -21,18 +21,19 @@ Package: higan
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Accurate Nintendo multi-system emulator
- higan is an emulator that focuses on accuracy, debugging functionality, and
- clean code. It does not include speed and game-specific hacks for
- compatibility, and as a result the minimum system requirements are very high.
- higan was formerly known as bsnes.
+ higan is an emulator for Nintendos SNES, NES, Gameboy, Gameboy Color
+ and Gameboy Advance. It was formerly called bsnes and the SNES
+ emulation is especially complete and polished.
  .
- There are three profiles that differ in the amount of accuracy and required
- system resources. Which profile to use can be set with:
+ higan strives to provide the most faithful hardware emulation possible.
+ It focuses on accuracy and clean code, rather than speed and special
+ features. It is meant as a reference emulator to document how the underlying
+ hardware works. As a result the minimum system requirements are high.
+ .
+ There are three profiles that govern the amount of accuracy and required
+ system resources of the SNES emulation. Which profile to use can be set with:
  .
  # update-alternatives --config higan
- .
- Although not as polished as the SNES emulation (yet), there is also support
- for NES, Gameboy, Gameboy Color and Gameboy Advance games.
 
 Package: bsnes
 Depends: higan, ${misc:Depends}
