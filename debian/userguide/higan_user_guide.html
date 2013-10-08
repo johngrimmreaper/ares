@@ -51,7 +51,7 @@ this point, there are already great emulators that target lower performance
 hardware.</p>
 
 <p>On Debian systems, the balanced profile is enabled by default. This can be
-changed with the command:
+changed with the command:</p>
 
 <pre>sudo update-alternatives --config higan
 </pre>
@@ -63,10 +63,13 @@ cannot be distributed with higan. Until you obtain this file, you will not be
 able to play any Game Boy Advance games with higan.</p>
 
 <p>Since higan focuses on accuracy, there is no high-level emulation of the BIOS
-as you might find in other emulators.</p>
+as you might find in other emulators. To install the GBA BIOS, first copy the
+GBA system folder and its content to higans config directory:</p>
 
-<p>Obtain the GBA BIOS, which should be 16384 bytes in size. Rename it to
-"bios.rom", and place it inside the folder "~/.config/higan/Game Boy Advance.sys".</p>
+<pre>cp -r /usr/share/games/higan/Game\ Boy\ Advance.sys/ ~/.config/higan/</pre>
+
+<p>Now obtain the GBA BIOS, which should be 16384 bytes in size. Rename it to
+"bios.rom", and place it inside "~/.config/higan/Game Boy Advance.sys".</p>
 
 <h3>Getting Started: Key Assignments</h3>
 
