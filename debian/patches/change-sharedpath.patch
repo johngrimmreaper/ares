@@ -1,3 +1,7 @@
+Description: Change path for shared files
+ We use /usr/share/games/.
+Author: Tobias Hansen <thansen@debian.org>
+
 --- a/nall/string/platform.hpp
 +++ b/nall/string/platform.hpp
 @@ -80,7 +80,7 @@
