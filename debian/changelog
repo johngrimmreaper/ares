@@ -1,11 +1,18 @@
-higan (093-1) UNRELEASED; urgency=low
+higan (093-1) unstable; urgency=low
 
   * New upstream release (Closes: #697130, #698848, #709979)
   * Program was renamed to higan.
     - Rename package.
-    - New packaging git repository
+    - New packaging git repository.
+  * bsnes becomes transitional package.
+  * laevateinn (debugger) was removed.
+  * Include user guide in html format.
+  * Shared files are no longer copied to ~/.config/higan at startup.
+  * Include library libananke for importing games, installed
+    to /usr/lib/games/higan, replaces bsnes-purify.
+  * Lots of packaging adjustments to accommodate to many upstream changes.
 
- -- Tobias Hansen <thansen@debian.org>  Tue, 14 May 2013 00:18:11 +0200
+ -- Tobias Hansen <thansen@debian.org>  Wed, 09 Oct 2013 01:20:17 +0200
 
 bsnes (0.088-7) unstable; urgency=low
 
