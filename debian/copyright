@@ -44,6 +44,10 @@ Comment:
  .
  -- Tobias Hansen <thansen@debian.org>  Tue, 08 Oct 2013
 
+Files: debian/userguide/higan_user_guide.html
+Copyright: 2013 byuu, Tobias Hansen
+License: ISC
+
 Files: sfc/alt/dsp/*
 Copyright: Copyright (C) 2006-2013 byuu, Shay Green
 License: LGPL-2.1+
