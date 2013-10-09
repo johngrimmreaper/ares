@@ -26,7 +26,8 @@ endif
 	$(MAKE) --directory=ananke
 
 override_dh_auto_install:
-	install -D -m 644 data/higan512.png debian/higan/usr/share/pixmaps/higan.png
+	install -D -m 644 data/higan.png debian/higan/usr/share/pixmaps/higan.png
+	install -D -m 644 data/higan512.png debian/higan/usr/share/pixmaps/higan512.png
 	install -D -m 644 data/higan.desktop debian/higan/usr/share/applications/higan.desktop
 	install -D -m 644 data/cheats.bml debian/higan/usr/share/games/higan/cheats.bml
 	cp -R profile/* debian/higan/usr/share/games/higan
