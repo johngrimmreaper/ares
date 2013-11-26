@@ -3,6 +3,5 @@ detect-non-linux-archs.patch
 nall-makefile-fixes.patch
 detect-endianness.patch
 remove-march=native-build-flag.patch
-change-sharedpath.patch
 load-private-libraries.patch
 desktop-file.patch

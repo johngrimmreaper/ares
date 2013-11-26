@@ -29,16 +29,16 @@ override_dh_auto_install:
 	install -D -m 644 data/higan.png debian/higan/usr/share/pixmaps/higan.png
 	install -D -m 644 data/higan512.png debian/higan/usr/share/pixmaps/higan512.png
 	install -D -m 644 data/higan.desktop debian/higan/usr/share/applications/higan.desktop
-	install -D -m 644 data/cheats.bml debian/higan/usr/share/games/higan/cheats.bml
-	cp -R profile/* debian/higan/usr/share/games/higan
-	chmod 644 debian/higan/usr/share/games/higan/*/*
-	mkdir -p debian/higan/usr/share/games/higan/Video\ Shaders
-	cp -R shaders/*.shader debian/higan/usr/share/games/higan/Video\ Shaders
-	chmod 644 debian/higan/usr/share/games/higan/Video\ Shaders/*/*
-	install -D -m 644 ananke/libananke.so debian/higan/usr/lib/games/higan/libananke.so.1
+	install -D -m 644 data/cheats.bml debian/higan/usr/share/higan/cheats.bml
+	cp -R profile/* debian/higan/usr/share/higan
+	chmod 644 debian/higan/usr/share/higan/*/*
+	mkdir -p debian/higan/usr/share/higan/Video\ Shaders
+	cp -R shaders/*.shader debian/higan/usr/share/higan/Video\ Shaders
+	chmod 644 debian/higan/usr/share/higan/Video\ Shaders/*/*
+	install -D -m 644 ananke/libananke.so debian/higan/usr/lib/higan/libananke.so.1
 
 override_dh_link:
-	dh_link usr/lib/games/higan/libananke.so.1 usr/lib/games/higan/libananke.so
+	dh_link usr/lib/higan/libananke.so.1 usr/lib/higan/libananke.so
 
 override_dh_auto_test:
 override_dh_makeshlibs:

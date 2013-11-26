@@ -2,8 +2,8 @@
 
 set -e
 
-update-alternatives --install /usr/games/higan higan /usr/games/higan-balanced 70
-update-alternatives --install /usr/games/higan higan /usr/games/higan-accuracy 40
-update-alternatives --install /usr/games/higan higan /usr/games/higan-performance 40
+update-alternatives --install /usr/bin/higan higan /usr/bin/higan-balanced 70
+update-alternatives --install /usr/bin/higan higan /usr/bin/higan-accuracy 40
+update-alternatives --install /usr/bin/higan higan /usr/bin/higan-performance 40
 
 #DEBHELPER#
