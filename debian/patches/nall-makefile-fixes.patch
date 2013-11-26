@@ -12,7 +12,7 @@ Author: Tobias Hansen <thansen@debian.org>
      link := -lc++ -lobjc
    else
 -    compiler := g++-4.7
-+    compiler := g++
++    compiler := g++-4.8
      flags :=
 -    link :=
 +    link := $(LDFLAGS)
