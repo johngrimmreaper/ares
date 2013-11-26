@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "upgrade" ]; then
+  if dpkg --compare-versions "$2" le "093-1"; then
+    update-alternatives --remove-all bsnes-bin
+	fi;
+fi;
+
+#DEBHELPER#
