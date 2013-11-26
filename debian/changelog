@@ -1,4 +1,4 @@
-higan (093-3) UNRELEASED; urgency=low
+higan (093-2) unstable; urgency=low
 
   * Use g++-4.8 on all architectures (at least g++-4.7 is required).
   * Move from section games to otherosfs, move files accordingly from
@@ -8,7 +8,7 @@ higan (093-3) UNRELEASED; urgency=low
     was redone multiple times since then. Change license of debian/*
     to GPL-3.
 
- -- Tobias Hansen <thansen@debian.org>  Wed, 27 Nov 2013 00:24:18 +0100
+ -- Tobias Hansen <thansen@debian.org>  Wed, 27 Nov 2013 00:28:21 +0100
 
 higan (093-1) unstable; urgency=low
 
