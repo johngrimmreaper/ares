@@ -1,6 +1,9 @@
 higan (093-2) UNRELEASED; urgency=low
 
   * Use g++-4.8 on all architectures (at least g++-4.7 is required).
+  * Move from section games to otherosfs, move files accordingly from
+    /usr/games to /usr/bin, /usr/share/games to /usr/share.
+  * Add preinst scripts to remove old alternatives bsnes-bin and higan.
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 26 Nov 2013 23:16:16 +0100
 
