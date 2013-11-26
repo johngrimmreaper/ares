@@ -27,9 +27,8 @@ Comment:
  The license is stated in the file fc/fc.hpp.
 
 Files: debian/*
-Copyright: 2010 Brandon Barnes <winterknight@nerdshack.com>
-           2011-2013 Tobias Hansen <thansen@debian.org>
-License: GPL-2
+Copyright: 2011-2013 Tobias Hansen <thansen@debian.org>
+License: GPL-3
 
 Files: debian/userguide/*
 Copyright: 2013 byuu
