@@ -1,10 +1,10 @@
 #!/bin/sh
 
-set -e
-
 if [ "$1" = "upgrade" ]; then
   if dpkg --compare-versions "$2" le "093-1"; then
+    set +e
     update-alternatives --remove-all bsnes-bin
+    set -e
 	fi;
 fi;
 
