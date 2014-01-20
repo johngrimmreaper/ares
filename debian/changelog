@@ -1,3 +1,9 @@
+higan (094-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jan 2014 00:41:04 +0100
+
 higan (093-2) unstable; urgency=low
 
   * Use g++-4.8 on all architectures (at least g++-4.7 is required).
