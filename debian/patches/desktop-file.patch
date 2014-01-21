@@ -1,16 +1,10 @@
 Description: Enhance desktop file
-  * Use high resolution icon.
   * Add keywords entry.
 Author: Tobias Hansen <thansen@debian.org>
 
 --- a/data/higan.desktop
 +++ b/data/higan.desktop
-@@ -2,7 +2,8 @@
- Name=higan
- Comment=SNES emulator
- Exec=higan
--Icon=higan
-+Icon=higan512
+@@ -6,3 +6,4 @@
  Terminal=false
  Type=Application
  Categories=Game;Emulator;

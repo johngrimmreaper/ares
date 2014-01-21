@@ -6,13 +6,17 @@ Description: Remove -march=native build flag.
    (armhf, s390, s390x, powerpc, ia64, ...).
 Author: Tobias Hansen <thansen@debian.org>
 
+
 --- a/Makefile
 +++ b/Makefile
-@@ -30,7 +30,6 @@
- 
- # platform
- ifeq ($(platform),x)
--  flags += -march=native
-   link += -s -Wl,-export-dynamic -ldl -lX11 -lXext
- else ifeq ($(platform),osx)
+@@ -44,10 +44,8 @@
+ else ifeq ($(platform),macosx)
    flags += -march=native
+ else ifeq ($(platform),linux)
+-  flags += -march=native
+   link += -s -Wl,-export-dynamic -lX11 -lXext -ldl
+ else ifeq ($(platform),bsd)
+-  flags += -march=native
+   link += -s -Wl,-export-dynamic -lX11 -lXext
+ else
+   $(error unsupported platform.)

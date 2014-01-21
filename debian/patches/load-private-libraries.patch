@@ -9,9 +9,9 @@ Author: Tobias Hansen <thansen@debian.org>
  #if defined(PLATFORM_X)
  inline bool library::open(const string& name, const string& path) {
    if(handle) close();
--  handle = (uintptr_t)dlopen(string(path, !path.empty() && !path.endswith("/") ? "/" : "", "lib", name, ".so"), RTLD_LAZY);
+-  handle = (uintptr_t)dlopen(string(path, !path.empty() && !path.endsWith("/") ? "/" : "", "lib", name, ".so"), RTLD_LAZY);
 +  handle = (uintptr_t)dlopen(string("/usr/lib/higan/lib", name, ".so"), RTLD_LAZY);
-+  if(!handle) handle = (uintptr_t)dlopen(string(path, !path.empty() && !path.endswith("/") ? "/" : "", "lib", name, ".so"), RTLD_LAZY);
++  if(!handle) handle = (uintptr_t)dlopen(string(path, !path.empty() && !path.endsWith("/") ? "/" : "", "lib", name, ".so"), RTLD_LAZY);
    if(!handle) handle = (uintptr_t)dlopen(string("/usr/local/lib/lib", name, ".so"), RTLD_LAZY);
    return handle;
  }
