@@ -1,6 +1,13 @@
 higan (094-1) UNRELEASED; urgency=medium
 
-  * New upstream release
+  * New upstream release.
+  * New dependency libudev on Linux.
+  * Bump Standards-Version to 3.9.5 (no changes needed).
+  * Update user guide.
+  * Delete patches applied upstream:
+    - debian/patches/detect-endianness.patch
+    - debian/patches/detect-non-linux-archs.patch
+    - debian/patches/disable-alsa-on-non-linux.patch
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jan 2014 00:41:04 +0100
 
