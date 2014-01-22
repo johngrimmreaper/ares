@@ -1,4 +1,4 @@
 nall-makefile-fixes.patch
-remove-march=native-build-flag.patch
+makefile-fixes.patch
 load-private-libraries.patch
 desktop-file.patch

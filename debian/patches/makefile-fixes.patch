@@ -1,0 +1,26 @@
+Description: Makefile fixes
+ * Remove -march=native build flag.
+   - This will cause gcc to use all instruction subsets
+     available on the build machine, meaning that the program
+     will not work on computers where they are not available.
+   - Also the flag is not supported on many architectures
+     (armhf, s390, s390x, powerpc, ia64, ...).
+ * Linking with dl is also required on kfreebsd.
+Author: Tobias Hansen <thansen@debian.org>
+
+
+--- a/Makefile
++++ b/Makefile
+@@ -44,11 +44,9 @@
+ else ifeq ($(platform),macosx)
+   flags += -march=native
+ else ifeq ($(platform),linux)
+-  flags += -march=native
+   link += -s -Wl,-export-dynamic -lX11 -lXext -ldl
+ else ifeq ($(platform),bsd)
+-  flags += -march=native
+-  link += -s -Wl,-export-dynamic -lX11 -lXext
++  link += -s -Wl,-export-dynamic -lX11 -lXext -ldl
+ else
+   $(error unsupported platform.)
+ endif
