@@ -8,6 +8,9 @@ higan (094-1) UNRELEASED; urgency=medium
     - debian/patches/detect-endianness.patch
     - debian/patches/detect-non-linux-archs.patch
     - debian/patches/disable-alsa-on-non-linux.patch
+  * New patches:
+    - debian/patches/force-button-images.patch:
+      Fixes missing images on buttons.
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jan 2014 00:41:04 +0100
 

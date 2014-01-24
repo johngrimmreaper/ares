@@ -1,0 +1,17 @@
+Description: Force button images
+ Showing buttons or not is a user setting in GTK+.
+ The default is not to show buttons. higan has buttons
+ with only an image and no text, so the images are needed.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/phoenix/gtk/application.cpp
++++ b/phoenix/gtk/application.cpp
+@@ -39,7 +39,7 @@
+   gtk_init(&argc, &argvp);
+ 
+   GtkSettings* gtkSettings = gtk_settings_get_default();
+-//g_object_set(gtkSettings, "gtk-button-images", true, nullptr);
++  g_object_set(gtkSettings, "gtk-button-images", true, nullptr);
+ 
+   gtk_rc_parse_string(R"(
+     style "phoenix-gtk"
