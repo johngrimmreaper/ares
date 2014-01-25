@@ -1,4 +1,4 @@
-higan (094-1) UNRELEASED; urgency=medium
+higan (094-1) unstable; urgency=medium
 
   * New upstream release.
   * New dependency libudev on Linux.
@@ -17,7 +17,7 @@ higan (094-1) UNRELEASED; urgency=medium
   * Remove debian/watch because byuu.org/higan is gzip
     compressed unconditionally which uscan does not support.
 
- -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jan 2014 00:41:04 +0100
+ -- Tobias Hansen <thansen@debian.org>  Sat, 25 Jan 2014 02:24:18 +0100
 
 higan (093-2) unstable; urgency=low
 
