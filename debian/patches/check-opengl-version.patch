@@ -14,11 +14,10 @@ Author: Tobias Hansen <thansen@debian.org>
  
  #define GLX_CONTEXT_MAJOR_VERSION_ARB 0x2091
  #define GLX_CONTEXT_MINOR_VERSION_ARB 0x2092
-@@ -172,6 +174,31 @@
-     }
- 
+@@ -174,6 +176,28 @@
      glxcontext = glXCreateContext(display, vi, /* sharelist = */ 0, /* direct = */ GL_TRUE);
-+
+     glXMakeCurrent(display, glxwindow = xwindow, glxcontext);
+ 
 +    int major, minor;
 +    const char *version = (const char *) glGetString (GL_VERSION);
 +    const char *dot = version == NULL ? NULL : strchr (version, '.');
@@ -26,14 +25,14 @@ Author: Tobias Hansen <thansen@debian.org>
 +
 +    /* Sanity check */
 +    if (dot == NULL || dot == version || *(dot + 1) == '\0') {
-+	major = 0;
-+	minor = 0;
++        major = 0;
++        minor = 0;
 +    } else {
-+	/* Find the start of the major version in the string */
-+	while (major_start > version && *major_start != ' ')
-+	    --major_start;
-+	major = strtol (major_start, NULL, 10);
-+	minor = strtol (dot + 1, NULL, 10);
++    /* Find the start of the major version in the string */
++    while (major_start > version && *major_start != ' ')
++           --major_start;
++        major = strtol (major_start, NULL, 10);
++        minor = strtol (dot + 1, NULL, 10);
 +    }
 +
 +    if(major < 3 || (major == 3 && minor < 2)) {
@@ -41,8 +40,6 @@ Author: Tobias Hansen <thansen@debian.org>
 +        return false;
 +    }
 +
-+
-+
-     glXMakeCurrent(display, glxwindow = xwindow, glxcontext);
- 
      glXCreateContextAttribs = (GLXContext (*)(Display*, GLXFBConfig, GLXContext, int, const int*))glGetProcAddress("glXCreateContextAttribsARB");
+     glXSwapInterval = (int (*)(int))glGetProcAddress("glXSwapIntervalSGI");
+     if(!glXSwapInterval) glXSwapInterval = (int (*)(int))glGetProcAddress("glXSwapIntervalMESA");
