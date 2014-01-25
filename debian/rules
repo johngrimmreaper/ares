@@ -1,5 +1,11 @@
 #!/usr/bin/make -f
 
+DEB_BUILD_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
+
+ifeq (,$(findstring $(DEB_BUILD_ARCH_CPU),"amd64 i386 powerpc"))
+	export DEB_BUILD_MAINT_OPTIONS=hardening=-fortify
+endif
+
 %:
 	dh $@ --parallel
 
