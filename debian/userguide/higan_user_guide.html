@@ -84,13 +84,12 @@ for each system you wish to emulate.</p>
 <p>higan supports many video, audio and input drivers. It defaults to the most
 conservative options.</p>
 
-<p>Linux users will find the SDL and ALSA drivers active by default. Again, I
-highly recommend installing the official binary drivers from nVidia and AMD, if
-at all possible. The open source drivers such as nouveau offer terrible OpenGL
-acceleration and will decimate performance. Failing this, you might try the
-X-Video driver, but it's not as nice. The SDL driver was a necessary evil to
-work on any Linux setup out of the box, but its performance is absolutely
-terrible.</p>
+<p>Linux users will find the OpenGL and ALSA drivers active by default. The OpenGL
+driver requires OpenGL 3.2, which is currently only supported by the official
+binary drivers from nVidia and AMD and the Intel driver in Mesa >= 10.0.
+Failing this, you might try the X-Video driver, but it's not as nice.
+The SDL driver was a necessary evil to work on any Linux setup out of the box,
+but its performance is absolutely terrible.</p>
 
 <p>You can change driver settings via Settings-&gt;Configuration-&gt;Drivers. Once
 you have changed drivers, you must restart higan for the changes to take effect.
