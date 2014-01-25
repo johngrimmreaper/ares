@@ -1,3 +1,11 @@
+higan (094-2) unstable; urgency=medium
+
+  * New patch sjlj-declare-xopen-source.patch:
+    sjlj.c requires the X/Open 7 standard which caused
+    FTBFS on all architectures except amd64, i386 and powerpc.
+
+ -- Tobias Hansen <thansen@debian.org>  Sat, 25 Jan 2014 12:59:26 +0100
+
 higan (094-1) unstable; urgency=medium
 
   * New upstream release.
