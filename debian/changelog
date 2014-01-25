@@ -11,6 +11,9 @@ higan (094-1) UNRELEASED; urgency=medium
   * New patches:
     - debian/patches/force-button-images.patch:
       Fixes missing images on buttons.
+    - debian/patches/check-opengl-version.patch:
+      Handle missing OpenGL 3.2 support gracefully.
+      (Closes: #730836)
   * Remove debian/watch because byuu.org/higan is gzip
     compressed unconditionally which uscan does not support.
 

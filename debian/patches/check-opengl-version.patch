@@ -1,0 +1,48 @@
+Description: Check OpenGL version
+ Without this higan just crashes when the
+ driver does not support OpenGL 3.2.
+ Code to extract the version from the
+ version string taken from cairo-gl-info.c
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/ruby/video/glx.cpp
++++ b/ruby/video/glx.cpp
+@@ -1,4 +1,6 @@
+ #include "opengl/opengl.hpp"
++#include "emulator/emulator.hpp"
++#include "target-ethos/interface/interface.hpp"
+ 
+ #define GLX_CONTEXT_MAJOR_VERSION_ARB 0x2091
+ #define GLX_CONTEXT_MINOR_VERSION_ARB 0x2092
+@@ -172,6 +174,31 @@
+     }
+ 
+     glxcontext = glXCreateContext(display, vi, /* sharelist = */ 0, /* direct = */ GL_TRUE);
++
++    int major, minor;
++    const char *version = (const char *) glGetString (GL_VERSION);
++    const char *dot = version == NULL ? NULL : strchr (version, '.');
++    const char *major_start = dot;
++
++    /* Sanity check */
++    if (dot == NULL || dot == version || *(dot + 1) == '\0') {
++	major = 0;
++	minor = 0;
++    } else {
++	/* Find the start of the major version in the string */
++	while (major_start > version && *major_start != ' ')
++	    --major_start;
++	major = strtol (major_start, NULL, 10);
++	minor = strtol (dot + 1, NULL, 10);
++    }
++
++    if(major < 3 || (major == 3 && minor < 2)) {
++        interface->notify("Error: OpenGL 3.2 is not available. Select another video driver on the Advanced Configuration tab and restart higan.\n");
++        return false;
++    }
++
++
++
+     glXMakeCurrent(display, glxwindow = xwindow, glxcontext);
+ 
+     glXCreateContextAttribs = (GLXContext (*)(Display*, GLXFBConfig, GLXContext, int, const int*))glGetProcAddress("glXCreateContextAttribsARB");

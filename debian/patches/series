@@ -3,3 +3,4 @@ makefile-fixes.patch
 load-private-libraries.patch
 desktop-file.patch
 force-button-images.patch
+check-opengl-version.patch
