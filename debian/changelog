@@ -5,6 +5,8 @@ higan (094-2) unstable; urgency=medium
     FTBFS on all architectures except amd64, i386 and powerpc.
   * Disable fortify hardening flag when sjlj.c is used, it breaks
     higan (tested with sjlj.c on amd64).
+  * Add lintian overrides for debian-watch-file-is-missing and
+    hardening-no-fortify-functions.
 
  -- Tobias Hansen <thansen@debian.org>  Sat, 25 Jan 2014 12:59:26 +0100
 
