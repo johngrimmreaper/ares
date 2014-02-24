@@ -1,0 +1,49 @@
+Description: Handle symlinks/DT_UNKNOWN correctly
+ The game library and import dialog don't work at all on my system with
+ the packaged version of higan:
+ * I'm not able to navigate to the directories I want to use, because I
+   have symlinks pointing to them: symlinks to directories are treated
+   as files, and filtered out based on the filename pattern.
+ * Even after navigating to the link's target, no directories are
+   visible.  Most of my filesystems use XFS, which doesn't fill d_type
+   in readdir (it sets DT_UNKNOWN); so these are also treated as files
+   and filtered out.
+ * If I manage to import a file by navigating to its parent directory,
+   it never appears in the Famicom / Super Famicom / etc. tabs, because
+   files get converted to directories when imported and directories get
+   filtered out as described above.  (There's apparently no way to load
+   things without going through the library--e.g., on the command line.)
+Author: Michael Gold <michael@bitplane.org>
+Bug-Debian: http://bugs.debian.org/737361
+
+--- a/nall/directory.hpp
++++ b/nall/directory.hpp
+@@ -190,10 +190,10 @@
+       while(ep = readdir(dp)) {
+         if(!strcmp(ep->d_name, ".")) continue;
+         if(!strcmp(ep->d_name, "..")) continue;
+-        bool is_directory = ep->d_type & DT_DIR;
+-        if(ep->d_type & DT_UNKNOWN) {
++        bool is_directory = (ep->d_type == DT_DIR);
++        if(ep->d_type == DT_UNKNOWN || ep->d_type == DT_LNK) {
+           struct stat sp = {0};
+-          stat(string{pathname, ep->d_name}, &sp);
++          fstatat(dirfd(dp), ep->d_name, &sp, 0);
+           is_directory = S_ISDIR(sp.st_mode);
+         }
+         if(is_directory) {
+@@ -215,7 +215,13 @@
+       while(ep = readdir(dp)) {
+         if(!strcmp(ep->d_name, ".")) continue;
+         if(!strcmp(ep->d_name, "..")) continue;
+-        if((ep->d_type & DT_DIR) == 0) {
++        bool is_file = (ep->d_type == DT_REG);
++        if(ep->d_type == DT_UNKNOWN || ep->d_type == DT_LNK) {
++          struct stat sp = {0};
++          fstatat(dirfd(dp), ep->d_name, &sp, 0);
++          is_file = S_ISREG(sp.st_mode);
++        }
++        if(is_file) {
+           if(strmatch(ep->d_name, pattern)) list.append(ep->d_name);
+         }
+       }

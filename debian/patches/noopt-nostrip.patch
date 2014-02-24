@@ -1,0 +1,39 @@
+Description: Support DEB_BUILD_OPTIONS='noopt nostrip'
+ This patch adds support for DEB_BUILD_OPTIONS=noopt and
+ DEB_BUILD_OPTIONS=nostrip, which are convenient for debugging.
+Author: Michael Gold <michael@bitplane.org>
+Bug-Debian: http://bugs.debian.org/737364
+
+--- a/Makefile
++++ b/Makefile
+@@ -13,7 +13,8 @@
+ # console := true
+ 
+ # compiler
+-flags   += -I. -O3 -fomit-frame-pointer
++flags   += -I.
++flags   += $(if $(filter noopt,$(DEB_BUILD_OPTIONS)),-O0,-O3 -fomit-frame-pointer)
+ link    +=
+ objects := libco
+ 
+@@ -39,14 +40,17 @@
+   else
+     link += -mwindows
+   endif
+-  link += -s -mthreads -luuid -lkernel32 -luser32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32 -lole32 -lws2_32
++  link += $(if $(filter nostrip,$(DEB_BUILD_OPTIONS)),,-s)
++  link += -mthreads -luuid -lkernel32 -luser32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32 -lole32 -lws2_32
+   link += -Wl,-enable-auto-import -Wl,-enable-runtime-pseudo-reloc
+ else ifeq ($(platform),macosx)
+   flags += -march=native
+ else ifeq ($(platform),linux)
+-  link += -s -Wl,-export-dynamic -lX11 -lXext -ldl
++  link += $(if $(filter nostrip,$(DEB_BUILD_OPTIONS)),,-s)
++  link += -Wl,-export-dynamic -lX11 -lXext -ldl
+ else ifeq ($(platform),bsd)
+-  link += -s -Wl,-export-dynamic -lX11 -lXext -ldl
++  link += $(if $(filter nostrip,$(DEB_BUILD_OPTIONS)),,-s)
++  link += -Wl,-export-dynamic -lX11 -lXext -ldl
+ else
+   $(error unsupported platform.)
+ endif

@@ -5,3 +5,6 @@ desktop-file.patch
 force-button-images.patch
 check-opengl-version.patch
 sjlj-declare-xopen-source.patch
+noopt-nostrip.patch
+fc-heuristic-error.patch
+dt_lnk-dt_unknown.patch

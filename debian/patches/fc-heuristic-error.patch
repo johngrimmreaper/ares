@@ -1,0 +1,28 @@
+Description: Prevent crash when importing unheadered NES ROM
+ higan segfaults when one tries to import a NES ROM without an iNES header.
+ With this patch it shows an error instead if there's no header.
+Author: Michael Gold <michael@bitplane.org>
+Bug-Debian: http://bugs.debian.org/737363
+
+--- a/ananke/famicom.cpp
++++ b/ananke/famicom.cpp
+@@ -12,9 +12,18 @@
+     nall::basename(information.name),
+     ".fc/"
+   };
+-  directory::create(pathname);
+ 
+   FamicomCartridge info(buffer.data(), buffer.size());
++  if (info.markup.size() == 0) {
++    if(thread::primary()) MessageWindow().setText({
++      "Error: ", information.name, "\n\n",
++      "The selected game could not be added to the library"
++      " because it was not recognized and contains no header."
++    }).error();
++    return "";
++  }
++
++  directory::create(pathname);
+   string markup = {"unverified\n\n", info.markup};
+   markup.append("\ninformation\n  title: ", nall::basename(information.name), "\n");
+   if(!information.manifest.empty()) markup = information.manifest;  //override with embedded beat manifest, if one exists

@@ -1,3 +1,18 @@
+higan (094-3) unstable; urgency=medium
+
+  * Add patches by Michael Gold:
+    - dt_lnk-dt_unknown.patch:
+      Handle symlinks/DT_UNKNOWN correctly. (Closes: #737361)
+    - fc-heuristic-error.patch:
+      Prevent crash when importing unheadered NES ROM. (Closes: #737363)
+    - noopt-nostrip.patch:
+      Support DEB_BUILD_OPTIONS='noopt nostrip'. (Closes: #737364)
+  * Modify patch:
+    - load-private-libraries.patch:
+      Look for libraries first in LD_LIBRARY_PATH first. (Closes: #737365)
+
+ -- Tobias Hansen <thansen@debian.org>  Mon, 24 Feb 2014 23:50:09 +0100
+
 higan (094-2) unstable; urgency=medium
 
   * New patch sjlj-declare-xopen-source.patch:
