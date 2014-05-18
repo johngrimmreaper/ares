@@ -1,0 +1,57 @@
+Description: Use $XDG_CONFIG_HOME
+ higan stores its config files in ~/.config.  This patch makes it use
+ XDG_CONFIG_HOME instead, if set.
+Author: Michael Gold <michael@bitplane.org>
+Bug-Debian: http://bugs.debian.org/738270
+
+--- a/nall/string/platform.hpp
++++ b/nall/string/platform.hpp
+@@ -50,7 +50,13 @@
+   #elif defined(PLATFORM_MACOSX)
+   string result = {userpath(), "Library/Application Support/"};
+   #else
+-  string result = {userpath(), ".config/"};
++  string result;
++  const char *env = getenv("XDG_CONFIG_HOME");
++  if(env) {
++    result.append(env);
++  } else {
++    result = {userpath(), ".config/"};
++  }
+   #endif
+   if(result.empty()) result = ".";
+   if(result.endsWith("/") == false) result.append("/");
+--- a/phoenix/gtk/settings.cpp
++++ b/phoenix/gtk/settings.cpp
+@@ -3,12 +3,12 @@
+ static Settings* settings = nullptr;
+ 
+ void Settings::load() {
+-  string path = {userpath(), ".config/phoenix/"};
++  string path = {configpath(), "phoenix/"};
+   Configuration::Document::load({path, "gtk.bml"});
+ }
+ 
+ void Settings::save() {
+-  string path = {userpath(), ".config/phoenix/"};
++  string path = {configpath(), "phoenix/"};
+   directory::create(path, 0755);
+   Configuration::Document::save({path, "gtk.bml"});
+ }
+--- a/phoenix/qt/settings.cpp
++++ b/phoenix/qt/settings.cpp
+@@ -3,12 +3,12 @@
+ static Settings *settings = nullptr;
+ 
+ void Settings::load() {
+-  string path = {userpath(), ".config/phoenix/"};
++  string path = {configpath(), "phoenix/"};
+   Configuration::Document::load({path, "qt.bml"});
+ }
+ 
+ void Settings::save() {
+-  string path = {userpath(), ".config/phoenix/"};
++  string path = {configpath(), "phoenix/"};
+   directory::create(path, 0755);
+   Configuration::Document::save({path, "qt.bml"});
+ }

@@ -8,3 +8,4 @@ sjlj-declare-xopen-source.patch
 noopt-nostrip.patch
 fc-heuristic-error.patch
 dt_lnk-dt_unknown.patch
+use-XDG_CONFIG_HOME.patch

@@ -1,9 +1,12 @@
-higan (094-4) UNRELEASED; urgency=medium
+higan (094-4) unstable; urgency=medium
 
   * Add a hack to the postinst script to make higan show up
     in gnome-shell right after the installation. (Closes: #748018)
+  * Add another patch by Michael Gold:
+    - use-XDG_CONFIG_HOME.patch:
+      Store config files in $XDG_CONFIG_HOME if set. (Closes: #738270)
 
- -- Tobias Hansen <thansen@debian.org>  Sat, 17 May 2014 12:49:30 +0200
+ -- Tobias Hansen <thansen@debian.org>  Sun, 18 May 2014 11:22:08 +0200
 
 higan (094-3) unstable; urgency=medium
 
