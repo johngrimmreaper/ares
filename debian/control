@@ -11,8 +11,7 @@ Build-Depends: debhelper (>= 9),
                libao-dev,
                libxv-dev,
                libudev-dev [linux-any],
-               libasound2-dev [linux-any],
-               g++-4.8
+               libasound2-dev [linux-any]
 Standards-Version: 3.9.5
 Vcs-Git: git://anonscm.debian.org/pkg-games/higan.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/higan.git

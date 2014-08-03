@@ -1,3 +1,9 @@
+higan (094-5) unstable; urgency=medium
+
+  * Use standard gcc instead of gcc-4.8. (Closes: #751314)
+
+ -- Tobias Hansen <thansen@debian.org>  Sun, 03 Aug 2014 16:57:25 +0200
+
 higan (094-4) unstable; urgency=medium
 
   * Add a hack to the postinst script to make higan show up

@@ -1,6 +1,5 @@
 Description: nall/Makefile fixes
 
-* Use gcc 4.8.
 * Use the flags from CFLAGS, CPPFLAGS and LDFLAGS. They are set in the rules file.
 
 Author: Tobias Hansen <thansen@debian.org>
@@ -15,8 +14,7 @@ Author: Tobias Hansen <thansen@debian.org>
 -    compiler := clang++
 -    flags := -w -I/usr/local/include
    else
--    compiler := g++
-+    compiler := g++-4.8
+     compiler := g++
      flags :=
 -    link :=
 +    link := $(LDFLAGS)
