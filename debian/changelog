@@ -1,3 +1,9 @@
+higan (094-6) UNRELEASED; urgency=medium
+
+  * Create debian/watch.
+
+ -- Tobias Hansen <thansen@debian.org>  Sun, 02 Nov 2014 01:22:00 +0100
+
 higan (094-5) unstable; urgency=medium
 
   * Use standard gcc instead of gcc-4.8. (Closes: #751314)
