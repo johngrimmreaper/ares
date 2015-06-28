@@ -8,6 +8,7 @@ higan (094-6) UNRELEASED; urgency=medium
     leading to false positives.
     - Remove check-opengl-version.patch
     - Add handle-opengl-x-error.patch
+  * Bump Standards-Version to 3.9.6.
 
  -- Tobias Hansen <thansen@debian.org>  Sun, 28 Jun 2015 12:43:15 +0200
 
