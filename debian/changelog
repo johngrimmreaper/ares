@@ -1,8 +1,15 @@
 higan (094-6) UNRELEASED; urgency=medium
 
   * Create debian/watch.
+  * Instead of checking for the available OpenGL version,
+    try creating an OpenGL 3.2 context and handle possible X errors.
+    The previous check would find the OpenGL compatibility profile version
+    which can be lower than the core profile version (e.g. when using Mesa)
+    leading to false positives.
+    - Remove check-opengl-version.patch
+    - Add handle-opengl-x-error.patch
 
- -- Tobias Hansen <thansen@debian.org>  Sun, 02 Nov 2014 01:22:00 +0100
+ -- Tobias Hansen <thansen@debian.org>  Sun, 28 Jun 2015 12:43:15 +0200
 
 higan (094-5) unstable; urgency=medium
 
