@@ -1,13 +1,14 @@
 higan (094-6) UNRELEASED; urgency=medium
 
-  * Create debian/watch.
   * Instead of checking for the available OpenGL version,
     try creating an OpenGL 3.2 context and handle possible X errors.
     The previous check would find the OpenGL compatibility profile version
     which can be lower than the core profile version (e.g. when using Mesa)
-    leading to false positives.
+    leading to false positives. (Closes: #790114)
     - Remove check-opengl-version.patch
     - Add handle-opengl-x-error.patch
+  * Add Provides: nes-emulator to d/control (Closes: #777098)
+  * Create debian/watch.
   * Bump Standards-Version to 3.9.6.
 
  -- Tobias Hansen <thansen@debian.org>  Sun, 28 Jun 2015 12:43:15 +0200
