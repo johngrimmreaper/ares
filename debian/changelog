@@ -1,4 +1,4 @@
-higan (094-6) UNRELEASED; urgency=medium
+higan (094-6) unstable; urgency=medium
 
   * Instead of checking for the available OpenGL version,
     try creating an OpenGL 3.2 context and handle possible X errors.
@@ -7,11 +7,12 @@ higan (094-6) UNRELEASED; urgency=medium
     leading to false positives. (Closes: #790114)
     - Remove check-opengl-version.patch
     - Add handle-opengl-x-error.patch
+  * Remove transitional dummy package bsnes.
   * Add Provides: nes-emulator to d/control (Closes: #777098)
   * Create debian/watch.
   * Bump Standards-Version to 3.9.6.
 
- -- Tobias Hansen <thansen@debian.org>  Sun, 28 Jun 2015 12:43:15 +0200
+ -- Tobias Hansen <thansen@debian.org>  Tue, 14 Jul 2015 23:52:16 +0200
 
 higan (094-5) unstable; urgency=medium
 
