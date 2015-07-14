@@ -35,10 +35,3 @@ Description: Accurate Nintendo multi-system emulator
  system resources of the SNES emulation. Which profile to use can be set with:
  .
  # update-alternatives --config higan
-
-Package: bsnes
-Depends: higan, ${misc:Depends}
-Architecture: all
-Section: oldlibs
-Description: transitional dummy package
- This is a transitional dummy package. It can safely be removed.
