@@ -1,11 +1,10 @@
-#ifndef NALL_MATRIX_HPP
-#define NALL_MATRIX_HPP
+#pragma once
 
 namespace nall {
 
 namespace Matrix {
 
-template<typename T> inline void Multiply(T* output, const T* xdata, unsigned xrows, unsigned xcols, const T* ydata, unsigned yrows, unsigned ycols) {
+template<typename T> inline auto Multiply(T* output, const T* xdata, unsigned xrows, unsigned xcols, const T* ydata, unsigned yrows, unsigned ycols) -> void {
   if(xcols != yrows) return;
 
   for(unsigned y = 0; y < xrows; y++) {
@@ -19,7 +18,7 @@ template<typename T> inline void Multiply(T* output, const T* xdata, unsigned xr
   }
 }
 
-template<typename T> inline vector<T> Multiply(const T* xdata, unsigned xrows, unsigned xcols, const T* ydata, unsigned yrows, unsigned ycols) {
+template<typename T> inline auto Multiply(const T* xdata, unsigned xrows, unsigned xcols, const T* ydata, unsigned yrows, unsigned ycols) -> vector<T> {
   vector<T> output;
   output.resize(xrows * ycols);
   Multiply(output.data(), xdata, xrows, xcols, ydata, yrows, ycols);
@@ -29,5 +28,3 @@ template<typename T> inline vector<T> Multiply(const T* xdata, unsigned xrows, u
 }
 
 }
-
-#endif

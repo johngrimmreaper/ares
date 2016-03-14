@@ -1,12 +1,11 @@
-#ifndef NALL_SERIAL_HPP
-#define NALL_SERIAL_HPP
+#pragma once
 
 #include <nall/intrinsics.hpp>
 #include <nall/stdint.hpp>
 #include <nall/string.hpp>
 
-#if !defined(PLATFORM_X) && !defined(PLATFORM_MACOSX)
-  #error "nall/serial: unsupported platform"
+#if !defined(API_POSIX)
+  #error "nall/serial: unsupported system"
 #endif
 
 #include <sys/ioctl.h>
@@ -17,7 +16,16 @@
 namespace nall {
 
 struct serial {
-  bool readable() {
+  serial() {
+    port = -1;
+    port_open = false;
+  }
+
+  ~serial() {
+    close();
+  }
+
+  auto readable() -> bool {
     if(port_open == false) return false;
     fd_set fdset;
     FD_ZERO(&fdset);
@@ -31,12 +39,12 @@ struct serial {
   }
 
   //-1 on error, otherwise return bytes read
-  int read(uint8_t* data, unsigned length) {
+  auto read(uint8_t* data, uint length) -> int {
     if(port_open == false) return -1;
     return ::read(port, (void*)data, length);
   }
 
-  bool writable() {
+  auto writable() -> bool {
     if(port_open == false) return false;
     fd_set fdset;
     FD_ZERO(&fdset);
@@ -50,12 +58,12 @@ struct serial {
   }
 
   //-1 on error, otherwise return bytes written
-  int write(const uint8_t* data, unsigned length) {
+  auto write(const uint8_t* data, uint length) -> int {
     if(port_open == false) return -1;
     return ::write(port, (void*)data, length);
   }
 
-  bool open(const string& portname, unsigned rate, bool flowcontrol) {
+  auto open(const string& portname, uint rate, bool flowcontrol) -> bool {
     close();
 
     port = ::open(portname, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
@@ -86,7 +94,7 @@ struct serial {
     return port_open = true;
   }
 
-  void close() {
+  auto close() -> void {
     if(port != -1) {
       tcdrain(port);
       if(port_open == true) {
@@ -98,15 +106,6 @@ struct serial {
     }
   }
 
-  serial() {
-    port = -1;
-    port_open = false;
-  }
-
-  ~serial() {
-    close();
-  }
-
 private:
   int port;
   bool port_open;
@@ -114,5 +113,3 @@ private:
 };
 
 }
-
-#endif

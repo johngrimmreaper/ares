@@ -1,7 +1,6 @@
-#ifndef NALL_STREAM_GZIP_HPP
-#define NALL_STREAM_GZIP_HPP
+#pragma once
 
-#include <nall/gzip.hpp>
+#include <nall/decode/gzip.hpp>
 
 namespace nall {
 
@@ -10,14 +9,14 @@ struct gzipstream : memorystream {
   using stream::write;
 
   gzipstream(const stream& stream) {
-    unsigned size = stream.size();
-    uint8_t *data = new uint8_t[size];
+    uint size = stream.size();
+    auto data = new uint8[size];
     stream.read(data, size);
 
-    gzip archive;
+    Decode::GZIP archive;
     bool result = archive.decompress(data, size);
     delete[] data;
-    if(result == false) return;
+    if(!result) return;
 
     psize = archive.size;
     pdata = new uint8_t[psize];
@@ -30,5 +29,3 @@ struct gzipstream : memorystream {
 };
 
 }
-
-#endif
