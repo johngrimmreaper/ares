@@ -1,7 +1,6 @@
-#ifndef NALL_STREAM_ZIP_HPP
-#define NALL_STREAM_ZIP_HPP
+#pragma once
 
-#include <nall/unzip.hpp>
+#include <nall/decode/zip.hpp>
 
 namespace nall {
 
@@ -10,11 +9,11 @@ struct zipstream : memorystream {
   using stream::write;
 
   zipstream(const stream& stream, const string& filter = "*") {
-    unsigned size = stream.size();
-    uint8_t* data = new uint8_t[size];
+    uint size = stream.size();
+    auto data = new uint8[size];
     stream.read(data, size);
 
-    unzip archive;
+    Decode::ZIP archive;
     if(archive.open(data, size) == false) return;
     delete[] data;
 
@@ -22,7 +21,7 @@ struct zipstream : memorystream {
       if(file.name.match(filter)) {
         auto buffer = archive.extract(file);
         psize = buffer.size();
-        pdata = buffer.move();
+        pdata = buffer.release();
         return;
       }
     }
@@ -34,5 +33,3 @@ struct zipstream : memorystream {
 };
 
 }
-
-#endif

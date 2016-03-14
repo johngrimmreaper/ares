@@ -1,40 +1,42 @@
 #ifndef RUBY_INPUT_KEYBOARD_XLIB
 #define RUBY_INPUT_KEYBOARD_XLIB
 
-namespace ruby {
-
 struct InputKeyboardXlib {
-  HID::Keyboard hid;
+  Input& input;
+  InputKeyboardXlib(Input& input) : input(input) {}
+
+  shared_pointer<HID::Keyboard> hid{new HID::Keyboard};
 
   Display* display = nullptr;
 
   struct Key {
     string name;
-    unsigned keysym;
-    unsigned keycode;
+    uint keysym;
+    uint keycode;
   };
   vector<Key> keys;
 
-  void assign(unsigned inputID, bool value) {
-    auto& group = hid.group[HID::Keyboard::GroupID::Button];
-    if(group.input[inputID].value == value) return;
-    if(input.onChange) input.onChange(hid, HID::Keyboard::GroupID::Button, inputID, group.input[inputID].value, value);
-    group.input[inputID].value = value;
+  auto assign(uint inputID, bool value) -> void {
+    auto& group = hid->buttons();
+    if(group.input(inputID).value() == value) return;
+    input.doChange(hid, HID::Keyboard::GroupID::Button, inputID, group.input(inputID).value(), value);
+    group.input(inputID).setValue(value);
   }
 
-  void poll(vector<HID::Device*>& devices) {
+  auto poll(vector<shared_pointer<HID::Device>>& devices) -> void {
     char state[32];
     XQueryKeymap(display, state);
 
-    for(unsigned n = 0; n < keys.size(); n++) {
-      bool value = state[keys[n].keycode >> 3] & (1 << (keys[n].keycode & 7));
-      assign(n, value);
+    uint inputID = 0;
+    for(auto& key : keys) {
+      bool value = state[key.keycode >> 3] & (1 << (key.keycode & 7));
+      assign(inputID++, value);
     }
 
-    devices.append(&hid);
+    devices.append(hid);
   }
 
-  bool init() {
+  auto init() -> bool {
     display = XOpenDisplay(0);
 
     keys.append({"Escape", XK_Escape});
@@ -151,24 +153,22 @@ struct InputKeyboardXlib {
     keys.append({"RightSuper", XK_Super_R});
     keys.append({"Menu", XK_Menu});
 
-    hid.id = 1;
+    hid->setID(1);
 
-    for(unsigned n = 0; n < keys.size(); n++) {
-      hid.button().append(keys[n].name);
-      keys[n].keycode = XKeysymToKeycode(display, keys[n].keysym);
+    for(auto& key : keys) {
+      hid->buttons().append(key.name);
+      key.keycode = XKeysymToKeycode(display, key.keysym);
     }
 
     return true;
   }
 
-  void term() {
+  auto term() -> void {
     if(display) {
       XCloseDisplay(display);
       display = nullptr;
     }
   }
 };
-
-}
 
 #endif
