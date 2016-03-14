@@ -1,3 +1,9 @@
+higan (097-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Tobias Hansen <thansen@debian.org>  Mon, 14 Mar 2016 23:25:31 +0000
+
 higan (094-6) unstable; urgency=medium
 
   * Instead of checking for the available OpenGL version,
