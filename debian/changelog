@@ -1,6 +1,21 @@
 higan (097-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Remove patches (no longer needed):
+    - load-private-libraries.patch
+    - force-button-images.patch
+    - fc-heuristic-error.patch
+    - dt_lnk-dt_unknown.patch
+    - handle-opengl-x-error.patch
+  * Change patches:
+    - noopt-nostrip.patch to noopt.patch:
+      Binaries are no longer stripped by default.
+  * Refresh/update patches:
+    - nall-makefile-fixes.patch
+    - makefile-fixes.patch
+    - desktop-file.patch
+    - sjlj-declare-xopen-source.patch
+    - use-XDG_CONFIG_HOME.patch
 
  -- Tobias Hansen <thansen@debian.org>  Mon, 14 Mar 2016 23:25:31 +0000
 
