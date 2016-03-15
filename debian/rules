@@ -6,6 +6,8 @@ ifeq (,$(findstring $(DEB_BUILD_ARCH_CPU),"amd64 i386 powerpc"))
 	export DEB_BUILD_MAINT_OPTIONS=hardening=-fortify
 endif
 
+MAKE += --directory=higan
+
 %:
 	dh $@ --parallel
 
@@ -13,11 +15,10 @@ endif
 # and does not remove compiled higan binary
 override_dh_auto_clean:
 	$(MAKE) clean
-	$(MAKE) --directory=ananke clean
-	rm -rf obj out ananke/obj
+	rm -rf obj out
 
 override_dh_auto_build:
-	mkdir -p obj out ananke/obj
+	mkdir -p obj out
 	dh_auto_build -- profile=balanced name=higan-balanced
 # Allow for building higan only once when testing stuff with the build option testbuild.
 ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
@@ -29,21 +30,12 @@ else
 	cp out/higan-balanced out/higan-accuracy
 	cp out/higan-balanced out/higan-performance
 endif
-	$(MAKE) --directory=ananke
 
 override_dh_auto_install:
-	install -D -m 644 data/higan.png debian/higan/usr/share/pixmaps/higan.png
-	install -D -m 644 data/higan.desktop debian/higan/usr/share/applications/higan.desktop
-	install -D -m 644 data/cheats.bml debian/higan/usr/share/higan/cheats.bml
-	cp -R profile/* debian/higan/usr/share/higan
+	install -D -m 644 higan/data/higan.png debian/higan/usr/share/pixmaps/higan.png
+	install -D -m 644 higan/data/higan.desktop debian/higan/usr/share/applications/higan.desktop
+	install -D -m 644 higan/data/cheats.bml debian/higan/usr/share/higan/cheats.bml
+	cp -R higan/profile/* debian/higan/usr/share/higan
 	chmod 644 debian/higan/usr/share/higan/*/*
-	mkdir -p debian/higan/usr/share/higan/Video\ Shaders
-	cp -R shaders/*.shader debian/higan/usr/share/higan/Video\ Shaders
-	chmod 644 debian/higan/usr/share/higan/Video\ Shaders/*/*
-	install -D -m 644 ananke/libananke.so debian/higan/usr/lib/higan/libananke.so.1
-
-override_dh_link:
-	dh_link usr/lib/higan/libananke.so.1 usr/lib/higan/libananke.so
 
 override_dh_auto_test:
-override_dh_makeshlibs:
