@@ -12,21 +12,21 @@ endif
 # We have to clean manually because the Makefile does not support distclean,
 # and does not remove compiled higan binary
 override_dh_auto_clean:
-	$(MAKE) clean
-	rm -rf obj out
+	$(MAKE) --directory=higan clean
+	rm -rf higan/obj higan/out
 
 override_dh_auto_build:
-	mkdir -p obj out
+	mkdir -p higan/obj higan/out
 	dh_auto_build -- profile=balanced name=higan-balanced
 # Allow for building higan only once when testing stuff with the build option testbuild.
 ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
-	$(MAKE) clean
+	$(MAKE) --directory=higan clean
 	dh_auto_build -- profile=accuracy name=higan-accuracy
-	$(MAKE) clean
+	$(MAKE) --directory=higan clean
 	dh_auto_build -- profile=performance name=higan-performance
 else
-	cp out/higan-balanced out/higan-accuracy
-	cp out/higan-balanced out/higan-performance
+	cp higan/out/higan-balanced higan/out/higan-accuracy
+	cp higan/out/higan-balanced higan/out/higan-performance
 endif
 
 override_dh_auto_install:
