@@ -9,7 +9,7 @@ Author: Tobias Hansen <thansen@debian.org>
    flags += -march=native
  else ifneq ($(filter $(platform),linux bsd),)
 -  flags += -fopenmp
-+  flags += -fopenmp $(pkg-config --cflags --libs cairo)
++  flags += -fopenmp -I/usr/include/cairo
    link += -fopenmp
    link += -Wl,-export-dynamic
    link += -lX11 -lXext -ldl

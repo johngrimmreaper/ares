@@ -9,12 +9,6 @@ endif
 %:
 	dh $@ --parallel --sourcedirectory=higan
 
-# We have to clean manually because the Makefile does not support distclean,
-# and does not remove compiled higan binary
-override_dh_auto_clean:
-	$(MAKE) --directory=higan clean
-	rm -rf higan/obj higan/out
-
 override_dh_auto_build:
 	mkdir -p higan/obj higan/out
 	dh_auto_build -- profile=balanced name=higan-balanced
