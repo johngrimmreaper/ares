@@ -11,5 +11,5 @@ Author: Tobias Hansen <thansen@debian.org>
  #define LIBCO_C
 +#define _XOPEN_SOURCE 700
  #include "libco.h"
+ 
  #include <stdlib.h>
- #include <signal.h>

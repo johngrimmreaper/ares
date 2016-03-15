@@ -4,8 +4,8 @@ Description: Force button images
  with only an image and no text, so the images are needed.
 Author: Tobias Hansen <thansen@debian.org>
 
---- a/phoenix/gtk/application.cpp
-+++ b/phoenix/gtk/application.cpp
+--- a/hiro/gtk/application.cpp
++++ b/hiro/gtk/application.cpp
 @@ -39,7 +39,7 @@
    gtk_init(&argc, &argvp);
  

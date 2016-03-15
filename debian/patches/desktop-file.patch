@@ -2,8 +2,8 @@ Description: Enhance desktop file
   * Add keywords entry.
 Author: Tobias Hansen <thansen@debian.org>
 
---- a/data/higan.desktop
-+++ b/data/higan.desktop
+--- a/higan/data/higan.desktop
++++ b/higan/data/higan.desktop
 @@ -6,3 +6,4 @@
  Terminal=false
  Type=Application

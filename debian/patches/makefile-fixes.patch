@@ -9,18 +9,18 @@ Description: Makefile fixes
 Author: Tobias Hansen <thansen@debian.org>
 
 
---- a/Makefile
-+++ b/Makefile
-@@ -44,11 +44,9 @@
+--- a/higan/GNUmakefile
++++ b/higan/GNUmakefile
+@@ -36,10 +36,10 @@
  else ifeq ($(platform),macosx)
    flags += -march=native
- else ifeq ($(platform),linux)
--  flags += -march=native
-   link += -s -Wl,-export-dynamic -lX11 -lXext -ldl
- else ifeq ($(platform),bsd)
--  flags += -march=native
--  link += -s -Wl,-export-dynamic -lX11 -lXext
-+  link += -s -Wl,-export-dynamic -lX11 -lXext -ldl
+ else ifneq ($(filter $(platform),linux bsd),)
+-  flags += -march=native -fopenmp
++  flags += -fopenmp
+   link += -fopenmp
+   link += -Wl,-export-dynamic
+-  link += -lX11 -lXext
++  link += -lX11 -lXext -ldl
  else
-   $(error unsupported platform.)
+   $(error "unsupported platform")
  endif

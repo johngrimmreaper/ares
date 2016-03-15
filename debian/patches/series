@@ -1,11 +1,6 @@
 nall-makefile-fixes.patch
 makefile-fixes.patch
-load-private-libraries.patch
 desktop-file.patch
-force-button-images.patch
 sjlj-declare-xopen-source.patch
-noopt-nostrip.patch
-fc-heuristic-error.patch
-dt_lnk-dt_unknown.patch
+noopt.patch
 use-XDG_CONFIG_HOME.patch
-handle-opengl-x-error.patch
