@@ -9,7 +9,13 @@ endif
 %:
 	dh $@ --parallel --sourcedirectory=higan
 
+override_dh_auto_clean:
+	$(MAKE) --directory=icarus clean
+	dh_auto_clean
+
 override_dh_auto_build:
+	mkdir -p icarus/obj icarus/out
+	$(MAKE) --directory=icarus
 	mkdir -p higan/obj higan/out
 	dh_auto_build -- profile=balanced name=higan-balanced
 # Allow for building higan only once when testing stuff with the build option testbuild.
