@@ -4,3 +4,4 @@ desktop-file.patch
 sjlj-declare-xopen-source.patch
 noopt.patch
 use-XDG_CONFIG_HOME.patch
+find_cairo.patch

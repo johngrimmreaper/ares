@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Tobias Hansen <thansen@debian.org>
 Build-Depends: debhelper (>= 9),
+               pkg-config,
                libcairo2-dev,
                libgtk2.0-dev,
                libsdl1.2-dev,

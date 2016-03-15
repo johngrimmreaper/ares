@@ -1,0 +1,15 @@
+Description: Find cairo.h
+  Find cairo.h by adding cflags from pkg-config.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/higan/GNUmakefile
++++ b/higan/GNUmakefile
+@@ -37,7 +37,7 @@
+ else ifeq ($(platform),macosx)
+   flags += -march=native
+ else ifneq ($(filter $(platform),linux bsd),)
+-  flags += -fopenmp
++  flags += -fopenmp $(pkg-config --cflags --libs cairo)
+   link += -fopenmp
+   link += -Wl,-export-dynamic
+   link += -lX11 -lXext -ldl
