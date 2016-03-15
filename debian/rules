@@ -14,9 +14,11 @@ override_dh_auto_build:
 	dh_auto_build -- profile=balanced name=higan-balanced
 # Allow for building higan only once when testing stuff with the build option testbuild.
 ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
-	$(MAKE) --directory=higan clean
+	rm -rf higan/obj
+	mkdir -p higan/obj
 	dh_auto_build -- profile=accuracy name=higan-accuracy
-	$(MAKE) --directory=higan clean
+	rm -rf higan/obj
+	mkdir -p higan/obj
 	dh_auto_build -- profile=performance name=higan-performance
 else
 	cp higan/out/higan-balanced higan/out/higan-accuracy
