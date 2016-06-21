@@ -5,20 +5,14 @@ struct BandaiFCG : Board {
   }
 
   auto main() -> void {
-    while(true) {
-      if(scheduler.sync == Scheduler::SynchronizeMode::All) {
-        scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
+    if(irq_counter_enable) {
+      if(--irq_counter == 0xffff) {
+        cpu.set_irq_line(1);
+        irq_counter_enable = false;
       }
-
-      if(irq_counter_enable) {
-        if(--irq_counter == 0xffff) {
-          cpu.set_irq_line(1);
-          irq_counter_enable = false;
-        }
-      }
-
-      tick();
     }
+
+    tick();
   }
 
   auto ciram_addr(uint addr) const -> uint {
@@ -33,7 +27,7 @@ struct BandaiFCG : Board {
   auto prg_read(uint addr) -> uint8 {
     if(addr & 0x8000) {
       bool region = addr & 0x4000;
-      uint bank = (region == 0 ? prg_bank : 0x0f);
+      uint bank = (region == 0 ? prg_bank : (uint8)0x0f);
       return prgrom.read((bank << 14) | (addr & 0x3fff));
     }
     return cpu.mdr();

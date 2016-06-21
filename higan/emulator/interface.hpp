@@ -4,6 +4,7 @@ namespace Emulator {
 
 struct Interface {
   struct Information {
+    string manufacturer;
     string name;
     uint width;
     uint height;
@@ -108,6 +109,9 @@ struct Interface {
   virtual auto cap(const string& name) -> bool { return false; }
   virtual auto get(const string& name) -> any { return {}; }
   virtual auto set(const string& name, const any& value) -> bool { return false; }
+
+  //shared functions
+  auto videoColor(uint16 r, uint16 g, uint16 b) -> uint32;
 };
 
 }

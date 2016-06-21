@@ -1,12 +1,8 @@
 include ../nall/GNUmakefile
 
-fc  := fc
-sfc := sfc
-gb  := gb
-gba := gba
-
-profile := accuracy
 target := tomoko
+# target := loki
+profile := accuracy
 # console := true
 
 flags += -I. -I.. -O3

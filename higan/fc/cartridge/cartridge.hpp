@@ -2,10 +2,9 @@
 #include "board/board.hpp"
 
 struct Cartridge : Thread {
-  static auto Main() -> void;
+  static auto Enter() -> void;
   auto main() -> void;
 
-  auto loaded() const -> bool;
   auto sha256() const -> string;
   auto manifest() const -> string;
   auto title() const -> string;
@@ -31,7 +30,6 @@ struct Cartridge : Thread {
 
 //privileged:
   Board* board = nullptr;
-  bool _loaded = false;
   string _sha256;
 
   auto prg_read(uint addr) -> uint8;

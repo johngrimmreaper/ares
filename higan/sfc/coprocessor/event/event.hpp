@@ -4,18 +4,18 @@
 
 struct Event : Coprocessor {
   static auto Enter() -> void;
-  auto enter() -> void;
+  auto main() -> void;
   auto init() -> void;
   auto load() -> void;
   auto unload() -> void;
   auto power() -> void;
   auto reset() -> void;
 
-  auto mcuRead(uint addr, uint8) -> uint8;
-  auto mcuWrite(uint addr, uint8) -> void;
+  auto mcuRead(uint24 addr, uint8) -> uint8;
+  auto mcuWrite(uint24 addr, uint8) -> void;
 
-  auto read(uint addr, uint8 data) -> uint8;
-  auto write(uint addr, uint8 data) -> void;
+  auto read(uint24 addr, uint8 data) -> uint8;
+  auto write(uint24 addr, uint8 data) -> void;
 
   auto serialize(serializer&) -> void;
 

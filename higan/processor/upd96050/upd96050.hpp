@@ -2,8 +2,7 @@
 //NEC uPD7725
 //NEC uPD96050
 
-#ifndef PROCESSOR_UPD96050_HPP
-#define PROCESSOR_UPD96050_HPP
+#pragma once
 
 namespace Processor {
 
@@ -49,28 +48,26 @@ struct uPD96050 {
   };
 
   struct Regs {
-    uint16 stack[16];  //LIFO
-    varuint pc;        //program counter
-    varuint rp;        //ROM pointer
-    varuint dp;        //data pointer
-    uint4 sp;          //stack pointer
+    uint16 stack[16];    //LIFO
+    VariadicNatural pc;  //program counter
+    VariadicNatural rp;  //ROM pointer
+    VariadicNatural dp;  //data pointer
+    uint4 sp;            //stack pointer
     int16 k;
     int16 l;
     int16 m;
     int16 n;
-    int16 a;           //accumulator
-    int16 b;           //accumulator
+    int16 a;             //accumulator
+    int16 b;             //accumulator
     Flag flaga;
     Flag flagb;
-    uint16 tr;         //temporary register
-    uint16 trb;        //temporary register
-    Status sr;         //status register
-    uint16 dr;         //data register
+    uint16 tr;           //temporary register
+    uint16 trb;          //temporary register
+    Status sr;           //status register
+    uint16 dr;           //data register
     uint16 si;
     uint16 so;
   } regs;
 };
 
 }
-
-#endif

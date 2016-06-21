@@ -7,15 +7,16 @@ struct ArmDSP : Processor::ARM, Coprocessor {
   ~ArmDSP();
 
   static auto Enter() -> void;
-  auto enter() -> void;
+  auto boot() -> void;
+  auto main() -> void;
 
   auto step(uint clocks) -> void override;
   auto bus_idle() -> void override;
   auto bus_read(uint mode, uint32 addr) -> uint32 override;
   auto bus_write(uint mode, uint32 addr, uint32 word) -> void override;
 
-  auto mmio_read(uint addr, uint8 data) -> uint8;
-  auto mmio_write(uint addr, uint8 data) -> void;
+  auto mmio_read(uint24 addr, uint8 data) -> uint8;
+  auto mmio_write(uint24 addr, uint8 data) -> void;
 
   auto init() -> void;
   auto load() -> void;

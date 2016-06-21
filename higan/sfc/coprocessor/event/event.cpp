@@ -5,33 +5,27 @@ namespace SuperFamicom {
 Event event;
 
 auto Event::Enter() -> void {
-  event.enter();
+  while(true) scheduler.synchronize(), event.main();
 }
 
-auto Event::enter() -> void {
-  while(true) {
-    if(scheduler.sync == Scheduler::SynchronizeMode::All) {
-      scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
+auto Event::main() -> void {
+  if(scoreActive && scoreSecondsRemaining) {
+    if(--scoreSecondsRemaining == 0) {
+      scoreActive = false;
     }
-
-    if(scoreActive && scoreSecondsRemaining) {
-      if(--scoreSecondsRemaining == 0) {
-        scoreActive = false;
-      }
-    }
-
-    if(timerActive && timerSecondsRemaining) {
-      if(--timerSecondsRemaining == 0) {
-        timerActive = false;
-        status |= 0x02;  //time over
-        scoreActive = true;
-        scoreSecondsRemaining = 5;
-      }
-    }
-
-    step(1);
-    synchronizeCPU();
   }
+
+  if(timerActive && timerSecondsRemaining) {
+    if(--timerSecondsRemaining == 0) {
+      timerActive = false;
+      status |= 0x02;  //time over
+      scoreActive = true;
+      scoreSecondsRemaining = 5;
+    }
+  }
+
+  step(1);
+  synchronizeCPU();
 }
 
 auto Event::init() -> void {
@@ -62,7 +56,7 @@ auto Event::reset() -> void {
   scoreSecondsRemaining = 0;
 }
 
-auto Event::mcuRead(uint addr, uint8 data) -> uint8 {
+auto Event::mcuRead(uint24 addr, uint8 data) -> uint8 {
   if(board == Board::CampusChallenge92) {
     uint id = 0;
     if(select == 0x09) id = 1;
@@ -98,17 +92,17 @@ auto Event::mcuRead(uint addr, uint8 data) -> uint8 {
   return data;
 }
 
-auto Event::mcuWrite(uint addr, uint8 data) -> void {
+auto Event::mcuWrite(uint24 addr, uint8 data) -> void {
 }
 
-auto Event::read(uint addr, uint8 data) -> uint8 {
+auto Event::read(uint24 addr, uint8 data) -> uint8 {
   if(addr == 0x106000 || addr == 0xc00000) {
     return status;
   }
   return data;
 }
 
-auto Event::write(uint addr, uint8 data) -> void {
+auto Event::write(uint24 addr, uint8 data) -> void {
   if(addr == 0x206000 || addr == 0xe00000) {
     select = data;
     if(timer && data == 0x09) {

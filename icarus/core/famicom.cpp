@@ -1,12 +1,12 @@
 auto Icarus::famicomManifest(string location) -> string {
-  vector<uint8> buffer;
+  vector<uint8_t> buffer;
   concatenate(buffer, {location, "ines.rom"});
   concatenate(buffer, {location, "program.rom"});
   concatenate(buffer, {location, "character.rom"});
   return famicomManifest(buffer, location);
 }
 
-auto Icarus::famicomManifest(vector<uint8>& buffer, string location, uint* prgrom, uint* chrrom) -> string {
+auto Icarus::famicomManifest(vector<uint8_t>& buffer, string location, uint* prgrom, uint* chrrom) -> string {
   string markup;
   string digest = Hash::SHA256(buffer.data(), buffer.size()).digest();
 
@@ -37,7 +37,7 @@ auto Icarus::famicomManifest(vector<uint8>& buffer, string location, uint* prgro
   return markup;
 }
 
-auto Icarus::famicomImport(vector<uint8>& buffer, string location) -> string {
+auto Icarus::famicomImport(vector<uint8_t>& buffer, string location) -> string {
   auto name = prefixname(location);
   auto source = pathname(location);
   string target{settings["Library/Location"].text(), "Famicom/", name, ".fc/"};
@@ -47,7 +47,11 @@ auto Icarus::famicomImport(vector<uint8>& buffer, string location) -> string {
   uint chrrom = 0;
   auto markup = famicomManifest(buffer, location, &prgrom, &chrrom);
   if(!markup) return failure("failed to parse ROM image");
+
   if(!directory::create(target)) return failure("library path unwritable");
+  if(file::exists({source, name, ".sav"}) && !file::exists({target, "save.ram"})) {
+    file::copy({source, name, ".sav"}, {target, "save.ram"});
+  }
 
   if(settings["icarus/CreateManifests"].boolean()) file::write({target, "manifest.bml"}, markup);
   file::write({target, "ines.rom"}, buffer.data(), 16);

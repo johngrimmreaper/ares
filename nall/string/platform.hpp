@@ -6,7 +6,7 @@ auto activepath() -> string {
   char path[PATH_MAX] = "";
   auto unused = getcwd(path, PATH_MAX);
   string result = path;
-  if(result.empty()) result = ".";
+  if(!result) result = ".";
   result.transform("\\", "/");
   if(result.endsWith("/") == false) result.append("/");
   return result;
@@ -16,7 +16,7 @@ auto realpath(rstring name) -> string {
   string result;
   char path[PATH_MAX] = "";
   if(::realpath(name, path)) result = pathname(string{path}.transform("\\", "/"));
-  if(result.empty()) return activepath();
+  if(!result) return activepath();
   result.transform("\\", "/");
   if(result.endsWith("/") == false) result.append("/");
   return result;
@@ -36,6 +36,20 @@ auto programpath() -> string {
   #endif
 }
 
+// /
+// c:/
+auto rootpath() -> string {
+  #if defined(PLATFORM_WINDOWS)
+  wchar_t path[PATH_MAX] = L"";
+  SHGetFolderPathW(nullptr, CSIDL_WINDOWS | CSIDL_FLAG_CREATE, nullptr, 0, path);
+  string result = (const char*)utf8_t(path);
+  result.transform("\\", "/");
+  return slice(result, 0, 3);
+  #else
+  return "/";
+  #endif
+}
+
 // /home/username/
 // c:/users/username/
 auto userpath() -> string {
@@ -48,7 +62,7 @@ auto userpath() -> string {
   struct passwd* userinfo = getpwuid(getuid());
   string result = userinfo->pw_dir;
   #endif
-  if(result.empty()) result = ".";
+  if(!result) result = ".";
   if(result.endsWith("/") == false) result.append("/");
   return result;
 }
@@ -66,12 +80,12 @@ auto configpath() -> string {
   #else
   string result = {userpath(), ".config/"};
   #endif
-  if(result.empty()) result = ".";
+  if(!result) result = ".";
   if(result.endsWith("/") == false) result.append("/");
   return result;
 }
 
-// /home/username/.local/
+// /home/username/.local/share/
 // c:/users/username/appdata/local/
 auto localpath() -> string {
   #if defined(PLATFORM_WINDOWS)
@@ -82,9 +96,9 @@ auto localpath() -> string {
   #elif defined(PLATFORM_MACOSX)
   string result = {userpath(), "Library/Application Support/"};
   #else
-  string result = {userpath(), ".local/"};
+  string result = {userpath(), ".local/share/"};
   #endif
-  if(result.empty()) result = ".";
+  if(!result) result = ".";
   if(result.endsWith("/") == false) result.append("/");
   return result;
 }
@@ -103,7 +117,7 @@ auto sharedpath() -> string {
   #else
   string result = "/usr/share/";
   #endif
-  if(result.empty()) result = ".";
+  if(!result) result = ".";
   if(result.endsWith("/") == false) result.append("/");
   return result;
 }

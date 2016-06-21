@@ -2,21 +2,17 @@
 
 namespace Famicom {
 
-#include "serialization.cpp"
 PPU ppu;
+#include "video.cpp"
 
-auto PPU::Main() -> void {
-  ppu.main();
+#include "serialization.cpp"
+
+auto PPU::Enter() -> void {
+  while(true) scheduler.synchronize(), ppu.main();
 }
 
 auto PPU::main() -> void {
-  while(true) {
-    if(scheduler.sync == Scheduler::SynchronizeMode::PPU) {
-      scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
-    }
-
-    raster_scanline();
-  }
+  raster_scanline();
 }
 
 auto PPU::tick() -> void {
@@ -47,14 +43,15 @@ auto PPU::scanline() -> void {
 
 auto PPU::frame() -> void {
   status.field ^= 1;
-  scheduler.exit(Scheduler::ExitReason::FrameEvent);
+  video.refresh();
+  scheduler.exit(Scheduler::Event::Frame);
 }
 
 auto PPU::power() -> void {
 }
 
 auto PPU::reset() -> void {
-  create(PPU::Main, 21477272);
+  create(PPU::Enter, 21'477'272);
 
   status.mdr = 0x00;
   status.field = 0;
@@ -113,7 +110,6 @@ auto PPU::read(uint16 addr) -> uint8 {
     break;
   case 4:  //OAMDATA
     result = oam[status.oam_addr];
-    if((status.oam_addr & 3) == 3) result &= 0xe3;
     break;
   case 7:  //PPUDATA
     if(raster_enable() && (status.ly <= 240 || status.ly == 261)) return 0x00;
@@ -164,6 +160,7 @@ auto PPU::write(uint16 addr, uint8 data) -> void {
     status.oam_addr = data;
     return;
   case 4:  //OAMDATA
+    if(status.oam_addr.bits(0,1) == 2) data.bits(2,4) = 0;  //clear non-existent bits (always read back as 0)
     oam[status.oam_addr++] = data;
     return;
   case 5:  //PPUSCROLL

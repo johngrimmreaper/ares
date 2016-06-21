@@ -7,6 +7,8 @@ namespace GameBoyAdvance {
 BIOS bios;
 System system;
 
+auto System::loaded() const -> bool { return _loaded; }
+
 auto System::init() -> void {
 }
 
@@ -32,40 +34,25 @@ auto System::load() -> void {
     interface->loadRequest(ID::BIOS, bios, true);
   }
 
-  serialize_init();
+  cartridge.load();
+  serializeInit();
+  _loaded = true;
+}
+
+auto System::unload() -> void {
+  if(!loaded()) return;
+  cartridge.unload();
+  _loaded = false;
 }
 
 auto System::run() -> void {
-  while(true) {
-    scheduler.enter();
-    if(scheduler.exit_reason() == Scheduler::ExitReason::FrameEvent) break;
-  }
-  video.refresh();
+  while(scheduler.enter() != Scheduler::Event::Frame);
 }
 
-auto System::runtosave() -> void {
-  scheduler.sync = Scheduler::SynchronizeMode::CPU;
-  runthreadtosave();
-
-  scheduler.sync = Scheduler::SynchronizeMode::All;
-  scheduler.active = ppu.thread;
-  runthreadtosave();
-
-  scheduler.sync = Scheduler::SynchronizeMode::All;
-  scheduler.active = apu.thread;
-  runthreadtosave();
-
-  scheduler.sync = Scheduler::SynchronizeMode::None;
-}
-
-auto System::runthreadtosave() -> void {
-  while(true) {
-    scheduler.enter();
-    if(scheduler.exit_reason() == Scheduler::ExitReason::SynchronizeEvent) break;
-    if(scheduler.exit_reason() == Scheduler::ExitReason::FrameEvent) {
-      video.refresh();
-    }
-  }
+auto System::runToSave() -> void {
+  scheduler.synchronize(cpu.thread);
+  scheduler.synchronize(ppu.thread);
+  scheduler.synchronize(apu.thread);
 }
 
 }

@@ -10,14 +10,14 @@ struct SMP : Processor::SPC700, Thread {
   auto portRead(uint2 port) const -> uint8;
   auto portWrite(uint2 port, uint8 data) -> void;
 
-  auto enter() -> void;
+  auto main() -> void;
   auto power() -> void;
   auto reset() -> void;
 
   auto serialize(serializer&) -> void;
 
-  uint8 iplrom[64] = {0};
-  uint8 apuram[64 * 1024] = {0};
+  uint8 iplrom[64];
+  uint8 apuram[64 * 1024];
 
 privileged:
   struct {

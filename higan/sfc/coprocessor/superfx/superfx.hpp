@@ -7,12 +7,10 @@ struct SuperFX : Processor::GSU, Coprocessor {
   #include "memory/memory.hpp"
   #include "mmio/mmio.hpp"
   #include "timing/timing.hpp"
-  #include "disassembler/disassembler.hpp"
 
   //superfx.cpp
   static auto Enter() -> void;
-
-  auto enter() -> void;
+  auto main() -> void;
   auto init() -> void;
   auto load() -> void;
   auto unload() -> void;

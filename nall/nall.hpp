@@ -23,12 +23,12 @@
 #include <nall/dl.hpp>
 #include <nall/endian.hpp>
 #include <nall/file.hpp>
-#include <nall/file-system-object.hpp>
 #include <nall/filemap.hpp>
 #include <nall/function.hpp>
 #include <nall/hashset.hpp>
 #include <nall/hid.hpp>
 #include <nall/image.hpp>
+#include <nall/inode.hpp>
 #include <nall/interpolation.hpp>
 #include <nall/intrinsics.hpp>
 #include <nall/map.hpp>
@@ -49,6 +49,7 @@
 #include <nall/string.hpp>
 #include <nall/thread.hpp>
 #include <nall/traits.hpp>
+#include <nall/unique-pointer.hpp>
 #include <nall/utility.hpp>
 #include <nall/varint.hpp>
 #include <nall/vector.hpp>

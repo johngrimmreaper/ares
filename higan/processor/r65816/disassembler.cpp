@@ -1,123 +1,117 @@
-auto R65816::dreadb(uint32 addr) -> uint8 {
+auto R65816::dreadb(uint24 addr) -> uint8 {
   if((addr & 0x40ffff) >= 0x2000 && (addr & 0x40ffff) <= 0x5fff) {
-    //$[00-3f|80-bf]:[2000-5fff]
+    //$00-3f|80-bf:2000-5fff
     //do not read MMIO registers within debugger
     return 0x00;
   }
-  return disassembler_read(addr);
+  return disassemblerRead(addr);
 }
 
-auto R65816::dreadw(uint32 addr) -> uint16 {
-  uint16 r;
-  r  = dreadb((addr + 0) & 0xffffff) <<  0;
-  r |= dreadb((addr + 1) & 0xffffff) <<  8;
+auto R65816::dreadw(uint24 addr) -> uint16 {
+  uint16 data;
+  data.byte(0) = dreadb(addr++);
+  data.byte(1) = dreadb(addr++);
+  return data;
+}
+
+auto R65816::dreadl(uint24 addr) -> uint24 {
+  uint24 data;
+  data.byte(0) = dreadb(addr++);
+  data.byte(1) = dreadb(addr++);
+  data.byte(2) = dreadb(addr++);
+  return data;
+}
+
+auto R65816::decode(uint8 mode, uint24 addr) -> uint24 {
+  uint24 r = 0;
+
+  switch(mode) {
+  case OPTYPE_DP:
+    r = (regs.d + (addr & 0xffff)) & 0xffff;
+    break;
+  case OPTYPE_DPX:
+    r = (regs.d + regs.x + (addr & 0xffff)) & 0xffff;
+    break;
+  case OPTYPE_DPY:
+    r = (regs.d + regs.y + (addr & 0xffff)) & 0xffff;
+    break;
+  case OPTYPE_IDP:
+    addr = (regs.d + (addr & 0xffff)) & 0xffff;
+    r = (regs.db << 16) + dreadw(addr);
+    break;
+  case OPTYPE_IDPX:
+    addr = (regs.d + regs.x + (addr & 0xffff)) & 0xffff;
+    r = (regs.db << 16) + dreadw(addr);
+    break;
+  case OPTYPE_IDPY:
+    addr = (regs.d + (addr & 0xffff)) & 0xffff;
+    r = (regs.db << 16) + dreadw(addr) + regs.y;
+    break;
+  case OPTYPE_ILDP:
+    addr = (regs.d + (addr & 0xffff)) & 0xffff;
+    r = dreadl(addr);
+    break;
+  case OPTYPE_ILDPY:
+    addr = (regs.d + (addr & 0xffff)) & 0xffff;
+    r = dreadl(addr) + regs.y;
+    break;
+  case OPTYPE_ADDR:
+    r = (regs.db << 16) + (addr & 0xffff);
+    break;
+  case OPTYPE_ADDR_PC:
+    r = (regs.pc.b << 16) + (addr & 0xffff);
+    break;
+  case OPTYPE_ADDRX:
+    r = (regs.db << 16) + (addr & 0xffff) + regs.x;
+    break;
+  case OPTYPE_ADDRY:
+    r = (regs.db << 16) + (addr & 0xffff) + regs.y;
+    break;
+  case OPTYPE_IADDR_PC:
+    r = (regs.pc.b << 16) + (addr & 0xffff);
+    break;
+  case OPTYPE_IADDRX:
+    r = (regs.pc.b << 16) + ((addr + regs.x) & 0xffff);
+    break;
+  case OPTYPE_ILADDR:
+    r = addr;
+    break;
+  case OPTYPE_LONG:
+    r = addr;
+    break;
+  case OPTYPE_LONGX:
+    r = (addr + regs.x);
+    break;
+  case OPTYPE_SR:
+    r = (regs.s + (addr & 0xff)) & 0xffff;
+    break;
+  case OPTYPE_ISRY:
+    addr = (regs.s + (addr & 0xff)) & 0xffff;
+    r = (regs.db << 16) + dreadw(addr) + regs.y;
+    break;
+  case OPTYPE_RELB:
+    r  = (regs.pc.b << 16) + ((regs.pc.w + 2) & 0xffff);
+    r += int8(addr);
+    break;
+  case OPTYPE_RELW:
+    r  = (regs.pc.b << 16) + ((regs.pc.w + 3) & 0xffff);
+    r += (int16)addr;
+    break;
+  }
+
   return r;
 }
 
-auto R65816::dreadl(uint32 addr) -> uint32 {
-  uint32 r;
-  r  = dreadb((addr + 0) & 0xffffff) <<  0;
-  r |= dreadb((addr + 1) & 0xffffff) <<  8;
-  r |= dreadb((addr + 2) & 0xffffff) << 16;
-  return r;
+auto R65816::disassemble() -> string {
+  return disassemble(regs.pc.d, regs.e, regs.p.m, regs.p.x);
 }
 
-auto R65816::decode(uint8 offset_type, uint32 addr) -> uint32 {
-  uint32 r = 0;
+auto R65816::disassemble(uint24 addr, bool e, bool m, bool x) -> string {
+  string s;
 
-  switch(offset_type) {
-    case OPTYPE_DP:
-      r = (regs.d + (addr & 0xffff)) & 0xffff;
-      break;
-    case OPTYPE_DPX:
-      r = (regs.d + regs.x + (addr & 0xffff)) & 0xffff;
-      break;
-    case OPTYPE_DPY:
-      r = (regs.d + regs.y + (addr & 0xffff)) & 0xffff;
-      break;
-    case OPTYPE_IDP:
-      addr = (regs.d + (addr & 0xffff)) & 0xffff;
-      r = (regs.db << 16) + dreadw(addr);
-      break;
-    case OPTYPE_IDPX:
-      addr = (regs.d + regs.x + (addr & 0xffff)) & 0xffff;
-      r = (regs.db << 16) + dreadw(addr);
-      break;
-    case OPTYPE_IDPY:
-      addr = (regs.d + (addr & 0xffff)) & 0xffff;
-      r = (regs.db << 16) + dreadw(addr) + regs.y;
-      break;
-    case OPTYPE_ILDP:
-      addr = (regs.d + (addr & 0xffff)) & 0xffff;
-      r = dreadl(addr);
-      break;
-    case OPTYPE_ILDPY:
-      addr = (regs.d + (addr & 0xffff)) & 0xffff;
-      r = dreadl(addr) + regs.y;
-      break;
-    case OPTYPE_ADDR:
-      r = (regs.db << 16) + (addr & 0xffff);
-      break;
-    case OPTYPE_ADDR_PC:
-      r = (regs.pc.b << 16) + (addr & 0xffff);
-      break;
-    case OPTYPE_ADDRX:
-      r = (regs.db << 16) + (addr & 0xffff) + regs.x;
-      break;
-    case OPTYPE_ADDRY:
-      r = (regs.db << 16) + (addr & 0xffff) + regs.y;
-      break;
-    case OPTYPE_IADDR_PC:
-      r = (regs.pc.b << 16) + (addr & 0xffff);
-      break;
-    case OPTYPE_IADDRX:
-      r = (regs.pc.b << 16) + ((addr + regs.x) & 0xffff);
-      break;
-    case OPTYPE_ILADDR:
-      r = addr;
-      break;
-    case OPTYPE_LONG:
-      r = addr;
-      break;
-    case OPTYPE_LONGX:
-      r = (addr + regs.x);
-      break;
-    case OPTYPE_SR:
-      r = (regs.s + (addr & 0xff)) & 0xffff;
-      break;
-    case OPTYPE_ISRY:
-      addr = (regs.s + (addr & 0xff)) & 0xffff;
-      r = (regs.db << 16) + dreadw(addr) + regs.y;
-      break;
-    case OPTYPE_RELB:
-      r  = (regs.pc.b << 16) + ((regs.pc.w + 2) & 0xffff);
-      r += int8(addr);
-      break;
-    case OPTYPE_RELW:
-      r  = (regs.pc.b << 16) + ((regs.pc.w + 3) & 0xffff);
-      r += int16(addr);
-      break;
-  }
-
-  return(r & 0xffffff);
-}
-
-auto R65816::disassemble_opcode(char* output) -> void {
-  return disassemble_opcode(output, regs.pc.d, regs.e, regs.p.m, regs.p.x);
-}
-
-auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool x) -> void {
-  static reg24_t pc;
-  char t[256];
-  char* s = output;
-
-  if(false /* in_opcode() == true */) {
-    strcpy(s, "?????? <CPU within opcode>");
-    return;
-  }
-
+  reg24_t pc;
   pc.d = addr;
-  sprintf(s, "%.6x ", (uint32)pc.d);
+  s = {hex(pc, 6), " "};
 
   uint8 op  = dreadb(pc.d); pc.w++;
   uint8 op0 = dreadb(pc.d); pc.w++;
@@ -130,6 +124,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   #define a8   (e || m)
   #define x8   (e || x)
 
+  char t[256];
   switch(op) {
   case 0x00: sprintf(t, "brk #$%.2x              ", op8); break;
   case 0x01: sprintf(t, "ora ($%.2x,x)   [%.6x]", op8, decode(OPTYPE_IDPX, op8)); break;
@@ -148,7 +143,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0x0d: sprintf(t, "ora $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x0e: sprintf(t, "asl $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x0f: sprintf(t, "ora $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0x10: sprintf(t, "bpl $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0x10: sprintf(t, "bpl $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0x11: sprintf(t, "ora ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0x12: sprintf(t, "ora ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0x13: sprintf(t, "ora ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -181,7 +176,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0x2d: sprintf(t, "and $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x2e: sprintf(t, "rol $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x2f: sprintf(t, "and $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0x30: sprintf(t, "bmi $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0x30: sprintf(t, "bmi $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0x31: sprintf(t, "and ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0x32: sprintf(t, "and ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0x33: sprintf(t, "and ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -214,7 +209,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0x4d: sprintf(t, "eor $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x4e: sprintf(t, "lsr $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x4f: sprintf(t, "eor $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0x50: sprintf(t, "bvc $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0x50: sprintf(t, "bvc $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0x51: sprintf(t, "eor ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0x52: sprintf(t, "eor ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0x53: sprintf(t, "eor ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -247,7 +242,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0x6d: sprintf(t, "adc $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x6e: sprintf(t, "ror $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x6f: sprintf(t, "adc $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0x70: sprintf(t, "bvs $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0x70: sprintf(t, "bvs $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0x71: sprintf(t, "adc ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0x72: sprintf(t, "adc ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0x73: sprintf(t, "adc ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -263,9 +258,9 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0x7d: sprintf(t, "adc $%.4x,x   [%.6x]", op16, decode(OPTYPE_ADDRX, op16)); break;
   case 0x7e: sprintf(t, "ror $%.4x,x   [%.6x]", op16, decode(OPTYPE_ADDRX, op16)); break;
   case 0x7f: sprintf(t, "adc $%.6x,x [%.6x]", op24, decode(OPTYPE_LONGX, op24)); break;
-  case 0x80: sprintf(t, "bra $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0x80: sprintf(t, "bra $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0x81: sprintf(t, "sta ($%.2x,x)   [%.6x]", op8, decode(OPTYPE_IDPX, op8)); break;
-  case 0x82: sprintf(t, "brl $%.4x     [%.6x]", uint16(decode(OPTYPE_RELW, op16)), decode(OPTYPE_RELW, op16)); break;
+  case 0x82: sprintf(t, "brl $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELW, op16)), decode(OPTYPE_RELW, op16)); break;
   case 0x83: sprintf(t, "sta $%.2x,s     [%.6x]", op8, decode(OPTYPE_SR, op8)); break;
   case 0x84: sprintf(t, "sty $%.2x       [%.6x]", op8, decode(OPTYPE_DP, op8)); break;
   case 0x85: sprintf(t, "sta $%.2x       [%.6x]", op8, decode(OPTYPE_DP, op8)); break;
@@ -280,7 +275,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0x8d: sprintf(t, "sta $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x8e: sprintf(t, "stx $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0x8f: sprintf(t, "sta $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0x90: sprintf(t, "bcc $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0x90: sprintf(t, "bcc $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0x91: sprintf(t, "sta ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0x92: sprintf(t, "sta ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0x93: sprintf(t, "sta ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -315,7 +310,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0xad: sprintf(t, "lda $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0xae: sprintf(t, "ldx $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0xaf: sprintf(t, "lda $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0xb0: sprintf(t, "bcs $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0xb0: sprintf(t, "bcs $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0xb1: sprintf(t, "lda ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0xb2: sprintf(t, "lda ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0xb3: sprintf(t, "lda ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -349,7 +344,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0xcd: sprintf(t, "cmp $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0xce: sprintf(t, "dec $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0xcf: sprintf(t, "cmp $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0xd0: sprintf(t, "bne $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0xd0: sprintf(t, "bne $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0xd1: sprintf(t, "cmp ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0xd2: sprintf(t, "cmp ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0xd3: sprintf(t, "cmp ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -383,7 +378,7 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   case 0xed: sprintf(t, "sbc $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0xee: sprintf(t, "inc $%.4x     [%.6x]", op16, decode(OPTYPE_ADDR, op16)); break;
   case 0xef: sprintf(t, "sbc $%.6x   [%.6x]", op24, decode(OPTYPE_LONG, op24)); break;
-  case 0xf0: sprintf(t, "beq $%.4x     [%.6x]", uint16(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
+  case 0xf0: sprintf(t, "beq $%.4x     [%.6x]", uint16_t(decode(OPTYPE_RELB, op8)), decode(OPTYPE_RELB, op8)); break;
   case 0xf1: sprintf(t, "sbc ($%.2x),y   [%.6x]", op8, decode(OPTYPE_IDPY, op8)); break;
   case 0xf2: sprintf(t, "sbc ($%.2x)     [%.6x]", op8, decode(OPTYPE_IDP, op8)); break;
   case 0xf3: sprintf(t, "sbc ($%.2x,s),y [%.6x]", op8, decode(OPTYPE_ISRY, op8)); break;
@@ -407,26 +402,26 @@ auto R65816::disassemble_opcode(char* output, uint32 addr, bool e, bool m, bool 
   #undef a8
   #undef x8
 
-  strcat(s, t);
-  strcat(s, " ");
-
-  sprintf(t, "A:%.4x X:%.4x Y:%.4x S:%.4x D:%.4x DB:%.2x ",
-    regs.a.w, regs.x.w, regs.y.w, regs.s.w, regs.d.w, regs.db);
-  strcat(s, t);
+  s.append(t, " A:{0} X:{1} Y:{2} S:{3} D:{4} B:{5} ", format{
+    hex(regs.a.w, 4), hex(regs.x.w, 4), hex(regs.y.w, 4),
+    hex(regs.s.w, 4), hex(regs.d.w, 4), hex(regs.db,  2)
+  });
 
   if(regs.e) {
-    sprintf(t, "%c%c%c%c%c%c%c%c",
+    s.append(
       regs.p.n ? 'N' : 'n', regs.p.v ? 'V' : 'v',
       regs.p.m ? '1' : '0', regs.p.x ? 'B' : 'b',
       regs.p.d ? 'D' : 'd', regs.p.i ? 'I' : 'i',
-      regs.p.z ? 'Z' : 'z', regs.p.c ? 'C' : 'c');
+      regs.p.z ? 'Z' : 'z', regs.p.c ? 'C' : 'c'
+    );
   } else {
-    sprintf(t, "%c%c%c%c%c%c%c%c",
+    s.append(
       regs.p.n ? 'N' : 'n', regs.p.v ? 'V' : 'v',
       regs.p.m ? 'M' : 'm', regs.p.x ? 'X' : 'x',
       regs.p.d ? 'D' : 'd', regs.p.i ? 'I' : 'i',
-      regs.p.z ? 'Z' : 'z', regs.p.c ? 'C' : 'c');
+      regs.p.z ? 'Z' : 'z', regs.p.c ? 'C' : 'c'
+    );
   }
 
-  strcat(s, t);
+  return s;
 }
