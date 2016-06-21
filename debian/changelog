@@ -19,6 +19,7 @@ higan (098-1) UNRELEASED; urgency=medium
   * Fix .desktop file syntax. (Closes: #812482)
   * Update homepage URL. (Closes: #808788)
   * Bump Standards-Version.
+  * Remove menu file.
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jun 2016 18:19:40 +0100
 
