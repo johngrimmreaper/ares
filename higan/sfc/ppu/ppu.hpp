@@ -1,3 +1,5 @@
+#include "video.hpp"
+
 struct PPU : Thread, public PPUcounter {
   enum : bool { Threaded = true };
 
@@ -11,16 +13,16 @@ struct PPU : Thread, public PPUcounter {
   auto interlace() const -> bool;
   auto overscan() const -> bool;
 
-  auto enter() -> void;
+  auto main() -> void;
   auto enable() -> void;
   auto power() -> void;
   auto reset() -> void;
 
   auto serialize(serializer&) -> void;
 
-  uint8 vram[64 * 1024] = {0};
-  uint8 oam[544] = {0};
-  uint8 cgram[512] = {0};
+  uint8 vram[64 * 1024];
+  uint8 oam[544];
+  uint8 cgram[512];
 
 privileged:
   uint ppu1_version = 1;  //allowed: 1
@@ -60,12 +62,12 @@ privileged:
   friend class Video;
 
   struct Debugger {
-    hook<void (uint16, uint8)> vram_read;
-    hook<void (uint16, uint8)> oam_read;
-    hook<void (uint16, uint8)> cgram_read;
-    hook<void (uint16, uint8)> vram_write;
-    hook<void (uint16, uint8)> oam_write;
-    hook<void (uint16, uint8)> cgram_write;
+    hook<auto (uint16, uint8) -> void> vram_read;
+    hook<auto (uint16, uint8) -> void> oam_read;
+    hook<auto (uint16, uint8) -> void> cgram_read;
+    hook<auto (uint16, uint8) -> void> vram_write;
+    hook<auto (uint16, uint8) -> void> oam_write;
+    hook<auto (uint16, uint8) -> void> cgram_write;
   } debugger;
 };
 

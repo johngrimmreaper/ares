@@ -3,11 +3,11 @@
 namespace SuperFamicom {
 
 DSP dsp;
+#include "audio.cpp"
 
 #define REG(n) state.regs[n]
 #define VREG(n) state.regs[v.vidx + n]
 
-#include "serialization.cpp"
 #include "gaussian.cpp"
 #include "counter.cpp"
 #include "envelope.cpp"
@@ -15,13 +15,14 @@ DSP dsp;
 #include "misc.cpp"
 #include "voice.cpp"
 #include "echo.cpp"
+#include "serialization.cpp"
 
 DSP::DSP() {
-  static_assert(sizeof(signed) >= 32 / 8, "signed >= 32-bits");
-  static_assert((int8)0x80 == -0x80,      "8-bit sign extension");
-  static_assert((int16)0x8000 == -0x8000, "16-bit sign extension");
-  static_assert((uint16)0xffff0000 == 0,  "16-bit unsigned clip");
-  static_assert((-1 >> 1) == -1,          "arithmetic shift right");
+  static_assert(sizeof(int) >= 32 / 8,      "int >= 32-bits");
+  static_assert((int8_t)0x80 == -0x80,      "8-bit sign extension");
+  static_assert((int16_t)0x8000 == -0x8000, "16-bit sign extension");
+  static_assert((uint16_t)0xffff0000 == 0,  "16-bit unsigned clip");
+  static_assert((-1 >> 1) == -1,            "arithmetic shift right");
 
   //-0x8000 <= n <= +0x7fff
   assert(sclamp<16>(+0x8000) == +0x7fff);
@@ -30,177 +31,173 @@ DSP::DSP() {
 
 /* timing */
 
-auto DSP::step(unsigned clocks) -> void {
+auto DSP::step(uint clocks) -> void {
   clock += clocks;
 }
 
 auto DSP::synchronizeSMP() -> void {
-  if(SMP::Threaded == true) {
-    if(clock >= 0 && scheduler.sync != Scheduler::SynchronizeMode::All) co_switch(smp.thread);
+  if(SMP::Threaded) {
+    if(clock >= 0 && !scheduler.synchronizing()) co_switch(smp.thread);
   } else {
-    while(clock >= 0) smp.enter();
+    while(clock >= 0) smp.main();
   }
 }
 
-auto DSP::Enter() -> void { dsp.enter(); }
+auto DSP::Enter() -> void {
+  while(true) scheduler.synchronize(), dsp.main();
+}
 
-auto DSP::enter() -> void {
-  while(true) {
-    if(scheduler.sync == Scheduler::SynchronizeMode::All) {
-      scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
-    }
+auto DSP::main() -> void {
+  voice5(voice[0]);
+  voice2(voice[1]);
+  tick();
 
-    voice5(voice[0]);
-    voice2(voice[1]);
-    tick();
+  voice6(voice[0]);
+  voice3(voice[1]);
+  tick();
 
-    voice6(voice[0]);
-    voice3(voice[1]);
-    tick();
+  voice7(voice[0]);
+  voice4(voice[1]);
+  voice1(voice[3]);
+  tick();
 
-    voice7(voice[0]);
-    voice4(voice[1]);
-    voice1(voice[3]);
-    tick();
+  voice8(voice[0]);
+  voice5(voice[1]);
+  voice2(voice[2]);
+  tick();
 
-    voice8(voice[0]);
-    voice5(voice[1]);
-    voice2(voice[2]);
-    tick();
+  voice9(voice[0]);
+  voice6(voice[1]);
+  voice3(voice[2]);
+  tick();
 
-    voice9(voice[0]);
-    voice6(voice[1]);
-    voice3(voice[2]);
-    tick();
+  voice7(voice[1]);
+  voice4(voice[2]);
+  voice1(voice[4]);
+  tick();
 
-    voice7(voice[1]);
-    voice4(voice[2]);
-    voice1(voice[4]);
-    tick();
+  voice8(voice[1]);
+  voice5(voice[2]);
+  voice2(voice[3]);
+  tick();
 
-    voice8(voice[1]);
-    voice5(voice[2]);
-    voice2(voice[3]);
-    tick();
+  voice9(voice[1]);
+  voice6(voice[2]);
+  voice3(voice[3]);
+  tick();
 
-    voice9(voice[1]);
-    voice6(voice[2]);
-    voice3(voice[3]);
-    tick();
+  voice7(voice[2]);
+  voice4(voice[3]);
+  voice1(voice[5]);
+  tick();
 
-    voice7(voice[2]);
-    voice4(voice[3]);
-    voice1(voice[5]);
-    tick();
+  voice8(voice[2]);
+  voice5(voice[3]);
+  voice2(voice[4]);
+  tick();
 
-    voice8(voice[2]);
-    voice5(voice[3]);
-    voice2(voice[4]);
-    tick();
+  voice9(voice[2]);
+  voice6(voice[3]);
+  voice3(voice[4]);
+  tick();
 
-    voice9(voice[2]);
-    voice6(voice[3]);
-    voice3(voice[4]);
-    tick();
+  voice7(voice[3]);
+  voice4(voice[4]);
+  voice1(voice[6]);
+  tick();
 
-    voice7(voice[3]);
-    voice4(voice[4]);
-    voice1(voice[6]);
-    tick();
+  voice8(voice[3]);
+  voice5(voice[4]);
+  voice2(voice[5]);
+  tick();
 
-    voice8(voice[3]);
-    voice5(voice[4]);
-    voice2(voice[5]);
-    tick();
+  voice9(voice[3]);
+  voice6(voice[4]);
+  voice3(voice[5]);
+  tick();
 
-    voice9(voice[3]);
-    voice6(voice[4]);
-    voice3(voice[5]);
-    tick();
+  voice7(voice[4]);
+  voice4(voice[5]);
+  voice1(voice[7]);
+  tick();
 
-    voice7(voice[4]);
-    voice4(voice[5]);
-    voice1(voice[7]);
-    tick();
+  voice8(voice[4]);
+  voice5(voice[5]);
+  voice2(voice[6]);
+  tick();
 
-    voice8(voice[4]);
-    voice5(voice[5]);
-    voice2(voice[6]);
-    tick();
+  voice9(voice[4]);
+  voice6(voice[5]);
+  voice3(voice[6]);
+  tick();
 
-    voice9(voice[4]);
-    voice6(voice[5]);
-    voice3(voice[6]);
-    tick();
+  voice1(voice[0]);
+  voice7(voice[5]);
+  voice4(voice[6]);
+  tick();
 
-    voice1(voice[0]);
-    voice7(voice[5]);
-    voice4(voice[6]);
-    tick();
+  voice8(voice[5]);
+  voice5(voice[6]);
+  voice2(voice[7]);
+  tick();
 
-    voice8(voice[5]);
-    voice5(voice[6]);
-    voice2(voice[7]);
-    tick();
+  voice9(voice[5]);
+  voice6(voice[6]);
+  voice3(voice[7]);
+  tick();
 
-    voice9(voice[5]);
-    voice6(voice[6]);
-    voice3(voice[7]);
-    tick();
+  voice1(voice[1]);
+  voice7(voice[6]);
+  voice4(voice[7]);
+  tick();
 
-    voice1(voice[1]);
-    voice7(voice[6]);
-    voice4(voice[7]);
-    tick();
+  voice8(voice[6]);
+  voice5(voice[7]);
+  voice2(voice[0]);
+  tick();
 
-    voice8(voice[6]);
-    voice5(voice[7]);
-    voice2(voice[0]);
-    tick();
+  voice3a(voice[0]);
+  voice9(voice[6]);
+  voice6(voice[7]);
+  echo22();
+  tick();
 
-    voice3a(voice[0]);
-    voice9(voice[6]);
-    voice6(voice[7]);
-    echo22();
-    tick();
+  voice7(voice[7]);
+  echo23();
+  tick();
 
-    voice7(voice[7]);
-    echo23();
-    tick();
+  voice8(voice[7]);
+  echo24();
+  tick();
 
-    voice8(voice[7]);
-    echo24();
-    tick();
+  voice3b(voice[0]);
+  voice9(voice[7]);
+  echo25();
+  tick();
 
-    voice3b(voice[0]);
-    voice9(voice[7]);
-    echo25();
-    tick();
+  echo26();
+  tick();
 
-    echo26();
-    tick();
+  misc27();
+  echo27();
+  tick();
 
-    misc27();
-    echo27();
-    tick();
+  misc28();
+  echo28();
+  tick();
 
-    misc28();
-    echo28();
-    tick();
+  misc29();
+  echo29();
+  tick();
 
-    misc29();
-    echo29();
-    tick();
+  misc30();
+  voice3c(voice[0]);
+  echo30();
+  tick();
 
-    misc30();
-    voice3c(voice[0]);
-    echo30();
-    tick();
-
-    voice4(voice[0]);
-    voice1(voice[2]);
-    tick();
-  }
+  voice4(voice[0]);
+  voice1(voice[2]);
+  tick();
 }
 
 auto DSP::tick() -> void {
@@ -283,6 +280,8 @@ auto DSP::power() -> void {
     voice[n].hiddenEnvelope = 0;
     voice[n]._envxOut = 0;
   }
+
+  audio.coprocessorEnable(false);
 }
 
 auto DSP::reset() -> void {

@@ -1,5 +1,5 @@
 #include "../tomoko.hpp"
-Presentation* presentation = nullptr;
+unique_pointer<Presentation> presentation;
 
 Presentation::Presentation() {
   presentation = this;
@@ -131,7 +131,7 @@ Presentation::Presentation() {
   });
   about.setText("About ...").onActivate([&] {
     MessageDialog().setParent(*this).setTitle("About higan ...").setText({
-      Emulator::Name, " v", Emulator::Version, " (", Emulator::Profile, ")\n\n",
+      Emulator::Name, "/tomoko v", Emulator::Version, " (", Emulator::Profile, ")\n\n",
       "Author: ", Emulator::Author, "\n",
       "License: ", Emulator::License, "\n",
       "Website: ", Emulator::Website
@@ -192,10 +192,8 @@ auto Presentation::updateEmulator() -> void {
     if(devices.objectCount() > 1) {
       auto path = string{emulator->information.name, "/", port.name}.replace(" ", "");
       auto device = settings(path).text();
-      for(auto object : devices.objects()) {
-        if(auto item = object.cast<MenuRadioItem>()) {
-          if(item.text() == device) item.setChecked().doActivate();
-        }
+      for(auto item : devices.objects<MenuRadioItem>()) {
+        if(item.text() == device) item.setChecked();
       }
       menu.setVisible();
     }
@@ -262,11 +260,11 @@ auto Presentation::toggleFullScreen() -> void {
 
 auto Presentation::drawSplashScreen() -> void {
   if(!video) return;
-  uint32* output;
+  uint32_t* output;
   uint length;
   if(video->lock(output, length, 256, 240)) {
     for(auto y : range(240)) {
-      uint32* dp = output + y * (length >> 2);
+      auto dp = output + y * (length >> 2);
       for(auto x : range(256)) *dp++ = 0xff000000;
     }
     video->unlock();
@@ -275,7 +273,7 @@ auto Presentation::drawSplashScreen() -> void {
 }
 
 auto Presentation::loadShaders() -> void {
-  auto pathname = locate({localpath(), "higan/"}, "Video Shaders/");
+  auto pathname = locate("Video Shaders/");
 
   if(settings["Video/Driver"].text() == "OpenGL") {
     for(auto shader : directory::folders(pathname, "*.shader")) {

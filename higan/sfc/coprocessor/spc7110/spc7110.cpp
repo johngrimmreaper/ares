@@ -16,20 +16,15 @@ SPC7110::~SPC7110() {
   delete decompressor;
 }
 
-auto SPC7110::Enter() -> void { spc7110.enter(); }
+auto SPC7110::Enter() -> void {
+  while(true) scheduler.synchronize(), spc7110.main();
+}
 
-auto SPC7110::enter() -> void {
-  while(true) {
-    if(scheduler.sync == Scheduler::SynchronizeMode::All) {
-      scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
-    }
-
-    if(dcu_pending) { dcu_pending = 0; dcu_begin_transfer(); }
-    if(mul_pending) { mul_pending = 0; alu_multiply(); }
-    if(div_pending) { div_pending = 0; alu_divide(); }
-
-    add_clocks(1);
-  }
+auto SPC7110::main() -> void {
+  if(dcu_pending) { dcu_pending = 0; dcu_begin_transfer(); }
+  if(mul_pending) { mul_pending = 0; alu_multiply(); }
+  if(div_pending) { div_pending = 0; alu_divide(); }
+  add_clocks(1);
 }
 
 auto SPC7110::add_clocks(uint clocks) -> void {
@@ -109,7 +104,7 @@ auto SPC7110::reset() -> void {
   r4834 = 0x00;
 }
 
-auto SPC7110::read(uint addr, uint8 data) -> uint8 {
+auto SPC7110::read(uint24 addr, uint8 data) -> uint8 {
   cpu.synchronizeCoprocessors();
   if((addr & 0xff0000) == 0x500000) addr = 0x4800;  //$50:0000-ffff == $4800
   if((addr & 0xff0000) == 0x580000) addr = 0x4808;  //$58:0000-ffff == $4808
@@ -193,7 +188,7 @@ auto SPC7110::read(uint addr, uint8 data) -> uint8 {
   return data;
 }
 
-auto SPC7110::write(uint addr, uint8 data) -> void {
+auto SPC7110::write(uint24 addr, uint8 data) -> void {
   cpu.synchronizeCoprocessors();
   if((addr & 0xff0000) == 0x500000) addr = 0x4800;  //$50:0000-ffff == $4800
   if((addr & 0xff0000) == 0x580000) addr = 0x4808;  //$58:0000-ffff == $4808
@@ -257,7 +252,7 @@ auto SPC7110::write(uint addr, uint8 data) -> void {
 
 //map address=00-3f,80-bf:8000-ffff mask=0x800000 => 00-3f:8000-ffff
 //map address=c0-ff:0000-ffff mask=0xc00000 => c0-ff:0000-ffff
-auto SPC7110::mcurom_read(uint addr, uint8 data) -> uint8 {
+auto SPC7110::mcurom_read(uint24 addr, uint8 data) -> uint8 {
   uint mask = (1 << (r4834 & 3)) - 1;  //8mbit, 16mbit, 32mbit, 64mbit DROM
 
   if(addr < 0x100000) {  //$00-0f,80-8f:8000-ffff; $c0-cf:0000-ffff
@@ -293,7 +288,7 @@ auto SPC7110::mcurom_read(uint addr, uint8 data) -> uint8 {
   return data;
 }
 
-auto SPC7110::mcurom_write(uint addr, uint8 data) -> void {
+auto SPC7110::mcurom_write(uint24 addr, uint8 data) -> void {
 }
 
 //===============
@@ -301,7 +296,7 @@ auto SPC7110::mcurom_write(uint addr, uint8 data) -> void {
 //===============
 
 //map address=00-3f,80-bf:6000-7fff mask=0x80e000 => 00-07:0000-ffff
-auto SPC7110::mcuram_read(uint addr, uint8) -> uint8 {
+auto SPC7110::mcuram_read(uint24 addr, uint8) -> uint8 {
   if(r4830 & 0x80) {
     addr = bus.mirror(addr, ram.size());
     return ram.read(addr);
@@ -309,7 +304,7 @@ auto SPC7110::mcuram_read(uint addr, uint8) -> uint8 {
   return 0x00;
 }
 
-auto SPC7110::mcuram_write(uint addr, uint8 data) -> void {
+auto SPC7110::mcuram_write(uint24 addr, uint8 data) -> void {
   if(r4830 & 0x80) {
     addr = bus.mirror(addr, ram.size());
     ram.write(addr, data);

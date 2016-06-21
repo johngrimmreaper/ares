@@ -19,7 +19,7 @@ struct Program : Emulator::Interface::Bind {
 
   //media.cpp
   auto loadMedia(string location) -> void;
-  auto loadMedia(Emulator::Interface& interface, Emulator::Interface::Media& media, const string& location) -> void;
+  auto loadMedia(Emulator::Interface& interface, Emulator::Interface::Media& media, string location) -> void;
   auto unloadMedia() -> void;
 
   //state.cpp
@@ -30,6 +30,7 @@ struct Program : Emulator::Interface::Bind {
   //utility.cpp
   auto powerCycle() -> void;
   auto softReset() -> void;
+  auto connectDevices() -> void;
   auto showMessage(const string& text) -> void;
   auto updateStatusText() -> void;
   auto updateVideoShader() -> void;
@@ -50,4 +51,4 @@ struct Program : Emulator::Interface::Bind {
   time_t statusTime = 0;
 };
 
-extern Program* program;
+extern unique_pointer<Program> program;

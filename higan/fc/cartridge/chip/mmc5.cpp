@@ -4,17 +4,11 @@ struct MMC5 : Chip {
   }
 
   auto main() -> void {
-    while(true) {
-      if(scheduler.sync == Scheduler::SynchronizeMode::All) {
-        scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
-      }
+    //scanline() resets this; if no scanlines detected, enter video blanking period
+    if(++cpu_cycle_counter >= 200) blank();  //113-114 normal; ~2500 across Vblank period
 
-      //scanline() resets this; if no scanlines detected, enter video blanking period
-      if(++cpu_cycle_counter >= 200) blank();  //113-114 normal; ~2500 across Vblank period
-
-      cpu.set_irq_line(irq_enable && irq_pending);
-      tick();
-    }
+    cpu.set_irq_line(irq_enable && irq_pending);
+    tick();
   }
 
   auto scanline(uint y) -> void {
@@ -94,7 +88,7 @@ struct MMC5 : Chip {
   auto prg_write(uint addr, uint8 data) -> void {
     if((addr & 0xfc00) == 0x5c00) {
       //writes 0x00 *during* Vblank (not during screen rendering ...)
-      if(exram_mode == 0 || exram_mode == 1) exram[addr & 0x03ff] = in_frame ? data : 0x00;
+      if(exram_mode == 0 || exram_mode == 1) exram[addr & 0x03ff] = in_frame ? data : (uint8)0x00;
       if(exram_mode == 2) exram[addr & 0x03ff] = data;
       return;
     }
@@ -277,7 +271,7 @@ struct MMC5 : Chip {
     switch(nametable_mode[(addr >> 10) & 3]) {
     case 0: return ppu.ciram_read(0x0000 | (addr & 0x03ff));
     case 1: return ppu.ciram_read(0x0400 | (addr & 0x03ff));
-    case 2: return exram_mode < 2 ? exram[addr & 0x03ff] : 0x00;
+    case 2: return exram_mode < 2 ? exram[addr & 0x03ff] : (uint8)0x00;
     case 3: return (hcounter & 2) == 0 ? fillmode_tile : fillmode_color;
     }
   }

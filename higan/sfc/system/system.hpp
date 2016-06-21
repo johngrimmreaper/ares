@@ -1,13 +1,15 @@
 struct Interface;
 
-#include "video.hpp"
-#include "audio.hpp"
 #include "device.hpp"
 
-struct System : property<System> {
-  enum class Region : uint { NTSC = 0, PAL = 1, Autodetect = 2 };
+struct System {
+  enum class Region : bool { NTSC = 0, PAL = 1 };
 
-  System();
+  auto loaded() const -> bool;
+  auto region() const -> Region;
+  auto expansionPort() const -> Device::ID;
+  auto cpuFrequency() const -> uint;
+  auto apuFrequency() const -> uint;
 
   auto run() -> void;
   auto runToSave() -> void;
@@ -19,14 +21,6 @@ struct System : property<System> {
   auto power() -> void;
   auto reset() -> void;
 
-  //return *active* system information (settings are cached upon power-on)
-  readonly<Region> region;
-  readonly<Device::ID> expansionPort;
-
-  readonly<uint> cpuFrequency;
-  readonly<uint> apuFrequency;
-  readonly<uint> serializeSize;
-
   auto serialize() -> serializer;
   auto unserialize(serializer&) -> bool;
 
@@ -35,45 +29,27 @@ struct System : property<System> {
   } information;
 
 private:
-  auto runThreadToSave() -> void;
-
   auto serialize(serializer&) -> void;
   auto serializeAll(serializer&) -> void;
   auto serializeInit() -> void;
 
+  bool _loaded = false;
+  Region _region = Region::NTSC;
+  Device::ID _expansionPort = Device::ID::None;
+  uint _cpuFrequency = 0;
+  uint _apuFrequency = 0;
+  uint _serializeSize = 0;
+
   friend class Cartridge;
-  friend class Video;
-  friend class Audio;
   friend class Device;
 };
 
 extern System system;
 
-#include <sfc/scheduler/scheduler.hpp>
-
-struct Configuration {
-  Device::ID controllerPort1 = Device::ID::None;
-  Device::ID controllerPort2 = Device::ID::None;
-  Device::ID expansionPort = Device::ID::None;
-  System::Region region = System::Region::Autodetect;
-  bool random = true;
-};
-
-extern Configuration configuration;
-
 struct Random {
-  auto seed(uint seed) -> void {
-    iter = seed;
-  }
-
-  auto operator()(uint result) -> uint {
-    if(configuration.random == false) return result;
-    return iter = (iter >> 1) ^ (((iter & 1) - 1) & 0xedb88320);
-  }
-
-  auto serialize(serializer& s) -> void {
-    s.integer(iter);
-  }
+  auto seed(uint seed) -> void;
+  auto operator()(uint result) -> uint;
+  auto serialize(serializer& s) -> void;
 
 private:
   uint iter = 0;

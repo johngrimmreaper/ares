@@ -8,12 +8,14 @@ Settings settings;
 Interface::Interface() {
   interface = this;
 
-  information.name        = "Famicom";
-  information.width       = 256;
-  information.height      = 240;
-  information.overscan    = true;
-  information.aspectRatio = 8.0 / 7.0;
-  information.resettable  = true;
+  information.manufacturer = "Nintendo";
+  information.name         = "Famicom";
+  information.width        = 256;
+  information.height       = 240;
+  information.overscan     = true;
+  information.aspectRatio  = 8.0 / 7.0;
+  information.resettable   = true;
+
   information.capability.states = true;
   information.capability.cheats = true;
 
@@ -61,7 +63,7 @@ auto Interface::audioFrequency() -> double {
 }
 
 auto Interface::loaded() -> bool {
-  return cartridge.loaded();
+  return system.loaded();
 }
 
 auto Interface::sha256() -> string {
@@ -84,7 +86,7 @@ auto Interface::group(uint id) -> uint {
 }
 
 auto Interface::load(uint id) -> void {
-  cartridge.load();
+  system.load();
 }
 
 auto Interface::save() -> void {
@@ -131,7 +133,7 @@ auto Interface::save(uint id, const stream& stream) -> void {
 
 auto Interface::unload() -> void {
   save();
-  cartridge.unload();
+  system.unload();
 }
 
 auto Interface::power() -> void {
@@ -147,7 +149,7 @@ auto Interface::run() -> void {
 }
 
 auto Interface::serialize() -> serializer {
-  system.runtosave();
+  system.runToSave();
   return system.serialize();
 }
 

@@ -9,9 +9,11 @@
 #define UNICODE
 #undef  NOMINMAX
 #define NOMINMAX
+
+#include <nall/windows/guard.hpp>
 #include <winsock2.h>
 #include <windows.h>
-#undef interface
+#include <nall/windows/guard.hpp>
 
 #if !defined(PATH_MAX)
   #define PATH_MAX 260

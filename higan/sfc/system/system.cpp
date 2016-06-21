@@ -3,65 +3,28 @@
 namespace SuperFamicom {
 
 System system;
-Configuration configuration;
-Random random;
 
-#include "video.cpp"
-#include "audio.cpp"
 #include "device.cpp"
+#include "random.cpp"
 #include "serialization.cpp"
 
-#include <sfc/scheduler/scheduler.cpp>
-
-System::System() {
-  region = Region::Autodetect;
-  expansionPort = Device::ID::eBoot;
-}
+auto System::loaded() const -> bool { return _loaded; }
+auto System::region() const -> Region { return _region; }
+auto System::expansionPort() const -> Device::ID { return _expansionPort; }
+auto System::cpuFrequency() const -> uint { return _cpuFrequency; }
+auto System::apuFrequency() const -> uint { return _apuFrequency; }
 
 auto System::run() -> void {
-  scheduler.sync = Scheduler::SynchronizeMode::None;
-
   scheduler.enter();
-  if(scheduler.exit_reason == Scheduler::ExitReason::FrameEvent) {
-    video.refresh();
-  }
 }
 
 auto System::runToSave() -> void {
-  if(CPU::Threaded == true) {
-    scheduler.sync = Scheduler::SynchronizeMode::CPU;
-    runThreadToSave();
-  }
-
-  if(SMP::Threaded == true) {
-    scheduler.thread = smp.thread;
-    runThreadToSave();
-  }
-
-  if(PPU::Threaded == true) {
-    scheduler.thread = ppu.thread;
-    runThreadToSave();
-  }
-
-  if(DSP::Threaded == true) {
-    scheduler.thread = dsp.thread;
-    runThreadToSave();
-  }
-
-  for(unsigned i = 0; i < cpu.coprocessors.size(); i++) {
-    auto& chip = *cpu.coprocessors[i];
-    scheduler.thread = chip.thread;
-    runThreadToSave();
-  }
-}
-
-auto System::runThreadToSave() -> void {
-  while(true) {
-    scheduler.enter();
-    if(scheduler.exit_reason == Scheduler::ExitReason::SynchronizeEvent) break;
-    if(scheduler.exit_reason == Scheduler::ExitReason::FrameEvent) {
-      video.refresh();
-    }
+  if(CPU::Threaded) scheduler.synchronize(cpu.thread);
+  if(SMP::Threaded) scheduler.synchronize(smp.thread);
+  if(PPU::Threaded) scheduler.synchronize(ppu.thread);
+  if(DSP::Threaded) scheduler.synchronize(dsp.thread);
+  for(auto chip : cpu.coprocessors) {
+    scheduler.synchronize(chip->thread);
   }
 }
 
@@ -69,7 +32,8 @@ auto System::init() -> void {
   assert(interface != nullptr);
 
   satellaview.init();
-  eboot.init();
+  superdisc.init();
+  s21fx.init();
 
   icd2.init();
   mcc.init();
@@ -89,8 +53,9 @@ auto System::init() -> void {
 
   bsmemory.init();
 
-  device.connect(0, configuration.controllerPort1);
-  device.connect(1, configuration.controllerPort2);
+  device.connect(0, (Device::ID)settings.controllerPort1);
+  device.connect(1, (Device::ID)settings.controllerPort2);
+  device.connect(2, (Device::ID)settings.expansionPort);
 }
 
 auto System::term() -> void {
@@ -104,15 +69,11 @@ auto System::load() -> void {
     interface->loadRequest(ID::IPLROM, iplrom, true);
   }
 
-  region = configuration.region;
-  if(region == Region::Autodetect) {
-    region = (cartridge.region() == Cartridge::Region::NTSC ? Region::NTSC : Region::PAL);
-  }
-  expansionPort = configuration.expansionPort;
-  cpuFrequency = region() == Region::NTSC ? 21477272 : 21281370;
-  apuFrequency = 24606720;
-
-  audio.coprocessor_enable(false);
+  cartridge.load();
+  _region = cartridge.region() == Cartridge::Region::NTSC ? Region::NTSC : Region::PAL;
+  _expansionPort = (Device::ID)settings.expansionPort;
+  _cpuFrequency = region() == Region::NTSC ? 21'477'272 : 21'281'370;
+  _apuFrequency = 24'606'720;
 
   bus.reset();
   bus.map();
@@ -121,7 +82,8 @@ auto System::load() -> void {
   ppu.enable();
 
   if(expansionPort() == Device::ID::Satellaview) satellaview.load();
-  if(expansionPort() == Device::ID::eBoot) eboot.load();
+  if(expansionPort() == Device::ID::SuperDisc) superdisc.load();
+  if(expansionPort() == Device::ID::S21FX) s21fx.load();
 
   if(cartridge.hasICD2()) icd2.load();
   if(cartridge.hasMCC()) mcc.load();
@@ -143,11 +105,14 @@ auto System::load() -> void {
   if(cartridge.hasSufamiTurboSlots()) sufamiturboA.load(), sufamiturboB.load();
 
   serializeInit();
+  _loaded = true;
 }
 
 auto System::unload() -> void {
+  if(!loaded()) return;
   if(expansionPort() == Device::ID::Satellaview) satellaview.unload();
-  if(expansionPort() == Device::ID::eBoot) eboot.unload();
+  if(expansionPort() == Device::ID::SuperDisc) superdisc.unload();
+  if(expansionPort() == Device::ID::S21FX) s21fx.unload();
 
   if(cartridge.hasICD2()) icd2.unload();
   if(cartridge.hasMCC()) mcc.unload();
@@ -167,6 +132,9 @@ auto System::unload() -> void {
 
   if(cartridge.hasBSMemorySlot()) bsmemory.unload();
   if(cartridge.hasSufamiTurboSlots()) sufamiturboA.unload(), sufamiturboB.unload();
+
+  cartridge.unload();
+  _loaded = false;
 }
 
 auto System::power() -> void {
@@ -178,7 +146,8 @@ auto System::power() -> void {
   ppu.power();
 
   if(expansionPort() == Device::ID::Satellaview) satellaview.power();
-  if(expansionPort() == Device::ID::eBoot) eboot.power();
+  if(expansionPort() == Device::ID::SuperDisc) superdisc.power();
+  if(expansionPort() == Device::ID::S21FX) s21fx.power();
 
   if(cartridge.hasICD2()) icd2.power();
   if(cartridge.hasMCC()) mcc.power();
@@ -208,7 +177,8 @@ auto System::reset() -> void {
   ppu.reset();
 
   if(expansionPort() == Device::ID::Satellaview) satellaview.reset();
-  if(expansionPort() == Device::ID::eBoot) eboot.reset();
+  if(expansionPort() == Device::ID::SuperDisc) superdisc.reset();
+  if(expansionPort() == Device::ID::S21FX) s21fx.reset();
 
   if(cartridge.hasICD2()) icd2.reset();
   if(cartridge.hasMCC()) mcc.reset();
@@ -239,11 +209,13 @@ auto System::reset() -> void {
   if(cartridge.hasSharpRTC()) cpu.coprocessors.append(&sharprtc);
   if(cartridge.hasSPC7110()) cpu.coprocessors.append(&spc7110);
   if(cartridge.hasMSU1()) cpu.coprocessors.append(&msu1);
+  if(expansionPort() == Device::ID::SuperDisc) cpu.coprocessors.append(&superdisc);
+  if(expansionPort() == Device::ID::S21FX) cpu.coprocessors.append(&s21fx);
 
-  video.reset();
-  scheduler.init();
-  device.connect(0, configuration.controllerPort1);
-  device.connect(1, configuration.controllerPort2);
+  scheduler.reset();
+  device.connect(0, (Device::ID)settings.controllerPort1);
+  device.connect(1, (Device::ID)settings.controllerPort2);
+  device.connect(2, (Device::ID)settings.expansionPort);
 }
 
 }

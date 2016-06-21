@@ -2,30 +2,32 @@
 
 namespace SuperFamicom {
 
+ICD2 icd2;
+
+#if defined(SFC_SUPERGAMEBOY)
+
 #include "interface/interface.cpp"
 #include "mmio/mmio.cpp"
 #include "serialization.cpp"
-ICD2 icd2;
 
-auto ICD2::Enter() -> void { icd2.enter(); }
-
-auto ICD2::enter() -> void {
+auto ICD2::Enter() -> void {
   while(true) {
-    if(scheduler.sync == Scheduler::SynchronizeMode::All) {
-      GameBoy::system.runtosave();
-      scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
-    }
-
-    if(r6003 & 0x80) {
-      GameBoy::system.run();
-      step(GameBoy::system.clocks_executed);
-      GameBoy::system.clocks_executed = 0;
-    } else {  //DMG halted
-      audio.coprocessor_sample(0x0000, 0x0000);
-      step(1);
-    }
-    synchronizeCPU();
+    if(scheduler.synchronizing()) GameBoy::system.runToSave();
+    scheduler.synchronize();
+    icd2.main();
   }
+}
+
+auto ICD2::main() -> void {
+  if(r6003 & 0x80) {
+    GameBoy::system.run();
+    step(GameBoy::system._clocksExecuted);
+    GameBoy::system._clocksExecuted = 0;
+  } else {  //DMG halted
+    audio.coprocessorSample(0, 0);
+    step(1);
+  }
+  synchronizeCPU();
 }
 
 auto ICD2::init() -> void {
@@ -36,16 +38,20 @@ auto ICD2::load() -> void {
   hook = GameBoy::interface->hook;
   GameBoy::interface->bind = this;
   GameBoy::interface->hook = this;
+  interface->loadRequest(ID::GameBoy, "Game Boy", "gb", false);
+  GameBoy::interface->load(GameBoy::ID::SuperGameBoy);
+  cartridge.loadGameBoy();
 }
 
 auto ICD2::unload() -> void {
+  GameBoy::interface->unload();
   GameBoy::interface->bind = bind;
   GameBoy::interface->hook = hook;
 }
 
 auto ICD2::power() -> void {
-  audio.coprocessor_enable(true);
-  audio.coprocessor_frequency(2 * 1024 * 1024);
+  audio.coprocessorEnable(true);
+  audio.coprocessorFrequency(2 * 1024 * 1024);
 }
 
 auto ICD2::reset() -> void {
@@ -74,5 +80,7 @@ auto ICD2::reset() -> void {
   GameBoy::system.init();
   GameBoy::system.power();
 }
+
+#endif
 
 }

@@ -1,6 +1,6 @@
 #include "../tomoko.hpp"
 #include "hotkeys.cpp"
-InputManager* inputManager = nullptr;
+unique_pointer<InputManager> inputManager;
 
 auto InputMapping::bind() -> void {
   auto token = assignment.split("/");
@@ -124,7 +124,10 @@ auto InputMapping::assignmentName() -> string {
   if(!device) return "None";
   string path;
   path.append(device->name());
-  path.append(".", device->group(group).name());
+  if(device->name() != "Keyboard") {
+    //keyboards only have one group; no need to append group name
+    path.append(".", device->group(group).name());
+  }
   path.append(".", device->group(group).input(input).name());
   if(qualifier == Qualifier::Lo) path.append(".Lo");
   if(qualifier == Qualifier::Hi) path.append(".Hi");
@@ -207,7 +210,7 @@ auto InputManager::poll() -> void {
   if(presentation && presentation->focused()) pollHotkeys();
 }
 
-auto InputManager::onChange(shared_pointer<HID::Device> device, uint group, uint input, int16 oldValue, int16 newValue) -> void {
+auto InputManager::onChange(shared_pointer<HID::Device> device, uint group, uint input, int16_t oldValue, int16_t newValue) -> void {
   if(settingsManager->focused()) {
     settingsManager->input.inputEvent(device, group, input, oldValue, newValue);
     settingsManager->hotkeys.inputEvent(device, group, input, oldValue, newValue);

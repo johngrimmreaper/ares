@@ -1,11 +1,10 @@
-#ifndef PROCESSOR_R65816_HPP
-#define PROCESSOR_R65816_HPP
-
-namespace Processor {
-
 //WDC 65C816 CPU core
 //* Ricoh 5A22
 //* Nintendo SA-1
+
+#pragma once
+
+namespace Processor {
 
 struct R65816 {
   #include "registers.hpp"
@@ -14,20 +13,20 @@ struct R65816 {
 
   using fp = auto (R65816::*)() -> void;
 
-  virtual auto op_io() -> void = 0;
-  virtual auto op_read(uint32_t addr) -> uint8_t = 0;
-  virtual auto op_write(uint32_t addr, uint8_t data) -> void = 0;
-  virtual auto last_cycle() -> void = 0;
-  virtual auto interrupt_pending() -> bool = 0;
-  virtual auto op_irq() -> void;
+  virtual auto io() -> void = 0;
+  virtual auto read(uint24 addr) -> uint8 = 0;
+  virtual auto write(uint24 addr, uint8 data) -> void = 0;
+  virtual auto lastCycle() -> void = 0;
+  virtual auto interruptPending() const -> bool = 0;
+  virtual auto interrupt() -> void;
 
-  virtual auto disassembler_read(uint32 addr) -> uint8 { return 0u; }
+  virtual auto disassemblerRead(uint24 addr) -> uint8 { return 0u; }
 
   //r65816.cpp
-  alwaysinline auto op_io_irq() -> void;
-  alwaysinline auto op_io_cond2() -> void;
-  alwaysinline auto op_io_cond4(uint16 x, uint16 y) -> void;
-  alwaysinline auto op_io_cond6(uint16 addr) -> void;
+  alwaysinline auto ioIRQ() -> void;
+  alwaysinline auto io2() -> void;
+  alwaysinline auto io4(uint16 x, uint16 y) -> void;
+  alwaysinline auto io6(uint16 addr) -> void;
 
   //algorithms.cpp
   auto op_adc_b();
@@ -216,7 +215,7 @@ struct R65816 {
   auto op_per_n();
 
   //switch.cpp
-  auto op_exec() -> void;
+  auto instruction() -> void;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
@@ -227,5 +226,3 @@ struct R65816 {
 };
 
 }
-
-#endif

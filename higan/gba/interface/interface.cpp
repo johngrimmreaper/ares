@@ -8,12 +8,14 @@ Settings settings;
 Interface::Interface() {
   interface = this;
 
-  information.name        = "Game Boy Advance";
-  information.width       = 240;
-  information.height      = 160;
-  information.overscan    = false;
-  information.aspectRatio = 1.0;
-  information.resettable  = false;
+  information.manufacturer = "Nintendo";
+  information.name         = "Game Boy Advance";
+  information.width        = 240;
+  information.height       = 160;
+  information.overscan     = false;
+  information.aspectRatio  = 1.0;
+  information.resettable   = false;
+
   information.capability.states = true;
   information.capability.cheats = false;
 
@@ -55,7 +57,7 @@ auto Interface::audioFrequency() -> double {
 }
 
 auto Interface::loaded() -> bool {
-  return cartridge.loaded();
+  return system.loaded();
 }
 
 auto Interface::group(uint id) -> uint {
@@ -75,7 +77,7 @@ auto Interface::group(uint id) -> uint {
 }
 
 auto Interface::load(uint id) -> void {
-  cartridge.load();
+  system.load();
 }
 
 auto Interface::save() -> void {
@@ -90,7 +92,7 @@ auto Interface::load(uint id, const stream& stream) -> void {
   }
 
   if(id == ID::BIOS) {
-    stream.read(bios.data, min(bios.size, stream.size()));
+    stream.read((uint8_t*)bios.data, min(bios.size, stream.size()));
   }
 
   if(id == ID::Manifest) {
@@ -98,39 +100,39 @@ auto Interface::load(uint id, const stream& stream) -> void {
   }
 
   if(id == ID::MROM) {
-    stream.read(cartridge.mrom.data, min(cartridge.mrom.size, stream.size()));
+    stream.read((uint8_t*)cartridge.mrom.data, min(cartridge.mrom.size, stream.size()));
   }
 
   if(id == ID::SRAM) {
-    stream.read(cartridge.sram.data, min(cartridge.sram.size, stream.size()));
+    stream.read((uint8_t*)cartridge.sram.data, min(cartridge.sram.size, stream.size()));
   }
 
   if(id == ID::EEPROM) {
-    stream.read(cartridge.eeprom.data, min(cartridge.eeprom.size, stream.size()));
+    stream.read((uint8_t*)cartridge.eeprom.data, min(cartridge.eeprom.size, stream.size()));
   }
 
   if(id == ID::FLASH) {
-    stream.read(cartridge.flash.data, min(cartridge.flash.size, stream.size()));
+    stream.read((uint8_t*)cartridge.flash.data, min(cartridge.flash.size, stream.size()));
   }
 }
 
 auto Interface::save(uint id, const stream& stream) -> void {
   if(id == ID::SRAM) {
-    stream.write(cartridge.sram.data, cartridge.sram.size);
+    stream.write((uint8_t*)cartridge.sram.data, cartridge.sram.size);
   }
 
   if(id == ID::EEPROM) {
-    stream.write(cartridge.eeprom.data, cartridge.eeprom.size);
+    stream.write((uint8_t*)cartridge.eeprom.data, cartridge.eeprom.size);
   }
 
   if(id == ID::FLASH) {
-    stream.write(cartridge.flash.data, cartridge.flash.size);
+    stream.write((uint8_t*)cartridge.flash.data, cartridge.flash.size);
   }
 }
 
 auto Interface::unload() -> void {
   save();
-  cartridge.unload();
+  system.unload();
 }
 
 auto Interface::power() -> void {
@@ -146,7 +148,7 @@ auto Interface::run() -> void {
 }
 
 auto Interface::serialize() -> serializer {
-  system.runtosave();
+  system.runToSave();
   return system.serialize();
 }
 

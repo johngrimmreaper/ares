@@ -8,65 +8,62 @@
 
 namespace GameBoy {
 
+PPU ppu;
+#include "video.cpp"
+
 #include "mmio.cpp"
 #include "dmg.cpp"
 #include "cgb.cpp"
 #include "serialization.cpp"
-PPU ppu;
 
-auto PPU::Main() -> void {
-  ppu.main();
+auto PPU::Enter() -> void {
+  while(true) scheduler.synchronize(), ppu.main();
 }
 
 auto PPU::main() -> void {
-  while(true) {
-    if(scheduler.sync == Scheduler::SynchronizeMode::All) {
-      scheduler.exit(Scheduler::ExitReason::SynchronizeEvent);
+  status.lx = 0;
+  interface->lcdScanline();  //Super Game Boy notification
+
+  if(status.display_enable) {
+    //LYC of zero triggers on LY==153
+    if((status.lyc && status.ly == status.lyc) || (!status.lyc && status.ly == 153)) {
+      if(status.interrupt_lyc) cpu.interrupt_raise(CPU::Interrupt::Stat);
     }
-
-    status.lx = 0;
-    interface->lcdScanline();  //Super Game Boy notification
-
-    if(status.display_enable) {
-      //LYC of zero triggers on LY==153
-      if((status.lyc && status.ly == status.lyc) || (!status.lyc && status.ly == 153)) {
-        if(status.interrupt_lyc) cpu.interrupt_raise(CPU::Interrupt::Stat);
-      }
-
-      if(status.ly <= 143) {
-        scanline();
-        if(status.interrupt_oam) cpu.interrupt_raise(CPU::Interrupt::Stat);
-      }
-
-      if(status.ly == 144) {
-        if(status.interrupt_vblank) cpu.interrupt_raise(CPU::Interrupt::Stat);
-        else if(status.interrupt_oam) cpu.interrupt_raise(CPU::Interrupt::Stat);  //hardware quirk
-        cpu.interrupt_raise(CPU::Interrupt::Vblank);
-      }
-    }
-
-    add_clocks(92);
 
     if(status.ly <= 143) {
-      for(auto n : range(160)) {
-        if(status.display_enable) run();
-        add_clocks(1);
-      }
-
-      if(status.display_enable) {
-        if(status.interrupt_hblank) cpu.interrupt_raise(CPU::Interrupt::Stat);
-        cpu.hblank();
-      }
-    } else {
-      add_clocks(160);
+      scanline();
+      if(status.interrupt_oam) cpu.interrupt_raise(CPU::Interrupt::Stat);
     }
 
-    add_clocks(204);
-
-    if(++status.ly == 154) {
-      status.ly = 0;
-      scheduler.exit(Scheduler::ExitReason::FrameEvent);
+    if(status.ly == 144) {
+      if(status.interrupt_vblank) cpu.interrupt_raise(CPU::Interrupt::Stat);
+      else if(status.interrupt_oam) cpu.interrupt_raise(CPU::Interrupt::Stat);  //hardware quirk
+      cpu.interrupt_raise(CPU::Interrupt::Vblank);
     }
+  }
+
+  add_clocks(92);
+
+  if(status.ly <= 143) {
+    for(auto n : range(160)) {
+      if(status.display_enable) run();
+      add_clocks(1);
+    }
+
+    if(status.display_enable) {
+      if(status.interrupt_hblank) cpu.interrupt_raise(CPU::Interrupt::Stat);
+      cpu.hblank();
+    }
+  } else {
+    add_clocks(160);
+  }
+
+  add_clocks(204);
+
+  if(++status.ly == 154) {
+    status.ly = 0;
+    video.refresh();
+    scheduler.exit(Scheduler::Event::Frame);
   }
 }
 
@@ -90,9 +87,7 @@ auto PPU::add_clocks(uint clocks) -> void {
 
     status.lx++;
     clock += cpu.frequency;
-    if(clock >= 0 && scheduler.sync != Scheduler::SynchronizeMode::All) {
-      co_switch(scheduler.active_thread = cpu.thread);
-    }
+    if(clock >= 0 && !scheduler.synchronizing()) co_switch(cpu.thread);
   }
 }
 
@@ -104,7 +99,7 @@ auto PPU::hflip(uint data) const -> uint {
 }
 
 auto PPU::power() -> void {
-  create(Main, 4 * 1024 * 1024);
+  create(Enter, 4 * 1024 * 1024);
 
   if(system.cgb()) {
     scanline = {&PPU::cgb_scanline, this};
@@ -141,8 +136,8 @@ auto PPU::power() -> void {
   for(auto& n : vram) n = 0x00;
   for(auto& n : oam) n = 0x00;
   for(auto& n : bgp) n = 0x00;
-  for(auto& n : obp[0]) n = 0x00;
-  for(auto& n : obp[1]) n = 0x00;
+  for(auto& n : obp[0]) n = 3;
+  for(auto& n : obp[1]) n = 3;
   for(auto& n : bgpd) n = 0x0000;
   for(auto& n : obpd) n = 0x0000;
 
