@@ -6,8 +6,8 @@ Bug-Debian: http://bugs.debian.org/737364
 
 --- a/higan/GNUmakefile
 +++ b/higan/GNUmakefile
-@@ -9,7 +9,8 @@
- target := tomoko
+@@ -5,7 +5,8 @@
+ profile := accuracy
  # console := true
  
 -flags += -I. -I.. -O3

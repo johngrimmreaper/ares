@@ -4,7 +4,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/GNUmakefile
 +++ b/higan/GNUmakefile
-@@ -37,7 +37,7 @@
+@@ -33,7 +33,7 @@
  else ifeq ($(platform),macosx)
    flags += -march=native
  else ifneq ($(filter $(platform),linux bsd),)

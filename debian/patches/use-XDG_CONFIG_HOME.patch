@@ -6,7 +6,7 @@ Bug-Debian: http://bugs.debian.org/738270
 
 --- a/nall/string/platform.hpp
 +++ b/nall/string/platform.hpp
-@@ -64,7 +64,13 @@
+@@ -78,7 +78,13 @@
    #elif defined(PLATFORM_MACOSX)
    string result = {userpath(), "Library/Application Support/"};
    #else
@@ -19,5 +19,5 @@ Bug-Debian: http://bugs.debian.org/738270
 +    result = {userpath(), ".config/"};
 +  }
    #endif
-   if(result.empty()) result = ".";
+   if(!result) result = ".";
    if(result.endsWith("/") == false) result.append("/");
