@@ -20,6 +20,7 @@ higan (098-1) UNRELEASED; urgency=medium
   * Update homepage URL. (Closes: #808788)
   * Bump Standards-Version.
   * Remove menu file.
+  * Update debian/watch.
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jun 2016 18:19:40 +0100
 

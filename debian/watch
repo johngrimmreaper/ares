@@ -1,2 +1,2 @@
 version=3
-http://byuu.org/emulation/higan/ .*higan_v(\d+)-source\.tar\.xz
+http://byuu.org/emulation/higan/ .*higan_v(\d+)-source\.7z
