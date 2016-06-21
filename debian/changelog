@@ -1,4 +1,4 @@
-higan (097-1) UNRELEASED; urgency=medium
+higan (098-1) UNRELEASED; urgency=medium
 
   * New upstream release.
   * Remove patches (no longer needed):
@@ -17,7 +17,7 @@ higan (097-1) UNRELEASED; urgency=medium
     - sjlj-declare-xopen-source.patch
     - use-XDG_CONFIG_HOME.patch
 
- -- Tobias Hansen <thansen@debian.org>  Mon, 14 Mar 2016 23:25:31 +0000
+ -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jun 2016 18:19:40 +0100
 
 higan (094-6) unstable; urgency=medium
 
