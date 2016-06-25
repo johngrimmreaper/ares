@@ -1,0 +1,16 @@
+Description: Use sharedpath() when locating files
+ To find files that are in /usr/share/higan.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/higan/target-tomoko/tomoko.cpp
++++ b/higan/target-tomoko/tomoko.cpp
+@@ -11,6 +11,9 @@
+   location = {configpath(), "higan/", name};
+   if(inode::exists(location)) return location;
+ 
++  location = {sharedpath(), "higan/", name};
++  if(inode::exists(location)) return location;
++
+   directory::create({localpath(), "higan/"});
+   return {localpath(), "higan/", name};
+ }
