@@ -1,0 +1,17 @@
+Description: Ignore manifests in the game library by default
+ Game folders in the game library created with older versions of
+ higan contain files named manifest.bml. Without this option enabled
+ these games do not work anymore as long as the manifests are present.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/higan/target-tomoko/configuration/configuration.cpp
++++ b/higan/target-tomoko/configuration/configuration.cpp
+@@ -12,7 +12,7 @@
+   set("UserInterface/ShowStatusBar", true);
+ 
+   set("Library/Location", {userpath(), "Emulation/"});
+-  set("Library/IgnoreManifests", false);
++  set("Library/IgnoreManifests", true);
+ 
+   set("Video/Driver", ruby::Video::optimalDriver());
+   set("Video/Synchronize", false);

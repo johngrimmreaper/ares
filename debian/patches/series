@@ -6,3 +6,4 @@ noopt.patch
 use-XDG_CONFIG_HOME.patch
 find_cairo.patch
 use_sharedpath.patch
+ignore_manifests_by_default.patch
