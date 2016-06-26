@@ -1,6 +1,7 @@
 Description: nall/Makefile fixes
 
 * Use the flags from CFLAGS, CPPFLAGS and LDFLAGS. They are set in the rules file.
+* Use g++ instead of g++-4.9.
 
 Author: Tobias Hansen <thansen@debian.org>
 
@@ -30,3 +31,12 @@ Author: Tobias Hansen <thansen@debian.org>
  
  # compiler detection
  ifeq ($(compiler),)
+@@ -51,7 +51,7 @@
+   else ifeq ($(platform),macosx)
+     compiler := clang++
+   else ifeq ($(platform),linux)
+-    compiler := g++-4.9
++    compiler := g++
+   else ifeq ($(platform),bsd)
+     compiler := g++49
+   else
