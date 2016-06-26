@@ -3,31 +3,31 @@ Upstream-Name: higan
 Source: http://byuu.org/emulation/higan/
 
 Files: *
-Copyright: 2004-2013 byuu
+Copyright: 2004-2016 byuu
 License: GPL-3
 Comment:
- The license is stated in the file sfc/sfc.hpp.
+ The license is stated in the file higan/sfc/sfc.hpp.
 
-Files: gba/*
+Files: higan/gba/*
 Copyright: 2011-2013 byuu, Cydrak
 License: GPL-3
 Comment:
- The license is stated in the file gba/gba.hpp.
+ The license is stated in the file higan/gba/gba.hpp.
 
-Files: gb/*
+Files: higan/gb/*
 Copyright: 2010-2013 byuu
 License: GPL-3
 Comment:
- The license is stated in the file gb/gb.hpp.
+ The license is stated in the file higan/gb/gb.hpp.
 
-Files: fc/*
+Files: higan/fc/*
 Copyright: 2011-2013 byuu, Ryphecha
 License: GPL-3
 Comment:
- The license is stated in the file fc/fc.hpp.
+ The license is stated in the file higan/fc/fc.hpp.
 
 Files: debian/*
-Copyright: 2011-2013 Tobias Hansen <thansen@debian.org>
+Copyright: 2011-2016 Tobias Hansen <thansen@debian.org>
 License: GPL-3
 
 Files: debian/userguide/*
@@ -47,19 +47,19 @@ Files: debian/userguide/higan_user_guide.html
 Copyright: 2013 byuu, Tobias Hansen
 License: ISC
 
-Files: sfc/alt/dsp/*
+Files: higan/sfc/alt/dsp/*
 Copyright: Copyright (C) 2006-2013 byuu, Shay Green
 License: LGPL-2.1+
 
-Files: sfc/chip/sdd1/decomp.*
+Files: higan/sfc/coprocessor/sdd1/decomp.*
 Copyright: byuu, Andreas Naive
 License: GPL-3
 
-Files: sfc/chip/spc7110/*
+Files: higan/sfc/coprocessor/spc7110/*
 Copyright: Copyright (c) 2008-2013, byuu, neviksti
 License: ISC
 
-Files: nall/inflate.hpp
+Files: nall/decode/inflate.hpp
 Copyright: byuu, Mark Adler
 License: Zlib
 
