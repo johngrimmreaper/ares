@@ -23,6 +23,7 @@ higan (098-1) UNRELEASED; urgency=medium
   * Update homepage URL. (Closes: #808788)
   * Bump Standards-Version.
   * Remove menu file.
+  * Remove lintian override for menu-command-not-in-package.
   * Update debian/watch.
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jun 2016 18:19:40 +0100
