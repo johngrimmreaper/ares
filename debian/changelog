@@ -20,6 +20,7 @@ higan (098-1) unstable; urgency=medium
     - use_sharedpath.patch
     - ignore_manifests_by_default.patch
     - create_config.patch
+    - include_cmath.patch
   * Fix .desktop file syntax. (Closes: #812482)
   * Update homepage URL. (Closes: #808788)
   * Bump Standards-Version.
