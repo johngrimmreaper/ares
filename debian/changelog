@@ -19,6 +19,7 @@ higan (098-1) UNRELEASED; urgency=medium
   * New patches:
     - use_sharedpath.patch
     - ignore_manifests_by_default.patch
+    - create_config.patch
   * Fix .desktop file syntax. (Closes: #812482)
   * Update homepage URL. (Closes: #808788)
   * Bump Standards-Version.

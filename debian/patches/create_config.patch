@@ -1,0 +1,16 @@
+Description: Always create new config file in configpath
+ Using locate() can lead to an attempt to write a new config file
+ to a directory without write permission. The correct path is
+ configpath (~/.config/higan).
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/higan/target-tomoko/configuration/configuration.cpp
++++ b/higan/target-tomoko/configuration/configuration.cpp
+@@ -48,5 +48,6 @@
+ }
+ 
+ auto Settings::quit() -> void {
+-  file::write(locate("settings.bml"), BML::serialize(*this));
++  directory::create({configpath(), "higan/"});
++  file::write({configpath(), "higan/", "settings.bml"}, BML::serialize(*this));
+ }
