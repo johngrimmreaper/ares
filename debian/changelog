@@ -1,4 +1,4 @@
-higan (098-1) UNRELEASED; urgency=medium
+higan (098-1) unstable; urgency=medium
 
   * New upstream release.
   * Remove patches (no longer needed):
@@ -31,7 +31,7 @@ higan (098-1) UNRELEASED; urgency=medium
   * Update user guide.
   * Write man page for icarus.
 
- -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jun 2016 18:19:40 +0100
+ -- Tobias Hansen <thansen@debian.org>  Sun, 26 Jun 2016 12:56:27 +0100
 
 higan (094-6) unstable; urgency=medium
 
