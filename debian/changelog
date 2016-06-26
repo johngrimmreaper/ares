@@ -27,6 +27,7 @@ higan (098-1) UNRELEASED; urgency=medium
   * Update debian/watch.
   * Use https vcs urls.
   * Update debian/copyright with new file locations.
+  * Update user guide.
 
  -- Tobias Hansen <thansen@debian.org>  Tue, 21 Jun 2016 18:19:40 +0100
 
