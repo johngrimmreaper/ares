@@ -1,3 +1,0 @@
-# Can't have one because byuu.org/higan is compressed unconditionally
-# and uscan does not support compressed html.
-higan source: debian-watch-file-is-missing
