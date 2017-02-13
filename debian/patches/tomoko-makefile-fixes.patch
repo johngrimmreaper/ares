@@ -1,0 +1,26 @@
+Description: higan/target-tomoko-GNUmakefile fixes
+ * Allow installation of files under fakeroot.
+ * Create $(prefix)/share/applications/ folder.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/higan/target-tomoko/GNUmakefile
++++ b/higan/target-tomoko/GNUmakefile
+@@ -81,9 +81,7 @@
+ endif
+ 
+ install:
+-ifeq ($(shell id -un),root)
+-	$(error "make install should not be run as root")
+-else ifeq ($(platform),windows)
++ifeq ($(platform),windows)
+ else ifeq ($(platform),macosx)
+ 	mkdir -p ~/Library/Application\ Support/$(name)/
+ 	mkdir -p ~/Emulation/System/
+@@ -92,6 +90,7 @@
+ 	cp -R systems/* ~/Library/Application\ Support/$(name)/
+ else ifneq ($(filter $(platform),linux bsd),)
+ 	mkdir -p $(prefix)/bin/
++	mkdir -p $(prefix)/share/applications/
+ 	mkdir -p $(prefix)/share/icons/
+ 	mkdir -p $(prefix)/share/$(name)/
+ 	cp out/$(name) $(prefix)/bin/$(name)
