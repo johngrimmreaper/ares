@@ -6,13 +6,13 @@ Bug-Debian: http://bugs.debian.org/737364
 
 --- a/higan/GNUmakefile
 +++ b/higan/GNUmakefile
-@@ -5,7 +5,8 @@
- profile := accuracy
+@@ -3,7 +3,8 @@
+ target := tomoko
  # console := true
  
 -flags += -I. -I.. -O3
 +flags += -I. -I..
 +flags += $(if $(filter noopt,$(DEB_BUILD_OPTIONS)),-O0,-O3)
- objects := libco
+ objects := libco emulator audio video resource
  
  # profile-guided optimization mode

@@ -3,7 +3,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/target-tomoko/GNUmakefile
 +++ b/higan/target-tomoko/GNUmakefile
-@@ -25,7 +25,10 @@
+@@ -27,7 +27,10 @@
    ruby += input.quartz input.carbon
  else ifeq ($(platform),linux)
    ruby += video.glx video.xv video.xshm video.sdl

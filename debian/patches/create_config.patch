@@ -6,7 +6,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/target-tomoko/configuration/configuration.cpp
 +++ b/higan/target-tomoko/configuration/configuration.cpp
-@@ -48,5 +48,6 @@
+@@ -49,5 +49,6 @@
  }
  
  auto Settings::quit() -> void {

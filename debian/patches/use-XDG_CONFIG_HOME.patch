@@ -4,20 +4,20 @@ Description: Use $XDG_CONFIG_HOME
 Author: Michael Gold <michael@bitplane.org>
 Bug-Debian: http://bugs.debian.org/738270
 
---- a/nall/string/platform.hpp
-+++ b/nall/string/platform.hpp
-@@ -78,7 +78,13 @@
+--- a/nall/path.hpp
++++ b/nall/path.hpp
+@@ -80,7 +80,13 @@
    #elif defined(PLATFORM_MACOSX)
-   string result = {userpath(), "Library/Application Support/"};
+   string result = {Path::user(), "Library/Application Support/"};
    #else
--  string result = {userpath(), ".config/"};
+-  string result = {Path::user(), ".config/"};
 +  string result;
 +  const char *env = getenv("XDG_CONFIG_HOME");
 +  if(env) {
 +    result.append(env);
 +  } else {
-+    result = {userpath(), ".config/"};
++    result = {Path::user(), ".config/"};
 +  }
    #endif
    if(!result) result = ".";
-   if(result.endsWith("/") == false) result.append("/");
+   if(!result.endsWith("/")) result.append("/");

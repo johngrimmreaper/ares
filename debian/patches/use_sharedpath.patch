@@ -5,12 +5,12 @@ Author: Tobias Hansen <thansen@debian.org>
 --- a/higan/target-tomoko/tomoko.cpp
 +++ b/higan/target-tomoko/tomoko.cpp
 @@ -11,6 +11,9 @@
-   location = {configpath(), "higan/", name};
+   location = {Path::config(), "higan/", name};
    if(inode::exists(location)) return location;
  
-+  location = {sharedpath(), "higan/", name};
++  location = {Path::shared(), "higan/", name};
 +  if(inode::exists(location)) return location;
 +
-   directory::create({localpath(), "higan/"});
-   return {localpath(), "higan/", name};
+   directory::create({Path::local(), "higan/"});
+   return {Path::local(), "higan/", name};
  }

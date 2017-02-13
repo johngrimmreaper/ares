@@ -9,7 +9,7 @@ Author: Tobias Hansen <thansen@debian.org>
 @@ -12,7 +12,7 @@
    set("UserInterface/ShowStatusBar", true);
  
-   set("Library/Location", {userpath(), "Emulation/"});
+   set("Library/Location", {Path::user(), "Emulation/"});
 -  set("Library/IgnoreManifests", false);
 +  set("Library/IgnoreManifests", true);
  

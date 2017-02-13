@@ -1,6 +1,7 @@
 higan (102-1) UNRELEASED; urgency=medium
 
   * New upstream release. (Closes: #837553)
+  * Remove disable_long_double_size_check.patch (applied upstream).
 
  -- Tobias Hansen <thansen@debian.org>  Mon, 13 Feb 2017 21:23:07 +0000
 

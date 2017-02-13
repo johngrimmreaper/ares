@@ -5,8 +5,8 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/libco/sjlj.c
 +++ b/libco/sjlj.c
-@@ -12,6 +12,7 @@
-  */
+@@ -10,6 +10,7 @@
+ */
  
  #define LIBCO_C
 +#define _XOPEN_SOURCE 700
