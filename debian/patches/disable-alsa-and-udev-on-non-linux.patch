@@ -1,17 +1,22 @@
-Description: Include ALSA audio backend only on Linux.
+Description: Include ALSA and udev only on Linux.
 Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/target-tomoko/GNUmakefile
 +++ b/higan/target-tomoko/GNUmakefile
-@@ -27,7 +27,10 @@
+@@ -27,8 +27,14 @@
    ruby += input.quartz input.carbon
  else ifeq ($(platform),linux)
    ruby += video.glx video.xv video.xshm video.sdl
 -  ruby += audio.alsa audio.openal audio.oss audio.pulseaudio audio.pulseaudiosimple audio.ao
+-  ruby += input.udev input.sdl input.xlib
 +  ifneq ($(findstring Linux,$(uname)),)
 +    ruby += audio.alsa
 +  endif
 +  ruby += audio.openal audio.oss audio.pulseaudio audio.pulseaudiosimple audio.ao
-   ruby += input.udev input.sdl input.xlib
++  ifneq ($(findstring Linux,$(uname)),)
++    ruby += input.udev
++  endif
++  ruby += input.sdl input.xlib
  else ifeq ($(platform),bsd)
    ruby += video.glx video.xv video.xshm video.sdl
+   ruby += audio.openal audio.oss

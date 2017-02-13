@@ -9,5 +9,5 @@ use_sharedpath.patch
 ignore_manifests_by_default.patch
 create_config.patch
 include_cmath.patch
-disable-alsa-on-non-linux.patch
+disable-alsa-and-udev-on-non-linux.patch
 tomoko-makefile-fixes.patch

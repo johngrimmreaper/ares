@@ -8,6 +8,7 @@ higan (102-1) UNRELEASED; urgency=medium
   * Switch to dh compat level 10.
   * Use install target of upstream makefile.
   * Remove disable_long_double_size_check.patch (applied upstream).
+  * Disable udev on kfreebsd. (Closes: #834061)
 
  -- Tobias Hansen <thansen@debian.org>  Mon, 13 Feb 2017 21:23:07 +0000
 
