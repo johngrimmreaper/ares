@@ -17,19 +17,7 @@ override_dh_auto_build:
 	mkdir -p icarus/obj icarus/out
 	$(MAKE) --directory=icarus
 	mkdir -p higan/obj higan/out
-	dh_auto_build -- profile=balanced name=higan-balanced
-# Allow for building higan only once when testing stuff with the build option testbuild.
-ifeq (,$(findstring testbuild,$(DEB_BUILD_OPTIONS)))
-	rm -rf higan/obj
-	mkdir -p higan/obj
-	dh_auto_build -- profile=accuracy name=higan-accuracy
-	rm -rf higan/obj
-	mkdir -p higan/obj
-	dh_auto_build -- profile=performance name=higan-performance
-else
-	cp higan/out/higan-balanced higan/out/higan-accuracy
-	cp higan/out/higan-balanced higan/out/higan-performance
-endif
+	dh_auto_build
 
 override_dh_auto_install:
 	install -D -m 644 higan/data/higan.png debian/higan/usr/share/pixmaps/higan.png

@@ -1,4 +1,2 @@
-higan/out/higan-balanced usr/bin
-higan/out/higan-accuracy usr/bin
-higan/out/higan-performance usr/bin
+higan/out/higan usr/bin
 icarus/out/icarus usr/bin
