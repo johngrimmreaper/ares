@@ -1,6 +1,12 @@
 higan (102-1) UNRELEASED; urgency=medium
 
   * New upstream release. (Closes: #837553)
+  * Higan no longer has profiles (accuracy, balanced, performance).
+    New versions of higan use what used to be the accuracy profile.
+    Consequently the update-alternatives mechanism to choose a profile
+    was removed from the package.
+  * Switch to dh compat level 10.
+  * Use install target of upstream makefile.
   * Remove disable_long_double_size_check.patch (applied upstream).
 
  -- Tobias Hansen <thansen@debian.org>  Mon, 13 Feb 2017 21:23:07 +0000
