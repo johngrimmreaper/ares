@@ -2,30 +2,17 @@
 
 namespace SuperFamicom {
 
-Satellaview satellaview;
-
-auto Satellaview::init() -> void {
-}
-
-auto Satellaview::load() -> void {
-  bus.map({&Satellaview::read, &satellaview}, {&Satellaview::write, &satellaview}, 0x00, 0x3f, 0x2188, 0x219f);
-  bus.map({&Satellaview::read, &satellaview}, {&Satellaview::write, &satellaview}, 0x80, 0xbf, 0x2188, 0x219f);
-}
-
-auto Satellaview::unload() -> void {
-}
-
-auto Satellaview::power() -> void {
-}
-
-auto Satellaview::reset() -> void {
+Satellaview::Satellaview() {
+  bus.map({&Satellaview::read, this}, {&Satellaview::write, this}, "00-3f,80-bf:2188-219f");
   memory::fill(&regs, sizeof regs);
 }
 
-auto Satellaview::read(uint24 addr, uint8 data) -> uint8 {
-  addr &= 0xffff;
+Satellaview::~Satellaview() {
+  bus.unmap("00-3f,80-bf:2188-219f");
+}
 
-  switch(addr) {
+auto Satellaview::read(uint24 addr, uint8 data) -> uint8 {
+  switch(addr &= 0xffff) {
   case 0x2188: return regs.r2188;
   case 0x2189: return regs.r2189;
   case 0x218a: return regs.r218a;
@@ -35,17 +22,17 @@ auto Satellaview::read(uint24 addr, uint8 data) -> uint8 {
   case 0x2190: return regs.r2190;
 
   case 0x2192: {
-    uint counter = regs.r2192_counter++;
-    if(regs.r2192_counter >= 18) regs.r2192_counter = 0;
+    uint counter = regs.rtcCounter++;
+    if(regs.rtcCounter >= 18) regs.rtcCounter = 0;
 
     if(counter == 0) {
       time_t rawtime;
       time(&rawtime);
       tm* t = localtime(&rawtime);
 
-      regs.r2192_hour   = t->tm_hour;
-      regs.r2192_minute = t->tm_min;
-      regs.r2192_second = t->tm_sec;
+      regs.rtcHour   = t->tm_hour;
+      regs.rtcMinute = t->tm_min;
+      regs.rtcSecond = t->tm_sec;
     }
 
     switch(counter) {
@@ -59,9 +46,9 @@ auto Satellaview::read(uint24 addr, uint8 data) -> uint8 {
     case  7: return 0x00;
     case  8: return 0x00;
     case  9: return 0x00;
-    case 10: return regs.r2192_second;
-    case 11: return regs.r2192_minute;
-    case 12: return regs.r2192_hour;
+    case 10: return regs.rtcSecond;
+    case 11: return regs.rtcMinute;
+    case 12: return regs.rtcHour;
     case 13: return 0x00;  //???
     case 14: return 0x00;  //???
     case 15: return 0x00;  //???
@@ -81,9 +68,7 @@ auto Satellaview::read(uint24 addr, uint8 data) -> uint8 {
 }
 
 auto Satellaview::write(uint24 addr, uint8 data) -> void {
-  addr &= 0xffff;
-
-  switch(addr) {
+  switch(addr &= 0xffff) {
   case 0x2188: {
     regs.r2188 = data;
   } break;
@@ -116,7 +101,7 @@ auto Satellaview::write(uint24 addr, uint8 data) -> void {
 
   case 0x2191: {
     regs.r2191 = data;
-    regs.r2192_counter = 0;
+    regs.rtcCounter = 0;
   } break;
 
   case 0x2192: {

@@ -12,17 +12,17 @@ auto HitachiDSP::Enter() -> void {
 
 auto HitachiDSP::main() -> void {
   if(mmio.dma) {
-    for(auto n : range(mmio.dma_length)) {
-      bus_write(mmio.dma_target + n, bus_read(mmio.dma_source + n));
+    for(auto n : range(mmio.dmaLength)) {
+      write(mmio.dmaTarget + n, read(mmio.dmaSource + n));
       step(2);
+      synchronize(cpu);
     }
     mmio.dma = false;
   }
 
-  exec(mmio.program_offset);
+  exec(mmio.programOffset);
   step(1);
-
-  synchronizeCPU();
+  synchronize(cpu);
 }
 
 auto HitachiDSP::init() -> void {
@@ -39,14 +39,14 @@ auto HitachiDSP::unload() -> void {
 auto HitachiDSP::power() -> void {
   mmio.dma = false;
 
-  mmio.dma_source = 0x000000;
-  mmio.dma_length = 0x0000;
-  mmio.dma_target = 0x000000;
+  mmio.dmaSource = 0x000000;
+  mmio.dmaLength = 0x0000;
+  mmio.dmaTarget = 0x000000;
   mmio.r1f48 = 0x00;
-  mmio.program_offset = 0x000000;
+  mmio.programOffset = 0x000000;
   mmio.r1f4c = 0x00;
-  mmio.page_number = 0x0000;
-  mmio.program_counter = 0x00;
+  mmio.pageNumber = 0x0000;
+  mmio.programCounter = 0x00;
   mmio.r1f50 = 0x33;
   mmio.r1f51 = 0x00;
   mmio.r1f52 = 0x01;

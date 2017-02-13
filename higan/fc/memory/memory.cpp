@@ -12,12 +12,12 @@ Bus bus;
 //$4018-ffff = Cartridge
 
 auto Bus::read(uint16 addr) -> uint8 {
-  uint8 data = cartridge.prg_read(addr);
-       if(addr <= 0x1fff) data = cpu.ram_read(addr);
-  else if(addr <= 0x3fff) data = ppu.read(addr);
-  else if(addr <= 0x4017) data = cpu.read(addr);
+  uint8 data = cartridge.readPRG(addr);
+       if(addr <= 0x1fff) data = cpu.readRAM(addr);
+  else if(addr <= 0x3fff) data = ppu.readIO(addr);
+  else if(addr <= 0x4017) data = cpu.readIO(addr);
 
-  if(cheat.enable()) {
+  if(cheat) {
     if(auto result = cheat.find(addr, data)) return result();
   }
 
@@ -25,10 +25,10 @@ auto Bus::read(uint16 addr) -> uint8 {
 }
 
 auto Bus::write(uint16 addr, uint8 data) -> void {
-  cartridge.prg_write(addr, data);
-  if(addr <= 0x1fff) return cpu.ram_write(addr, data);
-  if(addr <= 0x3fff) return ppu.write(addr, data);
-  if(addr <= 0x4017) return cpu.write(addr, data);
+  cartridge.writePRG(addr, data);
+  if(addr <= 0x1fff) return cpu.writeRAM(addr, data);
+  if(addr <= 0x3fff) return ppu.writeIO(addr, data);
+  if(addr <= 0x4017) return cpu.writeIO(addr, data);
 }
 
 }

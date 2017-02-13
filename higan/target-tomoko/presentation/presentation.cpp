@@ -1,35 +1,39 @@
 #include "../tomoko.hpp"
+#include "about.cpp"
+unique_pointer<AboutWindow> aboutWindow;
 unique_pointer<Presentation> presentation;
 
 Presentation::Presentation() {
   presentation = this;
 
   libraryMenu.setText("Library");
+  string_vector manufacturers;
   for(auto& emulator : program->emulators) {
-    for(auto& media : emulator->media) {
-      if(!media.bootable) continue;
-      auto item = new MenuItem{&libraryMenu};
-      item->setText({media.name, " ..."}).onActivate([=] {
-        directory::create({settings["Library/Location"].text(), media.name});
-        auto location = BrowserDialog()
-        .setTitle({"Load ", media.name})
-        .setPath({settings["Library/Location"].text(), media.name})
-        .setFilters(string{media.name, "|*.", media.type})
-        .openFolder();
-        if(directory::exists(location)) {
-          program->loadMedia(location);
-        }
-      });
-      loadBootableMedia.append(item);
+    if(!manufacturers.find(emulator->information.manufacturer)) {
+      manufacturers.append(emulator->information.manufacturer);
+    }
+  }
+  for(auto& manufacturer : manufacturers) {
+    Menu manufacturerMenu{&libraryMenu};
+    manufacturerMenu.setText(manufacturer);
+    for(auto& emulator : program->emulators) {
+      if(emulator->information.manufacturer != manufacturer) continue;
+      for(auto& medium : emulator->media) {
+        auto item = new MenuItem{&manufacturerMenu};
+        item->setText({medium.name, " ..."}).onActivate([=] {
+          program->loadMedium(*emulator, medium);
+        });
+      }
     }
   }
   //add icarus menu options -- but only if icarus binary is present
-  if(execute("icarus", "--name").strip() == "icarus") {
+  if(execute("icarus", "--name").output.strip() == "icarus") {
     libraryMenu.append(MenuSeparator());
     libraryMenu.append(MenuItem().setText("Load ROM File ...").onActivate([&] {
       audio->clear();
       if(auto location = execute("icarus", "--import")) {
-        program->loadMedia(location.strip());
+        program->mediumQueue.append(location.output.strip());
+        program->loadMedium();
       }
     }));
     libraryMenu.append(MenuItem().setText("Import ROM Files ...").onActivate([&] {
@@ -38,9 +42,8 @@ Presentation::Presentation() {
   }
 
   systemMenu.setText("System").setVisible(false);
-  powerSystem.setText("Power").onActivate([&] { program->powerCycle(); });
-  resetSystem.setText("Reset").onActivate([&] { program->softReset(); });
-  unloadSystem.setText("Unload").onActivate([&] { program->unloadMedia(); drawSplashScreen(); });
+  reloadSystem.setText("Power Cycle").onActivate([&] { program->powerCycle(); });
+  unloadSystem.setText("Unload").onActivate([&] { program->unloadMedium(); });
 
   settingsMenu.setText("Settings");
   videoScaleMenu.setText("Video Scale");
@@ -72,7 +75,7 @@ Presentation::Presentation() {
     settings["Video/ColorEmulation"].setValue(colorEmulation.checked());
     if(emulator) emulator->set("Color Emulation", colorEmulation.checked());
   });
-  scanlineEmulation.setText("Scanlines").setChecked(settings["Video/ScanlineEmulation"].boolean()).onToggle([&] {
+  scanlineEmulation.setText("Scanlines").setChecked(settings["Video/ScanlineEmulation"].boolean()).setVisible(false).onToggle([&] {
     settings["Video/ScanlineEmulation"].setValue(scanlineEmulation.checked());
     if(emulator) emulator->set("Scanline Emulation", scanlineEmulation.checked());
   });
@@ -89,7 +92,7 @@ Presentation::Presentation() {
     program->updateVideoShader();
   });
   loadShaders();
-  synchronizeVideo.setText("Synchronize Video").setChecked(settings["Video/Synchronize"].boolean()).onToggle([&] {
+  synchronizeVideo.setText("Synchronize Video").setChecked(settings["Video/Synchronize"].boolean()).setVisible(false).onToggle([&] {
     settings["Video/Synchronize"].setValue(synchronizeVideo.checked());
     video->set(Video::Synchronize, synchronizeVideo.checked());
   });
@@ -99,7 +102,7 @@ Presentation::Presentation() {
   });
   muteAudio.setText("Mute Audio").setChecked(settings["Audio/Mute"].boolean()).onToggle([&] {
     settings["Audio/Mute"].setValue(muteAudio.checked());
-    program->updateAudioVolume();
+    program->updateAudioEffects();
   });
   showStatusBar.setText("Show Status Bar").setChecked(settings["UserInterface/ShowStatusBar"].boolean()).onToggle([&] {
     settings["UserInterface/ShowStatusBar"].setValue(showStatusBar.checked());
@@ -130,18 +133,17 @@ Presentation::Presentation() {
     invoke("http://doc.byuu.org/higan/");
   });
   about.setText("About ...").onActivate([&] {
-    MessageDialog().setParent(*this).setTitle("About higan ...").setText({
-      Emulator::Name, "/tomoko v", Emulator::Version, " (", Emulator::Profile, ")\n\n",
-      "Author: ", Emulator::Author, "\n",
-      "License: ", Emulator::License, "\n",
-      "Website: ", Emulator::Website
-    }).information();
+    aboutWindow->setVisible().setFocused();
   });
 
   statusBar.setFont(Font().setBold());
   statusBar.setVisible(settings["UserInterface/ShowStatusBar"].boolean());
 
-  viewport.setDroppable().onDrop([&](auto locations) { program->load(locations(0)); });
+  viewport.setDroppable().onDrop([&](auto locations) {
+    if(!directory::exists(locations(0))) return;
+    program->mediumQueue.append(locations(0));
+    program->loadMedium();
+  });
 
   onClose([&] { program->quit(); });
 
@@ -168,19 +170,18 @@ Presentation::Presentation() {
 
 auto Presentation::updateEmulator() -> void {
   if(!emulator) return;
-  resetSystem.setVisible(emulator->information.resettable);
   inputPort1.setVisible(false).reset();
   inputPort2.setVisible(false).reset();
   inputPort3.setVisible(false).reset();
 
-  for(auto n : range(emulator->port)) {
+  for(auto n : range(emulator->ports)) {
     if(n >= 3) break;
-    auto& port = emulator->port[n];
+    auto& port = emulator->ports[n];
     auto& menu = (n == 0 ? inputPort1 : n == 1 ? inputPort2 : inputPort3);
     menu.setText(port.name);
 
     Group devices;
-    for(auto& device : port.device) {
+    for(auto& device : port.devices) {
       MenuRadioItem item{&menu};
       item.setText(device.name).onActivate([=] {
         auto path = string{emulator->information.name, "/", port.name}.replace(" ", "");
@@ -206,41 +207,61 @@ auto Presentation::updateEmulator() -> void {
   emulator->set("Scanline Emulation", scanlineEmulation.checked());
 }
 
-auto Presentation::resizeViewport() -> void {
-  int width   = emulator ? emulator->information.width  : 256;
-  int height  = emulator ? emulator->information.height : 240;
-  double stretch = emulator ? emulator->information.aspectRatio : 1.0;
-  if(stretch != 1.0) {
-    //aspect correction is always enabled in fullscreen mode
-    if(!fullScreen() && !settings["Video/AspectCorrection"].boolean()) stretch = 1.0;
-  }
+auto Presentation::clearViewport() -> void {
+  if(!video) return;
 
-  int scale = 2;
+  uint32_t* output;
+  uint length = 0;
+  uint width = viewport.geometry().width();
+  uint height = viewport.geometry().height();
+  if(video->lock(output, length, width, height)) {
+    for(uint y : range(height)) {
+      auto dp = output + y * (length >> 2);
+      for(uint x : range(width)) *dp++ = 0xff000000;
+    }
+
+    video->unlock();
+    video->refresh();
+  }
+}
+
+auto Presentation::resizeViewport() -> void {
+  //clear video area before resizing to avoid seeing distorted video momentarily
+  clearViewport();
+
+  uint scale = 2;
   if(settings["Video/Scale"].text() == "Small" ) scale = 2;
   if(settings["Video/Scale"].text() == "Medium") scale = 3;
   if(settings["Video/Scale"].text() == "Large" ) scale = 4;
 
-  int windowWidth = 0, windowHeight = 0;
+  uint windowWidth = 0, windowHeight = 0;
+  bool aspectCorrection = true;
   if(!fullScreen()) {
-    windowWidth  = 256 * scale * (settings["Video/AspectCorrection"].boolean() ? 8.0 / 7.0 : 1.0);
+    windowWidth  = 320 * scale;
     windowHeight = 240 * scale;
+    aspectCorrection = settings["Video/AspectCorrection"].boolean();
   } else {
     windowWidth  = geometry().width();
     windowHeight = geometry().height();
   }
-
-  int multiplier = min(windowWidth / (int)(width * stretch), windowHeight / height);
-  width = width * multiplier * stretch;
-  height = height * multiplier;
-
   if(!fullScreen()) setSize({windowWidth, windowHeight});
-  viewport.setGeometry({(windowWidth - width) / 2, (windowHeight - height) / 2, width, height});
 
-  if(!emulator) drawSplashScreen();
+  if(!emulator) {
+    viewport.setGeometry({0, 0, windowWidth, windowHeight});
+  } else {
+    auto videoSize = emulator->videoSize(windowWidth, windowHeight, aspectCorrection);
+    viewport.setGeometry({
+      (windowWidth - videoSize.width) / 2, (windowHeight - videoSize.height) / 2,
+      videoSize.width, videoSize.height
+    });
+  }
+
+  //clear video area again to ensure entire viewport area has been painted in
+  clearViewport();
 }
 
 auto Presentation::toggleFullScreen() -> void {
-  if(fullScreen() == false) {
+  if(!fullScreen()) {
     menuBar.setVisible(false);
     statusBar.setVisible(false);
     setResizable(true);
@@ -253,23 +274,7 @@ auto Presentation::toggleFullScreen() -> void {
     menuBar.setVisible(true);
     statusBar.setVisible(settings["UserInterface/ShowStatusBar"].boolean());
   }
-
-  Application::processEvents();
   resizeViewport();
-}
-
-auto Presentation::drawSplashScreen() -> void {
-  if(!video) return;
-  uint32_t* output;
-  uint length;
-  if(video->lock(output, length, 256, 240)) {
-    for(auto y : range(240)) {
-      auto dp = output + y * (length >> 2);
-      for(auto x : range(256)) *dp++ = 0xff000000;
-    }
-    video->unlock();
-    video->refresh();
-  }
 }
 
 auto Presentation::loadShaders() -> void {
@@ -279,7 +284,7 @@ auto Presentation::loadShaders() -> void {
     for(auto shader : directory::folders(pathname, "*.shader")) {
       if(videoShaders.objectCount() == 2) videoShaderMenu.append(MenuSeparator());
       MenuRadioItem item{&videoShaderMenu};
-      item.setText(string{shader}.rtrim(".shader/", 1L)).onActivate([=] {
+      item.setText(string{shader}.trimRight(".shader/", 1L)).onActivate([=] {
         settings["Video/Shader"].setValue({pathname, shader});
         program->updateVideoShader();
       });

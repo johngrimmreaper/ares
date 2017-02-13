@@ -6,7 +6,6 @@ PPU ppu;
 #include "io.cpp"
 #include "latch.cpp"
 #include "render.cpp"
-#include "video.cpp"
 #include "serialization.cpp"
 
 auto PPU::Enter() -> void {
@@ -29,7 +28,10 @@ auto PPU::main() -> void {
         if(l.screenTwoEnable) renderScreenTwo();
         if(l.spriteEnable) renderSprite();
       }
-      output[s.vclk * 224 + s.hclk] = s.pixel.color;
+      switch(l.orientation) {
+      case 0: output[(s.vclk + 40) * 224 + s.hclk] = s.pixel.color; break;
+      case 1: output[(223 - s.hclk) * 224 + (s.vclk + 40)] = s.pixel.color; break;
+      }
       step(1);
     }
     step(32);
@@ -73,15 +75,22 @@ auto PPU::scanline() -> void {
 auto PPU::frame() -> void {
   s.field = !s.field;
   s.vclk = 0;
-  video.refresh();
   scheduler.exit(Scheduler::Event::Frame);
+  if(l.orientation != system.orientation()) {
+    l.orientation = system.orientation();
+    memory::fill(output, 224 * 224 * sizeof(uint32));
+  }
+}
+
+auto PPU::refresh() -> void {
+  Emulator::video.refresh(output, 224 * sizeof(uint32), 224, 224);
 }
 
 auto PPU::step(uint clocks) -> void {
   s.hclk += clocks;
 
-  clock += clocks;
-  if(clock >= 0 && !scheduler.synchronizing()) co_switch(cpu.thread);
+  Thread::step(clocks);
+  synchronize(cpu);
 }
 
 auto PPU::power() -> void {
@@ -100,8 +109,6 @@ auto PPU::power() -> void {
   r.lcdEnable = 1;
   r.vtotal = 158;
   r.vblank = 155;
-
-  video.power();
 }
 
 }

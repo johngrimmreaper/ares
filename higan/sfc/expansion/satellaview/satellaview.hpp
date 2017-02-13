@@ -1,9 +1,6 @@
-struct Satellaview : Memory {
-  auto init() -> void;
-  auto load() -> void;
-  auto unload() -> void;
-  auto power() -> void;
-  auto reset() -> void;
+struct Satellaview : Expansion {
+  Satellaview();
+  ~Satellaview();
 
   auto read(uint24 addr, uint8 data) -> uint8;
   auto write(uint24 addr, uint8 data) -> void;
@@ -17,9 +14,9 @@ private:
     uint8 r2198, r2199, r219a, r219b;
     uint8 r219c, r219d, r219e, r219f;
 
-    uint8 r2192_counter;
-    uint8 r2192_hour, r2192_minute, r2192_second;
+    uint8 rtcCounter;
+    uint8 rtcHour;
+    uint8 rtcMinute;
+    uint8 rtcSecond;
   } regs;
 };
-
-extern Satellaview satellaview;

@@ -7,39 +7,36 @@ struct ID {
     WonderSwanColor,
   };
 
-  enum : uint {
-    SystemManifest,
-    SystemIPLROM,
-    SystemEEPROM,
+  struct Port { enum : uint {
+    HardwareHorizontal,
+    HardwareVertical,
+  };};
 
-    Manifest,
-    ROM,
-    RAM,
-    EEPROM,
-    RTC,
-  };
-
-  enum : uint {
-    DeviceHorizontal = 1,
-    DeviceVertical   = 2,
-  };
+  struct Device { enum : uint {
+    Controls,
+  };};
 };
 
 struct Interface : Emulator::Interface {
+  using Emulator::Interface::load;
+
   Interface();
 
   auto manifest() -> string override;
   auto title() -> string override;
+
+  auto videoSize() -> VideoSize override;
+  auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
   auto videoFrequency() -> double override;
+  auto videoColors() -> uint32;
+  auto videoColor(uint32 color) -> uint64;
+
   auto audioFrequency() -> double override;
 
   auto loaded() -> bool override;
   auto sha256() -> string override;
-  auto group(uint id) -> uint override;
-  auto load(uint id) -> void override;
+  auto load(uint id) -> bool override;
   auto save() -> void override;
-  auto load(uint id, const stream& stream) -> void override;
-  auto save(uint id, const stream& stream) -> void override;
   auto unload() -> void override;
 
   auto power() -> void override;
@@ -48,14 +45,11 @@ struct Interface : Emulator::Interface {
   auto serialize() -> serializer override;
   auto unserialize(serializer&) -> bool override;
 
-  auto cheatSet(const lstring&) -> void;
+  auto cheatSet(const string_vector&) -> void override;
 
   auto cap(const string& name) -> bool override;
   auto get(const string& name) -> any override;
   auto set(const string& name, const any& value) -> bool override;
-
-private:
-  vector<Device> device;
 };
 
 struct Settings {
@@ -63,7 +57,6 @@ struct Settings {
   bool colorEmulation = true;
 };
 
-extern Interface* interface;
 extern Settings settings;
 
 }

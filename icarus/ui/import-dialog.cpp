@@ -13,14 +13,14 @@ ImportDialog::ImportDialog() {
   setCentered();
 }
 
-auto ImportDialog::run(lstring locations) -> void {
+auto ImportDialog::run(string_vector locations) -> void {
   abort = false;
   errors.reset();
   unsigned position = 0;
 
   setVisible(true);
   for(auto& location : locations) {
-    auto name = nall::basename(location);
+    auto name = Location::base(location);
 
     if(abort) {
       errors.append(string{"[", name, "] aborted"});

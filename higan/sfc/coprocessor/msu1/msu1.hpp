@@ -1,4 +1,6 @@
-struct MSU1 : Coprocessor {
+struct MSU1 : Thread {
+  shared_pointer<Emulator::Stream> stream;
+
   static auto Enter() -> void;
   auto main() -> void;
   auto init() -> void;
@@ -10,25 +12,25 @@ struct MSU1 : Coprocessor {
   auto dataOpen() -> void;
   auto audioOpen() -> void;
 
-  auto mmioRead(uint24 addr, uint8 data) -> uint8;
-  auto mmioWrite(uint24 addr, uint8 data) -> void;
+  auto readIO(uint24 addr, uint8 data) -> uint8;
+  auto writeIO(uint24 addr, uint8 data) -> void;
 
   auto serialize(serializer&) -> void;
 
 private:
-  file dataFile;
-  file audioFile;
+  vfs::shared::file dataFile;
+  vfs::shared::file audioFile;
 
   enum Flag : uint {
-    DataBusy       = 0x80,
-    AudioBusy      = 0x40,
-    AudioRepeating = 0x20,
-    AudioPlaying   = 0x10,
+    Revision       = 0x02,  //max: 0x07
     AudioError     = 0x08,
-    Revision       = 0x02,
+    AudioPlaying   = 0x10,
+    AudioRepeating = 0x20,
+    AudioBusy      = 0x40,
+    DataBusy       = 0x80,
   };
 
-  struct MMIO {
+  struct IO {
     uint32 dataSeekOffset;
     uint32 dataReadOffset;
 
@@ -41,12 +43,12 @@ private:
     uint32 audioResumeTrack;
     uint32 audioResumeOffset;
 
-    bool dataBusy;
-    bool audioBusy;
-    bool audioRepeat;
-    bool audioPlay;
     bool audioError;
-  } mmio;
+    bool audioPlay;
+    bool audioRepeat;
+    bool audioBusy;
+    bool dataBusy;
+  } io;
 };
 
 extern MSU1 msu1;

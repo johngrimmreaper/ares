@@ -18,7 +18,7 @@ GameBoyAdvanceCartridge::GameBoyAdvanceCartridge(const uint8_t* data, unsigned s
   idlist.append({"FLASH512_V", 10});
   idlist.append({"FLASH1M_V",   9});
 
-  lstring list;
+  string_vector list;
   for(auto& id : idlist) {
     for(signed n = 0; n < size - 16; n++) {
       if(!memcmp(data + n, (const char*)id.name, id.size)) {
@@ -30,7 +30,7 @@ GameBoyAdvanceCartridge::GameBoyAdvanceCartridge(const uint8_t* data, unsigned s
           char text[16];
           memcpy(text, data + n, id.size + 3);
           text[id.size + 3] = 0;
-          list.appendOnce(text);
+          if(!list.find(text)) list.append(text);
         }
       }
     }

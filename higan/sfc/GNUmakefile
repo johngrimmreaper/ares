@@ -1,54 +1,30 @@
 processors += r65816 spc700 arm gsu hg51b upd96050
 
-objects += sfc-interface sfc-system sfc-scheduler sfc-controller
-objects += sfc-cartridge sfc-cheat
-objects += sfc-memory sfc-cpu sfc-smp sfc-dsp sfc-ppu
-objects += sfc-satellaview sfc-superdisc
-objects += sfc-21fx
+objects += sfc-interface sfc-system sfc-controller
+objects += sfc-cartridge sfc-memory
+objects += sfc-cpu sfc-smp sfc-dsp sfc-ppu
+objects += sfc-expansion sfc-satellaview sfc-21fx
 objects += sfc-icd2 sfc-mcc sfc-nss sfc-event
 objects += sfc-sa1 sfc-superfx
 objects += sfc-armdsp sfc-hitachidsp sfc-necdsp
 objects += sfc-epsonrtc sfc-sharprtc
-objects += sfc-spc7110 sfc-sdd1 sfc-obc1
-objects += sfc-msu1
+objects += sfc-spc7110 sfc-sdd1
+objects += sfc-obc1 sfc-msu1
 objects += sfc-bsmemory sfc-sufamiturbo
-
-ifeq ($(profile),accuracy)
-  flags += -DPROFILE_ACCURACY
-  sfccpu := cpu
-  sfcsmp := smp
-  sfcdsp := dsp
-  sfcppu := ppu
-else ifeq ($(profile),balanced)
-  flags += -DPROFILE_BALANCED
-  sfccpu := cpu
-  sfcsmp := smp
-  sfcdsp := alt/dsp
-  sfcppu := alt/ppu-balanced
-else ifeq ($(profile),performance)
-  flags += -DPROFILE_PERFORMANCE
-  sfccpu := alt/cpu
-  sfcsmp := alt/smp
-  sfcdsp := alt/dsp
-  sfcppu := alt/ppu-performance
-else
-  $(error "unknown Super Famicom profile")
-endif
 
 obj/sfc-interface.o:   sfc/interface/interface.cpp $(call rwildcard,sfc/interface)
 obj/sfc-system.o:      sfc/system/system.cpp $(call rwildcard,sfc/system/)
-obj/sfc-scheduler.o:   sfc/scheduler/scheduler.cpp $(call rwildcard,sfc/scheduler/)
 obj/sfc-controller.o:  sfc/controller/controller.cpp $(call rwildcard,sfc/controller/)
 obj/sfc-cartridge.o:   sfc/cartridge/cartridge.cpp $(call rwildcard,sfc/cartridge/)
-obj/sfc-cheat.o:       sfc/cheat/cheat.cpp $(call rwildcard,sfc/cheat/)
 obj/sfc-memory.o:      sfc/memory/memory.cpp $(call rwildcard,sfc/memory/)
-obj/sfc-cpu.o:         sfc/$(sfccpu)/cpu.cpp $(call rwildcard,sfc/$(sfccpu)/)
-obj/sfc-smp.o:         sfc/$(sfcsmp)/smp.cpp $(call rwildcard,sfc/$(sfcsmp)/)
-obj/sfc-dsp.o:         sfc/$(sfcdsp)/dsp.cpp $(call rwildcard,sfc/$(sfcdsp)/)
-obj/sfc-ppu.o:         sfc/$(sfcppu)/ppu.cpp $(call rwildcard,sfc/$(sfcppu)/)
 
+obj/sfc-cpu.o:         sfc/cpu/cpu.cpp $(call rwildcard,sfc/cpu/)
+obj/sfc-smp.o:         sfc/smp/smp.cpp $(call rwildcard,sfc/smp/)
+obj/sfc-dsp.o:         sfc/dsp/dsp.cpp $(call rwildcard,sfc/dsp/)
+obj/sfc-ppu.o:         sfc/ppu/ppu.cpp $(call rwildcard,sfc/ppu/)
+
+obj/sfc-expansion.o:   sfc/expansion/expansion.cpp $(call rwildcard,sfc/expansion/)
 obj/sfc-satellaview.o: sfc/expansion/satellaview/satellaview.cpp $(call rwildcard,sfc/expansion/satellaview/)
-obj/sfc-superdisc.o:   sfc/expansion/superdisc/superdisc.cpp $(call rwildcard,sfc/expansion/superdisc/)
 obj/sfc-21fx.o:        sfc/expansion/21fx/21fx.cpp $(call rwildcard,sfc/expansion/21fx/)
 
 obj/sfc-icd2.o:        sfc/coprocessor/icd2/icd2.cpp $(call rwildcard,sfc/coprocessor/icd2/)

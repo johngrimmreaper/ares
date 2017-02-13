@@ -1,23 +1,29 @@
+struct AboutWindow : Window {
+  AboutWindow();
+
+  VerticalLayout layout{this};
+    Canvas canvas{&layout, Size{399, 95}, 15};
+    HorizontalLayout informationLayout{&layout, Size{~0, 0}};
+      Label informationLeft{&informationLayout, Size{~0, 0}, 3};
+      Label informationRight{&informationLayout, Size{~0, 0}};
+};
+
 struct Presentation : Window {
   Presentation();
   auto updateEmulator() -> void;
+  auto clearViewport() -> void;
   auto resizeViewport() -> void;
   auto toggleFullScreen() -> void;
-  auto drawSplashScreen() -> void;
   auto loadShaders() -> void;
 
   MenuBar menuBar{this};
     Menu libraryMenu{&menuBar};
-      vector<MenuItem*> loadBootableMedia;
-      MenuSeparator librarySeparator;
     Menu systemMenu{&menuBar};
-      MenuItem powerSystem{&systemMenu};
-      MenuItem resetSystem{&systemMenu};
-      MenuSeparator systemMenuSeparatorPorts{&systemMenu};
       Menu inputPort1{&systemMenu};
       Menu inputPort2{&systemMenu};
       Menu inputPort3{&systemMenu};
-      MenuSeparator systemMenuSeparatorUnload{&systemMenu};
+      MenuSeparator systemMenuSeparatorPorts{&systemMenu};
+      MenuItem reloadSystem{&systemMenu};
       MenuItem unloadSystem{&systemMenu};
     Menu settingsMenu{&menuBar};
       Menu videoScaleMenu{&settingsMenu};
@@ -70,4 +76,5 @@ struct Presentation : Window {
   StatusBar statusBar{this};
 };
 
+extern unique_pointer<AboutWindow> aboutWindow;
 extern unique_pointer<Presentation> presentation;

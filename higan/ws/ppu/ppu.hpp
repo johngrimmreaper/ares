@@ -1,10 +1,9 @@
-#include "video.hpp"
-
 struct PPU : Thread, IO {
   static auto Enter() -> void;
   auto main() -> void;
   auto scanline() -> void;
   auto frame() -> void;
+  auto refresh() -> void;
   auto step(uint clocks) -> void;
   auto power() -> void;
 
@@ -36,7 +35,7 @@ struct PPU : Thread, IO {
     uint12 color;
   };
 
-  uint12 output[224 * 144];
+  uint32 output[224 * 224];
 
   struct State {
     bool field;
@@ -46,6 +45,9 @@ struct PPU : Thread, IO {
   } s;
 
   struct Latches {
+    //frame(), power()
+    bool orientation;
+
     //latchRegisters()
     uint8 backColor;
 

@@ -8,47 +8,45 @@ struct ID {
     GameBoyColor,
   };
 
-  enum : uint {
-    SystemManifest,
-    GameBoyBootROM,
-    SuperGameBoyBootROM,
-    GameBoyColorBootROM,
+  struct Port { enum : uint {
+    Hardware,
+  };};
 
-    Manifest,
-    ROM,
-    RAM,
-  };
-
-  enum : uint {
-    Device = 1,
-  };
+  struct Device { enum : uint {
+    Controls,
+  };};
 };
 
 struct Interface : Emulator::Interface {
+  using Emulator::Interface::load;
+
   Interface();
 
-  auto manifest() -> string;
-  auto title() -> string;
-  auto videoFrequency() -> double;
-  auto audioFrequency() -> double;
+  auto manifest() -> string override;
+  auto title() -> string override;
 
-  auto loaded() -> bool;
-  auto sha256() -> string;
-  auto group(uint id) -> uint;
-  auto load(uint id) -> void;
-  auto save() -> void;
-  auto load(uint id, const stream& stream) -> void;
-  auto save(uint id, const stream& stream) -> void;
-  auto unload() -> void;
+  auto videoSize() -> VideoSize override;
+  auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
+  auto videoFrequency() -> double override;
+  auto videoColors() -> uint32 override;
+  auto videoColor(uint32 color) -> uint64 override;
 
-  auto power() -> void;
-  auto reset() -> void;
-  auto run() -> void;
+  auto audioFrequency() -> double override;
 
-  auto serialize() -> serializer;
-  auto unserialize(serializer&) -> bool;
+  auto loaded() -> bool override;
+  auto sha256() -> string override;
+  auto load(uint id) -> bool override;
+  auto save() -> void override;
+  auto unload() -> void override;
 
-  auto cheatSet(const lstring&) -> void;
+  auto power() -> void override;
+  auto reset() -> void override;
+  auto run() -> void override;
+
+  auto serialize() -> serializer override;
+  auto unserialize(serializer&) -> bool override;
+
+  auto cheatSet(const string_vector&) -> void override;
 
   auto cap(const string& name) -> bool override;
   auto get(const string& name) -> any override;
@@ -65,9 +63,6 @@ struct Interface : Emulator::Interface {
   auto lcdScanline() -> void;
   auto lcdOutput(uint2 color) -> void;
   auto joypWrite(bool p15, bool p14) -> void;
-
-private:
-  vector<Device> device;
 };
 
 struct Settings {
@@ -75,7 +70,6 @@ struct Settings {
   bool colorEmulation = true;
 };
 
-extern Interface* interface;
 extern Settings settings;
 
 }

@@ -6,18 +6,6 @@ namespace Famicom {
 #include "board/board.cpp"
 Cartridge cartridge;
 
-auto Cartridge::sha256() const -> string {
-  return _sha256;
-}
-
-auto Cartridge::manifest() const -> string {
-  return information.markup;
-}
-
-auto Cartridge::title() const -> string {
-  return information.title;
-}
-
 auto Cartridge::Enter() -> void {
   while(true) scheduler.synchronize(), cartridge.main();
 }
@@ -26,20 +14,34 @@ auto Cartridge::main() -> void {
   board->main();
 }
 
-auto Cartridge::load() -> void {
-  interface->loadRequest(ID::Manifest, "manifest.bml", true);
+auto Cartridge::load() -> bool {
+  if(auto pathID = platform->load(ID::Famicom, "Famicom", "fc")) {
+    information.pathID = pathID();
+  } else return false;
 
-  Board::load(information.markup);  //this call will set Cartridge::board if successful
-  if(!board) return;
+  if(auto fp = platform->open(pathID(), "manifest.bml", File::Read, File::Required)) {
+    information.manifest = fp->reads();
+  } else {
+    return false;
+  }
+
+  Board::load(information.manifest);  //this call will set Cartridge::board if successful
+  if(!board) return false;
 
   Hash::SHA256 sha;
-  sha.data(board->prgrom.data, board->prgrom.size);
-  sha.data(board->chrrom.data, board->chrrom.size);
-  _sha256 = sha.digest();
+  sha.input(board->prgrom.data, board->prgrom.size);
+  sha.input(board->chrrom.data, board->chrrom.size);
+  information.sha256 = sha.digest();
+  return true;
+}
+
+auto Cartridge::save() -> void {
+  board->save();
 }
 
 auto Cartridge::unload() -> void {
-  memory.reset();
+  delete board;
+  board = nullptr;
 }
 
 auto Cartridge::power() -> void {
@@ -47,24 +49,24 @@ auto Cartridge::power() -> void {
 }
 
 auto Cartridge::reset() -> void {
-  create(Cartridge::Enter, 21'477'272);
+  create(Cartridge::Enter, system.colorburst() * 6.0);
   board->reset();
 }
 
-auto Cartridge::prg_read(uint addr) -> uint8 {
-  return board->prg_read(addr);
+auto Cartridge::readPRG(uint addr) -> uint8 {
+  return board->readPRG(addr);
 }
 
-auto Cartridge::prg_write(uint addr, uint8 data) -> void {
-  return board->prg_write(addr, data);
+auto Cartridge::writePRG(uint addr, uint8 data) -> void {
+  return board->writePRG(addr, data);
 }
 
-auto Cartridge::chr_read(uint addr) -> uint8 {
-  return board->chr_read(addr);
+auto Cartridge::readCHR(uint addr) -> uint8 {
+  return board->readCHR(addr);
 }
 
-auto Cartridge::chr_write(uint addr, uint8 data) -> void {
-  return board->chr_write(addr, data);
+auto Cartridge::writeCHR(uint addr, uint8 data) -> void {
+  return board->writeCHR(addr, data);
 }
 
 auto Cartridge::scanline(uint y) -> void {

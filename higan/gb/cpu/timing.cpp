@@ -2,83 +2,82 @@
 //  456 clocks/scanline
 //  154 scanlines/frame
 
-auto CPU::add_clocks(uint clocks) -> void {
-  if(system.sgb()) system._clocksExecuted += clocks;
-
-  while(clocks--) {
+auto CPU::step(uint clocks) -> void {
+  for(auto n : range(clocks)) {
     if(++status.clock == 0) {
       cartridge.mbc3.second();
     }
 
     //4MHz / N(hz) - 1 = mask
     status.div++;
-    if((status.div &   15) == 0) timer_262144hz();
-    if((status.div &   63) == 0)  timer_65536hz();
-    if((status.div &  255) == 0)  timer_16384hz();
-    if((status.div &  511) == 0)   timer_8192hz();
-    if((status.div & 1023) == 0)   timer_4096hz();
+    if((status.div &   15) == 0) timer262144hz();
+    if((status.div &   63) == 0)  timer65536hz();
+    if((status.div &  255) == 0)  timer16384hz();
+    if((status.div &  511) == 0)   timer8192hz();
+    if((status.div & 1023) == 0)   timer4096hz();
 
-    ppu.clock -= ppu.frequency;
-    if(ppu.clock < 0) co_switch(ppu.thread);
-
-    apu.clock -= apu.frequency;
-    if(apu.clock < 0) co_switch(apu.thread);
+    Thread::step(1);
+    synchronize(ppu);
+    synchronize(apu);
   }
 
-  if(system.sgb()) scheduler.exit(Scheduler::Event::Step);
+  if(system.sgb()) {
+    system._clocksExecuted += clocks;
+    scheduler.exit(Scheduler::Event::Step);
+  }
 }
 
-auto CPU::timer_262144hz() -> void {
-  if(status.timer_enable && status.timer_clock == 1) {
+auto CPU::timer262144hz() -> void {
+  if(status.timerEnable && status.timerClock == 1) {
     if(++status.tima == 0) {
       status.tima = status.tma;
-      interrupt_raise(Interrupt::Timer);
+      raise(Interrupt::Timer);
     }
   }
 }
 
-auto CPU::timer_65536hz() -> void {
-  if(status.timer_enable && status.timer_clock == 2) {
+auto CPU::timer65536hz() -> void {
+  if(status.timerEnable && status.timerClock == 2) {
     if(++status.tima == 0) {
       status.tima = status.tma;
-      interrupt_raise(Interrupt::Timer);
+      raise(Interrupt::Timer);
     }
   }
 }
 
-auto CPU::timer_16384hz() -> void {
-  if(status.timer_enable && status.timer_clock == 3) {
+auto CPU::timer16384hz() -> void {
+  if(status.timerEnable && status.timerClock == 3) {
     if(++status.tima == 0) {
       status.tima = status.tma;
-      interrupt_raise(Interrupt::Timer);
+      raise(Interrupt::Timer);
     }
   }
 }
 
-auto CPU::timer_8192hz() -> void {
-  if(status.serial_transfer && status.serial_clock) {
-    if(--status.serial_bits == 0) {
-      status.serial_transfer = 0;
-      interrupt_raise(Interrupt::Serial);
+auto CPU::timer8192hz() -> void {
+  if(status.serialTransfer && status.serialClock) {
+    if(--status.serialBits == 0) {
+      status.serialTransfer = 0;
+      raise(Interrupt::Serial);
     }
   }
 }
 
-auto CPU::timer_4096hz() -> void {
-  if(status.timer_enable && status.timer_clock == 0) {
+auto CPU::timer4096hz() -> void {
+  if(status.timerEnable && status.timerClock == 0) {
     if(++status.tima == 0) {
       status.tima = status.tma;
-      interrupt_raise(Interrupt::Timer);
+      raise(Interrupt::Timer);
     }
   }
 }
 
 auto CPU::hblank() -> void {
-  if(status.dma_mode == 1 && status.dma_length && ppu.status.ly < 144) {
+  if(status.dmaMode == 1 && status.dmaLength && ppu.status.ly < 144) {
     for(auto n : range(16)) {
-      dma_write(status.dma_target++, dma_read(status.dma_source++));
+      writeDMA(status.dmaTarget++, readDMA(status.dmaSource++));
     }
-    add_clocks(8 << status.speed_double);
-    status.dma_length -= 16;
+    step(8 << status.speedDouble);
+    status.dmaLength -= 16;
   }
 }

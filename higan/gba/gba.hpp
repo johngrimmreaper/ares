@@ -1,25 +1,20 @@
 #pragma once
 
+//license: GPLv3
+//started: 2012-03-19
+
 #include <emulator/emulator.hpp>
+#include <emulator/thread.hpp>
+#include <emulator/scheduler.hpp>
+
 #include <processor/arm/arm.hpp>
 
 namespace GameBoyAdvance {
-  namespace Info {
-    static const string Name = "bgba";
-    static const uint SerializerVersion = 3;
-  }
-}
+  #define platform Emulator::platform
+  using File = Emulator::File;
+  using Scheduler = Emulator::Scheduler;
+  extern Scheduler scheduler;
 
-/*
-  bgba - Game Boy Advance emulator
-  authors: byuu, Cydrak
-  license: GPLv3
-  project started: 2012-03-19
-*/
-
-#include <libco/libco.h>
-
-namespace GameBoyAdvance {
   enum : uint {           //mode flags for bus read, write:
     Nonsequential =   1,  //N cycle
     Sequential    =   2,  //S cycle
@@ -32,30 +27,22 @@ namespace GameBoyAdvance {
     Signed        = 256,  //sign extended
   };
 
-  struct Thread {
-    ~Thread() {
-      if(thread) co_delete(thread);
+  struct Thread : Emulator::Thread {
+    auto create(auto (*entrypoint)() -> void, double frequency) -> void {
+      Emulator::Thread::create(entrypoint, frequency);
+      scheduler.append(*this);
     }
 
-    auto create(auto (*entrypoint)() -> void, uint frequency) -> void {
-      if(thread) co_delete(thread);
-      thread = co_create(65536 * sizeof(void*), entrypoint);
-      this->frequency = frequency;
-      clock = 0;
+    inline auto synchronize(Thread& thread) -> void {
+      if(clock() >= thread.clock()) scheduler.resume(thread);
     }
 
-    auto serialize(serializer& s) -> void {
-      s.integer(frequency);
-      s.integer(clock);
+    inline auto step(uint clocks) -> void {
+      _clock += clocks;
     }
-
-    cothread_t thread = nullptr;
-    uint frequency = 0;
-    int clock = 0;
   };
 
   #include <gba/memory/memory.hpp>
-  #include <gba/scheduler/scheduler.hpp>
   #include <gba/system/system.hpp>
   #include <gba/cartridge/cartridge.hpp>
   #include <gba/player/player.hpp>

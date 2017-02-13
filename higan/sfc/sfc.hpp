@@ -1,6 +1,13 @@
 #pragma once
 
+//license: GPLv3
+//started: 2004-10-14
+
 #include <emulator/emulator.hpp>
+#include <emulator/thread.hpp>
+#include <emulator/scheduler.hpp>
+#include <emulator/cheat.hpp>
+
 #include <processor/arm/arm.hpp>
 #include <processor/gsu/gsu.hpp>
 #include <processor/hg51b/hg51b.hpp>
@@ -8,72 +15,43 @@
 #include <processor/spc700/spc700.hpp>
 #include <processor/upd96050/upd96050.hpp>
 
-namespace SuperFamicom {
-  namespace Info {
-    static const string Name = "bsnes";
-    static const uint SerializerVersion = 29;
-  }
-}
-
-/*
-  bsnes - Super Famicom emulator
-  author: byuu
-  license: GPLv3
-  project started: 2004-10-14
-*/
-
-#include <libco/libco.h>
-
 #if defined(SFC_SUPERGAMEBOY)
   #include <gb/gb.hpp>
 #endif
 
-#if defined(PROFILE_PERFORMANCE)
-  #include <nall/priority-queue.hpp>
-#endif
-
 namespace SuperFamicom {
-  struct Thread {
-    ~Thread() {
-      if(thread) co_delete(thread);
+  #define platform Emulator::platform
+  using File = Emulator::File;
+  using Scheduler = Emulator::Scheduler;
+  using Cheat = Emulator::Cheat;
+  extern Scheduler scheduler;
+  extern Cheat cheat;
+
+  struct Thread : Emulator::Thread {
+    auto create(auto (*entrypoint)() -> void, double frequency) -> void {
+      Emulator::Thread::create(entrypoint, frequency);
+      scheduler.append(*this);
     }
 
-    auto create(auto (*entrypoint)() -> void, uint frequency) -> void {
-      if(thread) co_delete(thread);
-      thread = co_create(65536 * sizeof(void*), entrypoint);
-      this->frequency = frequency;
-      clock = 0;
+    inline auto synchronize(Thread& thread) -> void {
+      if(clock() >= thread.clock()) scheduler.resume(thread);
     }
-
-    auto serialize(serializer& s) -> void {
-      s.integer(frequency);
-      s.integer(clock);
-    }
-
-    cothread_t thread = nullptr;
-    uint frequency = 0;
-    int64 clock = 0;
   };
 
   #include <sfc/memory/memory.hpp>
   #include <sfc/ppu/counter/counter.hpp>
 
-  #if defined(PROFILE_ACCURACY)
-  #include "profile-accuracy.hpp"
-  #elif defined(PROFILE_BALANCED)
-  #include "profile-balanced.hpp"
-  #elif defined(PROFILE_PERFORMANCE)
-  #include "profile-performance.hpp"
-  #endif
+  #include <sfc/cpu/cpu.hpp>
+  #include <sfc/smp/smp.hpp>
+  #include <sfc/dsp/dsp.hpp>
+  #include <sfc/ppu/ppu.hpp>
 
   #include <sfc/controller/controller.hpp>
-  #include <sfc/system/system.hpp>
-  #include <sfc/scheduler/scheduler.hpp>
-  #include <sfc/coprocessor/coprocessor.hpp>
   #include <sfc/expansion/expansion.hpp>
+  #include <sfc/system/system.hpp>
+  #include <sfc/coprocessor/coprocessor.hpp>
   #include <sfc/slot/slot.hpp>
   #include <sfc/cartridge/cartridge.hpp>
-  #include <sfc/cheat/cheat.hpp>
 
   #include <sfc/memory/memory-inline.hpp>
   #include <sfc/ppu/counter/counter-inline.hpp>

@@ -1,4 +1,4 @@
-struct NECDSP : Processor::uPD96050, Coprocessor {
+struct NECDSP : Processor::uPD96050, Thread {
   static auto Enter() -> void;
   auto main() -> void;
 
@@ -16,6 +16,8 @@ struct NECDSP : Processor::uPD96050, Coprocessor {
 
   auto firmware() const -> vector<uint8>;
   auto serialize(serializer&) -> void;
+
+  uint Frequency = 0;
 };
 
 extern NECDSP necdsp;

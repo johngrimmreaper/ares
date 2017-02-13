@@ -9,22 +9,22 @@ ScanDialog::ScanDialog() {
     refresh();
   });
   homeButton.setIcon(Icon::Go::Home).setBordered(false).onActivate([&] {
-    pathEdit.setText(userpath());
+    pathEdit.setText(Path::user());
     refresh();
   });
   upButton.setIcon(Icon::Go::Up).setBordered(false).onActivate([&] {
-    pathEdit.setText(dirname(settings["icarus/Path"].text()));
+    pathEdit.setText(Location::dir(settings["icarus/Path"].text()));
     refresh();
   });
   scanList.onActivate([&] { activate(); });
   selectAllButton.setText("Select All").onActivate([&] {
     for(auto& item : scanList.items()) {
-      if(item.cell(0).checkable()) item.cell(0).setChecked(true);
+      if(item.checkable()) item.setChecked(true);
     }
   });
   unselectAllButton.setText("Unselect All").onActivate([&] {
     for(auto& item : scanList.items()) {
-      if(item.cell(0).checkable()) item.cell(0).setChecked(false);
+      if(item.checkable()) item.setChecked(false);
     }
   });
   settingsButton.setText("Settings ...").onActivate([&] {
@@ -47,10 +47,9 @@ auto ScanDialog::show() -> void {
 
 auto ScanDialog::refresh() -> void {
   scanList.reset();
-  scanList.append(ListViewHeader().setVisible(false).append(ListViewColumn().setExpandable()));
 
-  auto pathname = pathEdit.text().transform("\\", "/").rtrim("/").append("/");
-  if(!directory::exists(pathname)) return;
+  auto pathname = pathEdit.text().transform("\\", "/");
+  if((pathname || Path::root() == "/") && !pathname.endsWith("/")) pathname.append("/");
 
   settings["icarus/Path"].setValue(pathname);
   pathEdit.setText(pathname);
@@ -58,25 +57,24 @@ auto ScanDialog::refresh() -> void {
 
   for(auto& name : contents) {
     if(!name.endsWith("/")) continue;
-    if(gamePakType(suffixname(name))) continue;
-    scanList.append(ListViewItem().append(ListViewCell().setIcon(Icon::Emblem::Folder).setText(name.rtrim("/"))));
+    if(gamePakType(Location::suffix(name))) continue;
+    scanList.append(ListViewItem().setIcon(Icon::Emblem::Folder).setText(name.trimRight("/")));
   }
 
   for(auto& name : contents) {
     if(name.endsWith("/")) continue;
-    if(!gameRomType(suffixname(name).downcase())) continue;
-    scanList.append(ListViewItem().append(ListViewCell().setCheckable().setIcon(Icon::Emblem::File).setText(name)));
+    if(!gameRomType(Location::suffix(name).downcase())) continue;
+    scanList.append(ListViewItem().setCheckable().setIcon(Icon::Emblem::File).setText(name));
   }
 
   Application::processEvents();
-  scanList.resizeColumns();
   scanList.setFocused();
 }
 
 auto ScanDialog::activate() -> void {
   if(auto item = scanList.selected()) {
-    string location{settings["icarus/Path"].text(), item.cell(0).text()};
-    if(directory::exists(location) && !gamePakType(suffixname(location))) {
+    string location{settings["icarus/Path"].text(), item.text()};
+    if(!gamePakType(Location::suffix(location))) {
       pathEdit.setText(location);
       refresh();
     }
@@ -84,10 +82,10 @@ auto ScanDialog::activate() -> void {
 }
 
 auto ScanDialog::import() -> void {
-  lstring filenames;
+  string_vector filenames;
   for(auto& item : scanList.items()) {
-    if(item.cell(0).checked()) {
-      filenames.append(string{settings["icarus/Path"].text(), item.cell(0).text()});
+    if(item.checked()) {
+      filenames.append(string{settings["icarus/Path"].text(), item.text()});
     }
   }
 
@@ -104,9 +102,13 @@ auto ScanDialog::gamePakType(const string& type) -> bool {
   return type == ".sys"
   || type == ".fc"
   || type == ".sfc"
+  || type == ".ms"
+  || type == ".md"
+  || type == ".pce"
   || type == ".gb"
   || type == ".gbc"
   || type == ".gba"
+  || type == ".gg"
   || type == ".bs"
   || type == ".st";
 }
@@ -115,9 +117,13 @@ auto ScanDialog::gameRomType(const string& type) -> bool {
   return type == ".zip"
   || type == ".fc" || type == ".nes"
   || type == ".sfc" || type == ".smc"
+  || type == ".ms" || type == ".sms"
+  || type == ".md" || type == ".smd" || type == ".gen"
+  || type == ".pce"
   || type == ".gb"
   || type == ".gbc"
   || type == ".gba"
+  || type == ".gg"
   || type == ".bs"
   || type == ".st";
 }

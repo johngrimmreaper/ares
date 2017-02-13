@@ -3,40 +3,37 @@
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
 
-//OSS4 soundcard.h includes below SNDCTL defines, but OSS3 does not
-//However, OSS4 soundcard.h does not reside in <sys/>
-//Therefore, attempt to manually define SNDCTL values if using OSS3 header
-//Note that if the defines below fail to work on any specific platform, one can point soundcard.h
-//above to the correct location for OSS4 (usually /usr/lib/oss/include/sys/soundcard.h)
-//Failing that, one can disable OSS4 ioctl calls inside init() and remove the below defines
+//OSSv4 features: define fallbacks for OSSv3 (where these ioctls are ignored)
 
 #ifndef SNDCTL_DSP_COOKEDMODE
-  #define SNDCTL_DSP_COOKEDMODE _IOW('P', 30, signed)
+  #define SNDCTL_DSP_COOKEDMODE _IOW('P', 30, int)
 #endif
 
 #ifndef SNDCTL_DSP_POLICY
-  #define SNDCTL_DSP_POLICY _IOW('P', 45, signed)
+  #define SNDCTL_DSP_POLICY _IOW('P', 45, int)
 #endif
 
 struct AudioOSS : Audio {
   ~AudioOSS() { term(); }
 
   struct {
-    signed fd = -1;
-    signed format = AFMT_S16_LE;
-    signed channels = 2;
+    int fd = -1;
+    int format = AFMT_S16_LE;
+    int channels = 2;
   } device;
 
   struct {
     string device = "/dev/dsp";
     bool synchronize = true;
-    unsigned frequency = 22050;
+    uint frequency = 48000;
+    uint latency = 60;
   } settings;
 
   auto cap(const string& name) -> bool {
     if(name == Audio::Device) return true;
     if(name == Audio::Synchronize) return true;
     if(name == Audio::Frequency) return true;
+    if(name == Audio::Latency) return true;
     return false;
   }
 
@@ -44,6 +41,7 @@ struct AudioOSS : Audio {
     if(name == Audio::Device) return settings.device;
     if(name == Audio::Synchronize) return settings.synchronize;
     if(name == Audio::Frequency) return settings.frequency;
+    if(name == Audio::Latency) return settings.latency;
     return {};
   }
 
@@ -60,8 +58,14 @@ struct AudioOSS : Audio {
       return true;
     }
 
-    if(name == Audio::Frequency && value.is<unsigned>()) {
-      settings.frequency = value.get<unsigned>();
+    if(name == Audio::Frequency && value.is<uint>()) {
+      settings.frequency = value.get<uint>();
+      if(device.fd >= 0) init();
+      return true;
+    }
+
+    if(name == Audio::Latency && value.is<uint>()) {
+      settings.latency = value.get<uint>();
       if(device.fd >= 0) init();
       return true;
     }
@@ -69,8 +73,8 @@ struct AudioOSS : Audio {
     return false;
   }
 
-  auto sample(uint16_t left, uint16_t right) -> void {
-    uint32_t sample = left << 0 | right << 16;
+  auto sample(int16_t left, int16_t right) -> void {
+    uint32_t sample = (uint16_t)left << 0 | (uint16_t)right << 16;
     auto unused = write(device.fd, &sample, 4);
   }
 
@@ -81,17 +85,15 @@ struct AudioOSS : Audio {
     device.fd = open(settings.device, O_WRONLY, O_NONBLOCK);
     if(device.fd < 0) return false;
 
-    #if 1 //SOUND_VERSION >= 0x040000
-    //attempt to enable OSS4-specific features regardless of version
-    //OSS3 ioctl calls will silently fail, but sound will still work
-    signed cooked = 1, policy = 4; //policy should be 0 - 10, lower = less latency, more CPU usage
+    int cooked = 1;
     ioctl(device.fd, SNDCTL_DSP_COOKEDMODE, &cooked);
+    //policy: 0 = minimum latency (higher CPU usage); 10 = maximum latency (lower CPU usage)
+    int policy = min(10, settings.latency / 20);  //note: latency measurement isn't exact
     ioctl(device.fd, SNDCTL_DSP_POLICY, &policy);
-    #endif
-    signed freq = settings.frequency;
+    int frequency = settings.frequency;
     ioctl(device.fd, SNDCTL_DSP_CHANNELS, &device.channels);
     ioctl(device.fd, SNDCTL_DSP_SETFMT, &device.format);
-    ioctl(device.fd, SNDCTL_DSP_SPEED, &freq);
+    ioctl(device.fd, SNDCTL_DSP_SPEED, &frequency);
 
     updateSynchronization();
     return true;

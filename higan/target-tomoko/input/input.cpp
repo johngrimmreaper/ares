@@ -144,31 +144,27 @@ auto InputMapping::deviceName() -> string {
 
 InputManager::InputManager() {
   inputManager = this;
+  frequency = max(1u, settings["Input/Frequency"].natural());
 
   for(auto& emulator : program->emulators) {
-    emulators.append(InputEmulator());
-    auto& inputEmulator = emulators.last();
+    auto& inputEmulator = emulators(emulators.size());
+    inputEmulator.interface = emulator;
     inputEmulator.name = emulator->information.name;
 
-    for(auto& port : emulator->port) {
-      inputEmulator.ports.append(InputPort());
-      auto& inputPort = inputEmulator.ports.last();
+    for(auto& port : emulator->ports) {
+      auto& inputPort = inputEmulator.ports(port.id);
       inputPort.name = port.name;
-      for(auto& device : port.device) {
-        inputPort.devices.append(InputDevice());
-        auto& inputDevice = inputPort.devices.last();
+      for(auto& device : port.devices) {
+        auto& inputDevice = inputPort.devices(device.id);
         inputDevice.name = device.name;
-        for(auto number : device.order) {
-          auto& input = device.input[number];
-          inputDevice.mappings.append(new InputMapping());
-          auto& inputMapping = inputDevice.mappings.last();
-          inputMapping->name = input.name;
-          inputMapping->link = &input;
-          input.guid = (uintptr)inputMapping;
+        for(auto& input : device.inputs) {
+          auto& inputMapping = inputDevice.mappings(inputDevice.mappings.size());
+          inputMapping.name = input.name;
+          inputMapping.type = input.type;
 
-          inputMapping->path = string{inputEmulator.name, "/", inputPort.name, "/", inputDevice.name, "/", inputMapping->name}.replace(" ", "");
-          inputMapping->assignment = settings(inputMapping->path).text();
-          inputMapping->bind();
+          inputMapping.path = string{inputEmulator.name, "/", inputPort.name, "/", inputDevice.name, "/", inputMapping.name}.replace(" ", "");
+          inputMapping.assignment = settings(inputMapping.path).text();
+          inputMapping.bind();
         }
       }
     }
@@ -177,12 +173,24 @@ InputManager::InputManager() {
   appendHotkeys();
 }
 
+//Emulator::Interface::inputPoll() needs to call into InputManager::InputEmulator
+//this function is calling during Program::loadMedium() to link the two together
+auto InputManager::bind(Emulator::Interface* interface) -> void {
+  this->emulator = nullptr;
+  for(auto& emulator : emulators) {
+    if(emulator.interface == interface) {
+      this->emulator = &emulator;
+    }
+  }
+  assert(this->emulator != nullptr);
+}
+
 auto InputManager::bind() -> void {
   for(auto& emulator : emulators) {
     for(auto& port : emulator.ports) {
       for(auto& device : port.devices) {
         for(auto& mapping : device.mappings) {
-          mapping->bind();
+          mapping.bind();
         }
       }
     }
@@ -194,20 +202,23 @@ auto InputManager::bind() -> void {
 }
 
 auto InputManager::poll() -> void {
+  //polling actual hardware is very time-consuming: skip call if poll was called too recently
+  auto thisPoll = chrono::millisecond();
+  if(thisPoll - lastPoll < frequency) return;
+  lastPoll = thisPoll;
+
   auto devices = input->poll();
   bool changed = devices.size() != this->devices.size();
-  if(changed == false) {
+  if(!changed) {
     for(auto n : range(devices)) {
       changed = devices[n] != this->devices[n];
       if(changed) break;
     }
   }
-  if(changed == true) {
+  if(changed) {
     this->devices = devices;
     bind();
   }
-
-  if(presentation && presentation->focused()) pollHotkeys();
 }
 
 auto InputManager::onChange(shared_pointer<HID::Device> device, uint group, uint input, int16_t oldValue, int16_t newValue) -> void {

@@ -26,7 +26,7 @@ struct AudioOpenAL : Audio {
 
   struct {
     bool synchronize = true;
-    unsigned frequency = 22050;
+    unsigned frequency = 48000;
     unsigned latency = 40;
   } settings;
 
@@ -66,8 +66,8 @@ struct AudioOpenAL : Audio {
     return false;
   }
 
-  auto sample(uint16_t left, uint16_t right) -> void {
-    buffer.data[buffer.length++] = left << 0 | right << 16;
+  auto sample(int16_t left, int16_t right) -> void {
+    buffer.data[buffer.length++] = (uint16_t)left << 0 | (uint16_t)right << 16;
     if(buffer.length < buffer.size) return;
 
     ALuint albuffer = 0;
@@ -172,8 +172,8 @@ struct AudioOpenAL : Audio {
   }
 
 private:
-  auto queryDevices() -> lstring {
-    lstring result;
+  auto queryDevices() -> string_vector {
+    string_vector result;
 
     const char* buffer = alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
     if(!buffer) return result;

@@ -1,12 +1,10 @@
-struct S21FX : Thread, Memory {
+struct S21FX : Expansion {
+  S21FX();
+  ~S21FX();
+
   static auto Enter() -> void;
-  auto main() -> void;
   auto step(uint clocks) -> void;
-  auto init() -> void;
-  auto load() -> void;
-  auto unload() -> void;
-  auto power() -> void;
-  auto reset() -> void;
+  auto main() -> void;
 
   auto read(uint24 addr, uint8 data) -> uint8;
   auto write(uint24 addr, uint8 data) -> void;
@@ -32,10 +30,8 @@ private:
     function<uint8 ()>,     //read
     function<void (uint8)>  //write
   )> linkInit;
-  function<void (lstring)> linkMain;
+  function<void (string_vector)> linkMain;
 
   vector<uint8> snesBuffer;  //SNES -> Link
   vector<uint8> linkBuffer;  //Link -> SNES
 };
-
-extern S21FX s21fx;

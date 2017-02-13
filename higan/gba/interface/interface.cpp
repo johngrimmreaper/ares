@@ -2,42 +2,37 @@
 
 namespace GameBoyAdvance {
 
-Interface* interface = nullptr;
 Settings settings;
 
 Interface::Interface() {
-  interface = this;
-
   information.manufacturer = "Nintendo";
   information.name         = "Game Boy Advance";
-  information.width        = 240;
-  information.height       = 160;
   information.overscan     = false;
-  information.aspectRatio  = 1.0;
   information.resettable   = false;
 
   information.capability.states = true;
   information.capability.cheats = false;
 
-  media.append({ID::GameBoyAdvance, "Game Boy Advance", "gba", true});
+  media.append({ID::GameBoyAdvance, "Game Boy Advance", "gba"});
 
-  { Device device{0, ID::Device, "Controller"};
-    device.input.append({ 0, 0, "A"     });
-    device.input.append({ 1, 0, "B"     });
-    device.input.append({ 2, 0, "Select"});
-    device.input.append({ 3, 0, "Start" });
-    device.input.append({ 4, 0, "Right" });
-    device.input.append({ 5, 0, "Left"  });
-    device.input.append({ 6, 0, "Up"    });
-    device.input.append({ 7, 0, "Down"  });
-    device.input.append({ 8, 0, "R"     });
-    device.input.append({ 9, 0, "L"     });
-    device.input.append({10, 2, "Rumble"});
-    device.order = {6, 7, 5, 4, 1, 0, 9, 8, 2, 3, 10};
-    this->device.append(device);
+  Port hardwarePort{ID::Port::Hardware, "Hardware"};
+
+  { Device device{ID::Device::Controls, "Controls"};
+    device.inputs.append({0, "Up"    });
+    device.inputs.append({0, "Down"  });
+    device.inputs.append({0, "Left"  });
+    device.inputs.append({0, "Right" });
+    device.inputs.append({0, "B"     });
+    device.inputs.append({0, "A"     });
+    device.inputs.append({0, "L"     });
+    device.inputs.append({0, "R"     });
+    device.inputs.append({0, "Select"});
+    device.inputs.append({0, "Start" });
+    device.inputs.append({2, "Rumble"});
+    hardwarePort.devices.append(device);
   }
 
-  port.append({0, "Device", {device[0]}});
+  ports.append(move(hardwarePort));
 }
 
 auto Interface::manifest() -> string {
@@ -48,8 +43,45 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
+auto Interface::videoSize() -> VideoSize {
+  return {240, 160};
+}
+
+auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
+  uint w = 240;
+  uint h = 160;
+  uint m = min(width / w, height / h);
+  return {w * m, h * m};
+}
+
 auto Interface::videoFrequency() -> double {
   return 16777216.0 / (228.0 * 1232.0);
+}
+
+auto Interface::videoColors() -> uint32 {
+  return 1 << 15;
+}
+
+auto Interface::videoColor(uint32 color) -> uint64 {
+  uint R = color.bits( 0, 4);
+  uint G = color.bits( 5, 9);
+  uint B = color.bits(10,14);
+
+  uint64 r = image::normalize(R, 5, 16);
+  uint64 g = image::normalize(G, 5, 16);
+  uint64 b = image::normalize(B, 5, 16);
+
+  if(settings.colorEmulation) {
+    double lcdGamma = 4.0, outGamma = 2.2;
+    double lb = pow(B / 31.0, lcdGamma);
+    double lg = pow(G / 31.0, lcdGamma);
+    double lr = pow(R / 31.0, lcdGamma);
+    r = pow((  0 * lb +  50 * lg + 255 * lr) / 255, 1 / outGamma) * (0xffff * 255 / 280);
+    g = pow(( 30 * lb + 230 * lg +  10 * lr) / 255, 1 / outGamma) * (0xffff * 255 / 280);
+    b = pow((220 * lb +  10 * lg +  50 * lr) / 255, 1 / outGamma) * (0xffff * 255 / 280);
+  }
+
+  return r << 32 | g << 16 | b << 0;
 }
 
 auto Interface::audioFrequency() -> double {
@@ -60,74 +92,12 @@ auto Interface::loaded() -> bool {
   return system.loaded();
 }
 
-auto Interface::group(uint id) -> uint {
-  switch(id) {
-  case ID::SystemManifest:
-  case ID::BIOS:
-    return ID::System;
-  case ID::Manifest:
-  case ID::MROM:
-  case ID::SRAM:
-  case ID::EEPROM:
-  case ID::FLASH:
-    return ID::GameBoyAdvance;
-  }
-
-  throw;
-}
-
-auto Interface::load(uint id) -> void {
-  system.load();
+auto Interface::load(uint id) -> bool {
+  return system.load(this);
 }
 
 auto Interface::save() -> void {
-  for(auto& memory : cartridge.memory) {
-    interface->saveRequest(memory.id, memory.name);
-  }
-}
-
-auto Interface::load(uint id, const stream& stream) -> void {
-  if(id == ID::SystemManifest) {
-    system.information.manifest = stream.text();
-  }
-
-  if(id == ID::BIOS) {
-    stream.read((uint8_t*)bios.data, min(bios.size, stream.size()));
-  }
-
-  if(id == ID::Manifest) {
-    cartridge.information.markup = stream.text();
-  }
-
-  if(id == ID::MROM) {
-    stream.read((uint8_t*)cartridge.mrom.data, min(cartridge.mrom.size, stream.size()));
-  }
-
-  if(id == ID::SRAM) {
-    stream.read((uint8_t*)cartridge.sram.data, min(cartridge.sram.size, stream.size()));
-  }
-
-  if(id == ID::EEPROM) {
-    stream.read((uint8_t*)cartridge.eeprom.data, min(cartridge.eeprom.size, stream.size()));
-  }
-
-  if(id == ID::FLASH) {
-    stream.read((uint8_t*)cartridge.flash.data, min(cartridge.flash.size, stream.size()));
-  }
-}
-
-auto Interface::save(uint id, const stream& stream) -> void {
-  if(id == ID::SRAM) {
-    stream.write((uint8_t*)cartridge.sram.data, cartridge.sram.size);
-  }
-
-  if(id == ID::EEPROM) {
-    stream.write((uint8_t*)cartridge.eeprom.data, cartridge.eeprom.size);
-  }
-
-  if(id == ID::FLASH) {
-    stream.write((uint8_t*)cartridge.flash.data, cartridge.flash.size);
-  }
+  system.save();
 }
 
 auto Interface::unload() -> void {
@@ -169,8 +139,18 @@ auto Interface::get(const string& name) -> any {
 }
 
 auto Interface::set(const string& name, const any& value) -> bool {
-  if(name == "Blur Emulation" && value.is<bool>()) return settings.blurEmulation = value.get<bool>(), true;
-  if(name == "Color Emulation" && value.is<bool>()) return settings.colorEmulation = value.get<bool>(), true;
+  if(name == "Blur Emulation" && value.is<bool>()) {
+    settings.blurEmulation = value.get<bool>();
+    system.configureVideoEffects();
+    return true;
+  }
+
+  if(name == "Color Emulation" && value.is<bool>()) {
+    settings.colorEmulation = value.get<bool>();
+    system.configureVideoPalette();
+    return true;
+  }
+
   return false;
 }
 

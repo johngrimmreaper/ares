@@ -3,10 +3,10 @@
 /* ruby
  * author: byuu
  * license: ISC
- * version: 0.14 (2015-11-19)
+ * version: 0.15 (2016-04-18)
  *
- * ruby is a cross-platform hardware abstraction layer
- * it provides a common interface to video, audio and input devices
+ * ruby is a cross-platform hardware abstraction layer.
+ * it provides a common interface to video, audio and input devices.
  */
 
 #include <nall/nall.hpp>
@@ -26,7 +26,7 @@ struct Video {
   static auto create(const nall::string& driver = "") -> Video*;
   static auto optimalDriver() -> nall::string;
   static auto safestDriver() -> nall::string;
-  static auto availableDrivers() -> nall::lstring;
+  static auto availableDrivers() -> nall::string_vector;
 
   virtual ~Video() = default;
 
@@ -54,7 +54,7 @@ struct Audio {
   static auto create(const nall::string& driver = "") -> Audio*;
   static auto optimalDriver() -> nall::string;
   static auto safestDriver() -> nall::string;
-  static auto availableDrivers() -> nall::lstring;
+  static auto availableDrivers() -> nall::string_vector;
 
   virtual ~Audio() = default;
 
@@ -62,7 +62,7 @@ struct Audio {
   virtual auto get(const nall::string& name) -> nall::any { return false; }
   virtual auto set(const nall::string& name, const nall::any& value) -> bool { return false; }
 
-  virtual auto sample(uint16_t left, uint16_t right) -> void {}
+  virtual auto sample(int16_t left, int16_t right) -> void {}
   virtual auto clear() -> void {}
 
   virtual auto init() -> bool { return true; }
@@ -79,7 +79,7 @@ struct Input {
   static auto create(const nall::string& driver = "") -> Input*;
   static auto optimalDriver() -> nall::string;
   static auto safestDriver() -> nall::string;
-  static auto availableDrivers() -> nall::lstring;
+  static auto availableDrivers() -> nall::string_vector;
 
   virtual ~Input() = default;
 

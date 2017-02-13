@@ -1,87 +1,71 @@
-//accepts a callback binding so r14 writes can trigger ROM buffering transparently
-struct reg16_t {
+struct Register {
   uint16 data = 0;
-  function<auto (uint16) -> void> modify;
+  bool modified = false;
 
-  inline operator unsigned() const {
+  inline operator uint() const {
     return data;
   }
 
-  inline auto assign(uint16 i) -> uint16 {
-    if(modify) modify(i);
-    else data = i;
-    return data;
+  inline auto assign(uint value) -> uint16 {
+    modified = true;
+    return data = value;
   }
 
   inline auto operator++() { return assign(data + 1); }
   inline auto operator--() { return assign(data - 1); }
-  inline auto operator++(int) { unsigned r = data; assign(data + 1); return r; }
-  inline auto operator--(int) { unsigned r = data; assign(data - 1); return r; }
-  inline auto operator   = (unsigned i) { return assign(i); }
-  inline auto operator  |= (unsigned i) { return assign(data | i); }
-  inline auto operator  ^= (unsigned i) { return assign(data ^ i); }
-  inline auto operator  &= (unsigned i) { return assign(data & i); }
-  inline auto operator <<= (unsigned i) { return assign(data << i); }
-  inline auto operator >>= (unsigned i) { return assign(data >> i); }
-  inline auto operator  += (unsigned i) { return assign(data + i); }
-  inline auto operator  -= (unsigned i) { return assign(data - i); }
-  inline auto operator  *= (unsigned i) { return assign(data * i); }
-  inline auto operator  /= (unsigned i) { return assign(data / i); }
-  inline auto operator  %= (unsigned i) { return assign(data % i); }
+  inline auto operator++(int) { uint r = data; assign(data + 1); return r; }
+  inline auto operator--(int) { uint r = data; assign(data - 1); return r; }
+  inline auto operator   = (uint i) { return assign(i); }
+  inline auto operator  |= (uint i) { return assign(data | i); }
+  inline auto operator  ^= (uint i) { return assign(data ^ i); }
+  inline auto operator  &= (uint i) { return assign(data & i); }
+  inline auto operator <<= (uint i) { return assign(data << i); }
+  inline auto operator >>= (uint i) { return assign(data >> i); }
+  inline auto operator  += (uint i) { return assign(data + i); }
+  inline auto operator  -= (uint i) { return assign(data - i); }
+  inline auto operator  *= (uint i) { return assign(data * i); }
+  inline auto operator  /= (uint i) { return assign(data / i); }
+  inline auto operator  %= (uint i) { return assign(data % i); }
 
-  inline auto operator   = (const reg16_t& i) { return assign(i); }
+  inline auto operator   = (const Register& value) { return assign(value); }
 
-  reg16_t() = default;
-  reg16_t(const reg16_t&) = delete;
+  Register() = default;
+  Register(const Register&) = delete;
 };
 
-struct sfr_t {
-  bool irq;   //interrupt flag
-  bool b;     //WITH flag
-  bool ih;    //immediate higher 8-bit flag
-  bool il;    //immediate lower 8-bit flag
-  bool alt2;  //ALT2 mode
-  bool alt1;  //ALT2 instruction mode
-  bool r;     //ROM r14 read flag
-  bool g;     //GO flag
-  bool ov;    //overflow flag
-  bool s;     //sign flag
-  bool cy;    //carry flag
-  bool z;     //zero flag
+struct SFR {
+  union {
+    uint16_t data = 0;
+    BooleanBitField<uint16_t, 15> irq;     //interrupt flag
+    BooleanBitField<uint16_t, 12> b;       //with flag
+    BooleanBitField<uint16_t, 11> ih;      //immediate higher 8-bit flag
+    BooleanBitField<uint16_t, 10> il;      //immediate lower 8-bit flag
+    BooleanBitField<uint16_t,  9> alt2;    //alt2 instruction mode
+    BooleanBitField<uint16_t,  8> alt1;    //alt1 instruction mode
+    BooleanBitField<uint16_t,  6> r;       //ROM r14 read flag
+    BooleanBitField<uint16_t,  5> g;       //go flag
+    BooleanBitField<uint16_t,  4> ov;      //overflow flag
+    BooleanBitField<uint16_t,  3> s;       //sign flag
+    BooleanBitField<uint16_t,  2> cy;      //carry flag
+    BooleanBitField<uint16_t,  1> z;       //zero flag
+    NaturalBitField<uint16_t,  9, 8> alt;  //instruction mode (composite flag)
+  };
 
-  operator unsigned() const {
-    return (irq << 15) | (b << 12) | (ih << 11) | (il << 10) | (alt2 << 9) | (alt1 << 8)
-         | (r << 6) | (g << 5) | (ov << 4) | (s << 3) | (cy << 2) | (z << 1);
-  }
-
-  auto& operator=(uint16_t data) {
-    irq  = data & 0x8000;
-    b    = data & 0x1000;
-    ih   = data & 0x0800;
-    il   = data & 0x0400;
-    alt2 = data & 0x0200;
-    alt1 = data & 0x0100;
-    r    = data & 0x0040;
-    g    = data & 0x0020;
-    ov   = data & 0x0010;
-    s    = data & 0x0008;
-    cy   = data & 0x0004;
-    z    = data & 0x0002;
-    return *this;
-  }
+  inline operator uint() const { return data & 0x9f7e; }
+  inline auto& operator=(const uint value) { return data = value, *this; }
 };
 
-struct scmr_t {
-  unsigned ht;
+struct SCMR {
+  uint ht;
   bool ron;
   bool ran;
-  unsigned md;
+  uint md;
 
-  operator unsigned() const {
+  operator uint() const {
     return ((ht >> 1) << 5) | (ron << 4) | (ran << 3) | ((ht & 1) << 2) | (md);
   }
 
-  auto& operator=(uint8 data) {
+  auto& operator=(uint data) {
     ht  = (bool)(data & 0x20) << 1;
     ht |= (bool)(data & 0x04) << 0;
     ron = data & 0x10;
@@ -91,18 +75,18 @@ struct scmr_t {
   }
 };
 
-struct por_t {
+struct POR {
   bool obj;
   bool freezehigh;
   bool highnibble;
   bool dither;
   bool transparent;
 
-  operator unsigned() const {
+  operator uint() const {
     return (obj << 4) | (freezehigh << 3) | (highnibble << 2) | (dither << 1) | (transparent);
   }
 
-  auto& operator=(uint8 data) {
+  auto& operator=(uint data) {
     obj         = data & 0x10;
     freezehigh  = data & 0x08;
     highnibble  = data & 0x04;
@@ -112,48 +96,49 @@ struct por_t {
   }
 };
 
-struct cfgr_t {
+struct CFGR {
   bool irq;
   bool ms0;
 
-  operator unsigned() const {
+  operator uint() const {
     return (irq << 7) | (ms0 << 5);
   }
 
-  auto& operator=(uint8 data) {
+  auto& operator=(uint data) {
     irq = data & 0x80;
     ms0 = data & 0x20;
     return *this;
   }
 };
 
-struct regs_t {
+struct Registers {
   uint8 pipeline;
   uint16 ramaddr;
 
-  reg16_t r[16];    //general purpose registers
-  sfr_t sfr;        //status flag register
+  Register r[16];   //general purpose registers
+  SFR sfr;          //status flag register
   uint8 pbr;        //program bank register
   uint8 rombr;      //game pack ROM bank register
   bool rambr;       //game pack RAM bank register
   uint16 cbr;       //cache base register
   uint8 scbr;       //screen base register
-  scmr_t scmr;      //screen mode register
+  SCMR scmr;        //screen mode register
   uint8 colr;       //color register
-  por_t por;        //plot option register
+  POR por;          //plot option register
   bool bramr;       //back-up RAM register
   uint8 vcr;        //version code register
-  cfgr_t cfgr;      //config register
+  CFGR cfgr;        //config register
   bool clsr;        //clock select register
 
-  unsigned romcl;   //clock ticks until romdr is valid
+  uint romcl;       //clock ticks until romdr is valid
   uint8 romdr;      //ROM buffer data register
 
-  unsigned ramcl;   //clock ticks until ramdr is valid
+  uint ramcl;       //clock ticks until ramdr is valid
   uint16 ramar;     //RAM buffer address register
   uint8 ramdr;      //RAM buffer data register
 
-  unsigned sreg, dreg;
+  uint sreg;
+  uint dreg;
   auto& sr() { return r[sreg]; }  //source register (from)
   auto& dr() { return r[dreg]; }  //destination register (to)
 
@@ -167,12 +152,12 @@ struct regs_t {
   }
 } regs;
 
-struct cache_t {
+struct Cache {
   uint8 buffer[512];
   bool valid[32];
 } cache;
 
-struct pixelcache_t {
+struct PixelCache {
   uint16 offset;
   uint8 bitpend;
   uint8 data[8];

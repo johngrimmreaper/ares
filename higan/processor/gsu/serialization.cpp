@@ -2,36 +2,12 @@ auto GSU::serialize(serializer& s) -> void {
   s.integer(regs.pipeline);
   s.integer(regs.ramaddr);
 
-  s.integer(regs.r[ 0].data);
-  s.integer(regs.r[ 1].data);
-  s.integer(regs.r[ 2].data);
-  s.integer(regs.r[ 3].data);
-  s.integer(regs.r[ 4].data);
-  s.integer(regs.r[ 5].data);
-  s.integer(regs.r[ 6].data);
-  s.integer(regs.r[ 7].data);
-  s.integer(regs.r[ 8].data);
-  s.integer(regs.r[ 9].data);
-  s.integer(regs.r[10].data);
-  s.integer(regs.r[11].data);
-  s.integer(regs.r[12].data);
-  s.integer(regs.r[13].data);
-  s.integer(regs.r[14].data);
-  s.integer(regs.r[15].data);
+  for(auto n : range(16)) {
+    s.integer(regs.r[n].data);
+    s.integer(regs.r[n].modified);
+  }
 
-  s.integer(regs.sfr.irq);
-  s.integer(regs.sfr.b);
-  s.integer(regs.sfr.ih);
-  s.integer(regs.sfr.il);
-  s.integer(regs.sfr.alt2);
-  s.integer(regs.sfr.alt1);
-  s.integer(regs.sfr.r);
-  s.integer(regs.sfr.g);
-  s.integer(regs.sfr.ov);
-  s.integer(regs.sfr.s);
-  s.integer(regs.sfr.cy);
-  s.integer(regs.sfr.z);
-
+  s.integer(regs.sfr.data);
   s.integer(regs.pbr);
   s.integer(regs.rombr);
   s.integer(regs.rambr);
@@ -72,9 +48,9 @@ auto GSU::serialize(serializer& s) -> void {
   s.array(cache.buffer);
   s.array(cache.valid);
 
-  for(unsigned i = 0; i < 2; i++) {
-    s.integer(pixelcache[i].offset);
-    s.integer(pixelcache[i].bitpend);
-    s.array(pixelcache[i].data);
+  for(uint n : range(2)) {
+    s.integer(pixelcache[n].offset);
+    s.integer(pixelcache[n].bitpend);
+    s.array(pixelcache[n].data);
   }
 }

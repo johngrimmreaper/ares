@@ -11,19 +11,19 @@ struct Response : Message {
   Response(const Request& request) { setRequest(request); }
 
   explicit operator bool() const { return responseType() != 0; }
-  auto operator()(unsigned responseType) -> type& { return setResponseType(responseType); }
+  auto operator()(uint responseType) -> type& { return setResponseType(responseType); }
 
-  inline auto head(const function<bool (const uint8_t* data, unsigned size)>& callback) const -> bool override;
+  inline auto head(const function<bool (const uint8_t* data, uint size)>& callback) const -> bool override;
   inline auto setHead() -> bool override;
 
-  inline auto body(const function<bool (const uint8_t* data, unsigned size)>& callback) const -> bool override;
+  inline auto body(const function<bool (const uint8_t* data, uint size)>& callback) const -> bool override;
   inline auto setBody() -> bool override;
 
   auto request() const -> const Request* { return _request; }
   auto setRequest(const Request& value) -> type& { _request = &value; return *this; }
 
-  auto responseType() const -> unsigned { return _responseType; }
-  auto setResponseType(unsigned value) -> type& { _responseType = value; return *this; }
+  auto responseType() const -> uint { return _responseType; }
+  auto setResponseType(uint value) -> type& { _responseType = value; return *this; }
 
   auto hasData() const -> bool { return (bool)_data; }
   auto data() const -> const vector<uint8_t>& { return _data; }
@@ -38,20 +38,20 @@ struct Response : Message {
   inline auto setText(const string& value) -> type&;
 
   inline auto hasBody() const -> bool;
-  inline auto findContentLength() const -> unsigned;
+  inline auto findContentLength() const -> uint;
   inline auto findContentType() const -> string;
   inline auto findContentType(const string& suffix) const -> string;
   inline auto findResponseType() const -> string;
   inline auto setFileETag() -> void;
 
   const Request* _request = nullptr;
-  unsigned _responseType = 0;
+  uint _responseType = 0;
   vector<uint8_t> _data;
   string _file;
   string _text;
 };
 
-auto Response::head(const function<bool (const uint8_t*, unsigned)>& callback) const -> bool {
+auto Response::head(const function<bool (const uint8_t*, uint)>& callback) const -> bool {
   if(!callback) return false;
   string output;
 
@@ -61,7 +61,7 @@ auto Response::head(const function<bool (const uint8_t*, unsigned)>& callback) c
         output.append("HTTP/1.1 304 Not Modified\r\n");
         output.append("Connection: close\r\n");
         output.append("\r\n");
-        return callback(output.binary(), output.size());
+        return callback(output.data<uint8_t>(), output.size());
       }
     }
   }
@@ -83,22 +83,22 @@ auto Response::head(const function<bool (const uint8_t*, unsigned)>& callback) c
   }
   output.append("\r\n");
 
-  return callback(output.binary(), output.size());
+  return callback(output.data<uint8_t>(), output.size());
 }
 
 auto Response::setHead() -> bool {
-  lstring headers = _head.split("\n");
-  string response = headers.takeFirst().rtrim("\r");
+  auto headers = _head.split("\n");
+  string response = headers.takeLeft().trimRight("\r");
 
-       if(response.ibeginsWith("HTTP/1.0 ")) response.iltrim("HTTP/1.0 ", 1L);
-  else if(response.ibeginsWith("HTTP/1.1 ")) response.iltrim("HTTP/1.1 ", 1L);
+       if(response.ibeginsWith("HTTP/1.0 ")) response.itrimLeft("HTTP/1.0 ", 1L);
+  else if(response.ibeginsWith("HTTP/1.1 ")) response.itrimLeft("HTTP/1.1 ", 1L);
   else return false;
 
-  setResponseType(natural(response));
+  setResponseType(response.natural());
 
   for(auto& header : headers) {
     if(header.beginsWith(" ") || header.beginsWith("\t")) continue;
-    lstring variable = header.split(":", 1L).strip();
+    auto variable = header.split(":", 1L).strip();
     if(variable.size() != 2) continue;
     this->header.append(variable[0], variable[1]);
   }
@@ -106,33 +106,33 @@ auto Response::setHead() -> bool {
   return true;
 }
 
-auto Response::body(const function<bool (const uint8_t*, unsigned)>& callback) const -> bool {
+auto Response::body(const function<bool (const uint8_t*, uint)>& callback) const -> bool {
   if(!callback) return false;
   if(!hasBody()) return true;
   bool chunked = header["Transfer-Encoding"].value() == "chunked";
 
   if(chunked) {
     string prefix = {hex(findContentLength()), "\r\n"};
-    if(!callback(prefix.binary(), prefix.size())) return false;
+    if(!callback(prefix.data<uint8_t>(), prefix.size())) return false;
   }
 
   if(_body) {
-    if(!callback(_body.binary(), _body.size())) return false;
+    if(!callback(_body.data<uint8_t>(), _body.size())) return false;
   } else if(hasData()) {
     if(!callback(data().data(), data().size())) return false;
   } else if(hasFile()) {
     filemap map(file(), filemap::mode::read);
     if(!callback(map.data(), map.size())) return false;
   } else if(hasText()) {
-    if(!callback(text().binary(), text().size())) return false;
+    if(!callback(text().data<uint8_t>(), text().size())) return false;
   } else {
     string response = findResponseType();
-    if(!callback(response.binary(), response.size())) return false;
+    if(!callback(response.data<uint8_t>(), response.size())) return false;
   }
 
   if(chunked) {
     string suffix = {"\r\n0\r\n\r\n"};
-    if(!callback(suffix.binary(), suffix.size())) return false;
+    if(!callback(suffix.data<uint8_t>(), suffix.size())) return false;
   }
 
   return true;
@@ -154,7 +154,7 @@ auto Response::hasBody() const -> bool {
   return true;
 }
 
-auto Response::findContentLength() const -> unsigned {
+auto Response::findContentLength() const -> uint {
   if(auto contentLength = header["Content-Length"]) return contentLength.value().natural();
   if(_body) return _body.size();
   if(hasData()) return data().size();
@@ -166,7 +166,7 @@ auto Response::findContentLength() const -> unsigned {
 auto Response::findContentType() const -> string {
   if(auto contentType = header["Content-Type"]) return contentType.value();
   if(hasData()) return "application/octet-stream";
-  if(hasFile()) return findContentType(suffixname(file()));
+  if(hasFile()) return findContentType(Location::suffix(file()));
   return "text/html; charset=utf-8";
 }
 
@@ -229,8 +229,19 @@ auto Response::setData(const vector<uint8_t>& value) -> type& {
 }
 
 auto Response::setFile(const string& value) -> type& {
+  //block path escalation exploits ("../" and "..\" in the file location)
+  bool valid = true;
+  for(uint n : range(value.size())) {
+    if(value(n + 0, '\0') != '.') continue;
+    if(value(n + 1, '\0') != '.') continue;
+    if(value(n + 2, '\0') != '/' && value(n + 2, '\0') != '\\') continue;
+    valid = false;
+    break;
+  }
+  if(!valid) return *this;
+
   _file = value;
-  string eTag = {"\"", string::datetime(file::timestamp(value, file::time::modify)), "\""};
+  string eTag = {"\"", chrono::utc::datetime(file::timestamp(value, file::time::modify)), "\""};
   header.assign("Content-Length", file::size(value));
   header.assign("Cache-Control", "public");
   header.assign("ETag", eTag);

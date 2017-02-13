@@ -19,7 +19,7 @@ struct AudioALSA : Audio {
 
   struct {
     bool synchronize = false;
-    unsigned frequency = 22050;
+    unsigned frequency = 48000;
     unsigned latency = 60;
   } settings;
 
@@ -65,10 +65,10 @@ struct AudioALSA : Audio {
     return false;
   }
 
-  auto sample(uint16_t left, uint16_t right) -> void {
+  auto sample(int16_t left, int16_t right) -> void {
     if(!device.handle) return;
 
-    buffer.data[buffer.length++] = left + (right << 16);
+    buffer.data[buffer.length++] = (uint16_t)left << 0 | (uint16_t)right << 16;
     if(buffer.length < device.period_size) return;
 
     snd_pcm_sframes_t avail;

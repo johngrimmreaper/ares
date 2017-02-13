@@ -1,16 +1,11 @@
 //Sony CXP1100Q-1
 
 struct SMP : Processor::SPC700, Thread {
-  enum : bool { Threaded = true };
-
-  alwaysinline auto step(uint clocks) -> void;
-  alwaysinline auto synchronizeCPU() -> void;
-  alwaysinline auto synchronizeDSP() -> void;
-
-  auto portRead(uint2 port) const -> uint8;
-  auto portWrite(uint2 port, uint8 data) -> void;
+  auto readPort(uint2 port) const -> uint8;
+  auto writePort(uint2 port, uint8 data) -> void;
 
   auto main() -> void;
+  auto load(Markup::Node) -> bool;
   auto power() -> void;
   auto reset() -> void;
 
@@ -19,8 +14,8 @@ struct SMP : Processor::SPC700, Thread {
   uint8 iplrom[64];
   uint8 apuram[64 * 1024];
 
-privileged:
-  struct {
+private:
+  struct IO {
     //timing
     uint clockCounter;
     uint dspCounter;
@@ -43,32 +38,25 @@ privileged:
     //$00f8,$00f9
     uint8 ram00f8;
     uint8 ram00f9;
-  } status;
+  } io;
 
   static auto Enter() -> void;
 
-  struct Debugger {
-    hook<void (uint16)> op_exec;
-    hook<void (uint16, uint8)> op_read;
-    hook<void (uint16, uint8)> op_write;
-  } debugger;
-
   //memory.cpp
-  auto ramRead(uint16 addr) -> uint8;
-  auto ramWrite(uint16 addr, uint8 data) -> void;
+  auto readRAM(uint16 addr) -> uint8;
+  auto writeRAM(uint16 addr, uint8 data) -> void;
 
-  auto busRead(uint16 addr) -> uint8;
-  auto busWrite(uint16 addr, uint8 data) -> void;
+  auto readBus(uint16 addr) -> uint8;
+  auto writeBus(uint16 addr, uint8 data) -> void;
 
-  auto op_io() -> void;
-  auto op_read(uint16 addr) -> uint8;
-  auto op_write(uint16 addr, uint8 data) -> void;
+  auto idle() -> void override;
+  auto read(uint16 addr) -> uint8 override;
+  auto write(uint16 addr, uint8 data) -> void override;
 
-  auto disassembler_read(uint16 addr) -> uint8;
+  auto readDisassembler(uint16 addr) -> uint8 override;
 
   //timing.cpp
-  template<unsigned Frequency>
-  struct Timer {
+  template<uint Frequency> struct Timer {
     uint8 stage0;
     uint8 stage1;
     uint8 stage2;
@@ -85,7 +73,7 @@ privileged:
   Timer<192> timer1;
   Timer< 24> timer2;
 
-  alwaysinline auto addClocks(uint clocks) -> void;
+  alwaysinline auto step(uint clocks) -> void;
   alwaysinline auto cycleEdge() -> void;
 };
 

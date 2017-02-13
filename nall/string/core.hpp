@@ -16,7 +16,12 @@
 namespace nall {
 
 auto string::operator[](int position) const -> const char& {
-  if(position > size() + 1) throw exception_out_of_bounds{};
+//if(position > size() + 1) throw;
+  return data()[position];
+}
+
+auto string::operator()(int position, char fallback) const -> char {
+  if(position > size() + 1) return fallback;
   return data()[position];
 }
 
@@ -25,12 +30,32 @@ template<typename... P> auto string::assign(P&&... p) -> string& {
   return append(forward<P>(p)...);
 }
 
+template<typename T, typename... P> auto string::prepend(const T& value, P&&... p) -> string& {
+  prepend(forward<P>(p)...);
+  return _prepend(make_string(value));
+}
+
+template<typename... P> auto string::prepend(const nall::string_format& value, P&&... p) -> string& {
+  prepend(forward<P>(p)...);
+  return format(value);
+}
+
+auto string::prepend() -> string& {
+  return *this;
+}
+
+template<typename T> auto string::_prepend(const stringify<T>& source) -> string& {
+  resize(source.size() + size());
+  memory::move(get() + source.size(), get(), size() - source.size());
+  memory::copy(get(), source.data(), source.size());
+}
+
 template<typename T, typename... P> auto string::append(const T& value, P&&... p) -> string& {
   _append(make_string(value));
   return append(forward<P>(p)...);
 }
 
-template<typename... P> auto string::append(const nall::format& value, P&&... p) -> string& {
+template<typename... P> auto string::append(const nall::string_format& value, P&&... p) -> string& {
   format(value);
   return append(forward<P>(p)...);
 }
@@ -43,10 +68,6 @@ template<typename T> auto string::_append(const stringify<T>& source) -> string&
   resize(size() + source.size());
   memory::copy(get() + size() - source.size(), source.data(), source.size());
   return *this;
-}
-
-auto string::empty() const -> bool {
-  return size() == 0;
 }
 
 auto string::length() const -> uint {
