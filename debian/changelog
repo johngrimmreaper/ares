@@ -1,3 +1,9 @@
+higan (102-1) UNRELEASED; urgency=medium
+
+  * New upstream release. (Closes: #837553)
+
+ -- Tobias Hansen <thansen@debian.org>  Mon, 13 Feb 2017 21:23:07 +0000
+
 higan (098-2) unstable; urgency=medium
 
   * Disable check for the size of long double to
