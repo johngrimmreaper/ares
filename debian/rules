@@ -20,10 +20,6 @@ override_dh_auto_build:
 	dh_auto_build
 
 override_dh_auto_install:
-	install -D -m 644 higan/data/higan.png debian/higan/usr/share/pixmaps/higan.png
-	install -D -m 644 higan/data/higan.desktop debian/higan/usr/share/applications/higan.desktop
-	install -D -m 644 higan/data/cheats.bml debian/higan/usr/share/higan/cheats.bml
-	cp -R higan/profile/* debian/higan/usr/share/higan
-	chmod 644 debian/higan/usr/share/higan/*/*
+	dh_auto_install -- prefix=../debian/tmp/usr
 
 override_dh_auto_test:
