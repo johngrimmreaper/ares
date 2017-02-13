@@ -8,8 +8,8 @@ auto pWindow::construct() -> void {
 
   //if program was given a name, try and set the window taskbar icon to a matching pixmap image
   if(auto name = Application::state.name) {
-    if(file::exists({userpath(), ".local/share/icons/", name, ".png"})) {
-      qtWindow->setWindowIcon(QIcon(QString::fromUtf8(string{userpath(), ".local/share/icons/", name, ".png"})));
+    if(file::exists({Path::user(), ".local/share/icons/", name, ".png"})) {
+      qtWindow->setWindowIcon(QIcon(QString::fromUtf8(string{Path::user(), ".local/share/icons/", name, ".png"})));
     } else if(file::exists({"/usr/local/share/pixmaps/", name, ".png"})) {
       qtWindow->setWindowIcon(QIcon(QString::fromUtf8(string{"/usr/local/share/pixmaps/", name, ".png"})));
     } else if(file::exists({"/usr/share/pixmaps/", name, ".png"})) {
@@ -70,10 +70,10 @@ auto pWindow::frameMargin() const -> Geometry {
     0, _menuHeight() + _statusHeight()
   };
   return {
-    settings->geometry.frameX,
-    settings->geometry.frameY + _menuHeight(),
-    settings->geometry.frameWidth,
-    settings->geometry.frameHeight + _menuHeight() + _statusHeight()
+    settings.geometry.frameX,
+    settings.geometry.frameY + _menuHeight(),
+    settings.geometry.frameWidth,
+    settings.geometry.frameHeight + _menuHeight() + _statusHeight()
   };
 }
 
@@ -195,10 +195,10 @@ auto pWindow::setVisible(bool visible) -> void {
 }
 
 /*
-  if(widget.font().empty() && !window.state.widgetFont.empty()) {
+  if(!widget.font() && window.state.widgetFont) {
     widget.setFont(window.state.widgetFont);
   }
-  if(widget.font().empty()) widget.p.setFont(Font::sans(8));
+  if(!widget.font()) widget.p.setFont(Font::sans(8));
   if(GetParentWidget(&widget)) {
     widget.p.qtWidget->setParent(GetParentWidget(&widget)->p.container(widget));
   } else {
@@ -215,11 +215,11 @@ auto pWindow::_append(mWidget& widget) -> void {
 }
 
 auto pWindow::_menuHeight() const -> signed {
-  return qtMenuBar->isVisible() ? settings->geometry.menuHeight : 0;
+  return qtMenuBar->isVisible() ? settings.geometry.menuHeight : 0;
 }
 
 auto pWindow::_statusHeight() const -> signed {
-  return qtStatusBar->isVisible() ? settings->geometry.statusHeight : 0;
+  return qtStatusBar->isVisible() ? settings.geometry.statusHeight : 0;
 }
 
 auto pWindow::_updateFrameGeometry() -> void {
@@ -227,22 +227,20 @@ auto pWindow::_updateFrameGeometry() -> void {
   QRect border = qtWindow->frameGeometry();
   QRect client = qtWindow->geometry();
 
-  settings->geometry.frameX = client.x() - border.x();
-  settings->geometry.frameY = client.y() - border.y();
-  settings->geometry.frameWidth = border.width() - client.width();
-  settings->geometry.frameHeight = border.height() - client.height();
+  settings.geometry.frameX = client.x() - border.x();
+  settings.geometry.frameY = client.y() - border.y();
+  settings.geometry.frameWidth = border.width() - client.width();
+  settings.geometry.frameHeight = border.height() - client.height();
 
   if(qtMenuBar->isVisible()) {
     pApplication::syncX();
-    settings->geometry.menuHeight = qtMenuBar->height();
+    settings.geometry.menuHeight = qtMenuBar->height();
   }
 
   if(qtStatusBar->isVisible()) {
     pApplication::syncX();
-    settings->geometry.statusHeight = qtStatusBar->height();
+    settings.geometry.statusHeight = qtStatusBar->height();
   }
-
-  settings->save();
 }
 
 auto QtWindow::closeEvent(QCloseEvent* event) -> void {
@@ -305,8 +303,8 @@ auto QtWindow::resizeEvent(QResizeEvent*) -> void {
 auto QtWindow::sizeHint() const -> QSize {
   unsigned width = p.state().geometry.width();
   unsigned height = p.state().geometry.height();
-  if(p.qtMenuBar->isVisible()) height += settings->geometry.menuHeight;
-  if(p.qtStatusBar->isVisible()) height += settings->geometry.statusHeight;
+  if(p.qtMenuBar->isVisible()) height += settings.geometry.menuHeight;
+  if(p.qtStatusBar->isVisible()) height += settings.geometry.statusHeight;
   return QSize(width, height);
 }
 

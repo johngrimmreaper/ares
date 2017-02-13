@@ -24,13 +24,13 @@ InputSettings::InputSettings(TabFrame* parent) : TabFrameItem(parent) {
   assignMouse3.setVisible(false).onActivate([&] { assignMouseInput(2); });
   resetButton.setText("Reset").onActivate([&] {
     if(MessageDialog("Are you sure you want to erase all mappings for this device?").setParent(*settingsManager).question() == "Yes") {
-      for(auto& mapping : activeDevice().mappings) mapping->unbind();
+      for(auto& mapping : activeDevice().mappings) mapping.unbind();
       refreshMappings();
     }
   });
   eraseButton.setText("Erase").onActivate([&] {
     if(auto mapping = mappingList.selected()) {
-      activeDevice().mappings[mapping->offset()]->unbind();
+      activeDevice().mappings[mapping.offset()].unbind();
       refreshMappings();
     }
   });
@@ -45,13 +45,13 @@ auto InputSettings::updateControls() -> void {
   assignMouse3.setVisible(false);
 
   if(auto mapping = mappingList.selected()) {
-    auto input = activeDevice().mappings[mapping->offset()];
+    auto& input = activeDevice().mappings[mapping.offset()];
 
-    if(input->isDigital()) {
+    if(input.isDigital()) {
       assignMouse1.setVisible().setText("Mouse Left");
       assignMouse2.setVisible().setText("Mouse Middle");
       assignMouse3.setVisible().setText("Mouse Right");
-    } else if(input->isAnalog()) {
+    } else if(input.isAnalog()) {
       assignMouse1.setVisible().setText("Mouse X-axis");
       assignMouse2.setVisible().setText("Mouse Y-axis");
     }
@@ -92,16 +92,16 @@ auto InputSettings::reloadDevices() -> void {
 auto InputSettings::reloadMappings() -> void {
   eraseButton.setEnabled(false);
   mappingList.reset();
-  mappingList.append(ListViewHeader().setVisible()
-    .append(ListViewColumn().setText("Name"))
-    .append(ListViewColumn().setText("Mapping").setExpandable())
-    .append(ListViewColumn().setText("Device").setAlignment(1.0).setForegroundColor({0, 128, 0}))
+  mappingList.append(TableViewHeader().setVisible()
+    .append(TableViewColumn().setText("Name"))
+    .append(TableViewColumn().setText("Mapping").setExpandable())
+    .append(TableViewColumn().setText("Device").setAlignment(1.0).setForegroundColor({0, 128, 0}))
   );
   for(auto& mapping : activeDevice().mappings) {
-    mappingList.append(ListViewItem()
-      .append(ListViewCell().setText(mapping->name))
-      .append(ListViewCell())
-      .append(ListViewCell())
+    mappingList.append(TableViewItem()
+      .append(TableViewCell().setText(mapping.name))
+      .append(TableViewCell())
+      .append(TableViewCell())
     );
   }
   refreshMappings();
@@ -110,8 +110,8 @@ auto InputSettings::reloadMappings() -> void {
 auto InputSettings::refreshMappings() -> void {
   uint position = 0;
   for(auto& mapping : activeDevice().mappings) {
-    mappingList.item(position)->cell(1)->setText(mapping->assignmentName());
-    mappingList.item(position)->cell(2)->setText(mapping->deviceName());
+    mappingList.item(position).cell(1).setText(mapping.assignmentName());
+    mappingList.item(position).cell(2).setText(mapping.deviceName());
     position++;
   }
   mappingList.resizeColumns();
@@ -121,7 +121,7 @@ auto InputSettings::assignMapping() -> void {
   inputManager->poll();  //clear any pending events first
 
   if(auto mapping = mappingList.selected()) {
-    activeMapping = activeDevice().mappings[mapping->offset()];
+    activeMapping = &activeDevice().mappings[mapping.offset()];
     settingsManager->layout.setEnabled(false);
     settingsManager->statusBar.setText({"Press a key or button to map [", activeMapping->name, "] ..."});
   }
@@ -130,7 +130,7 @@ auto InputSettings::assignMapping() -> void {
 auto InputSettings::assignMouseInput(uint id) -> void {
   if(auto mouse = inputManager->findMouse()) {
     if(auto mapping = mappingList.selected()) {
-      activeMapping = activeDevice().mappings[mapping->offset()];
+      activeMapping = &activeDevice().mappings[mapping.offset()];
 
       if(activeMapping->isDigital()) {
         return inputEvent(mouse, HID::Mouse::GroupID::Button, id, 0, 1, true);

@@ -1,15 +1,16 @@
 struct System : IO {
-  auto loaded() const -> bool;
-  auto model() const -> Model;
-  auto orientation() const -> bool;
-  auto color() const -> bool;
-  auto planar() const -> bool;
-  auto packed() const -> bool;
-  auto depth() const -> bool;
+  auto loaded() const -> bool { return _loaded; }
+  auto model() const -> Model { return _model; }
+  auto orientation() const -> bool { return _orientation; }
+  auto color() const -> bool { return r.color; }
+  auto planar() const -> bool { return r.format == 0; }
+  auto packed() const -> bool { return r.format == 1; }
+  auto depth() const -> bool { return r.color && r.depth == 1; }
 
   auto init() -> void;
   auto term() -> void;
-  auto load(Model) -> void;
+  auto load(Emulator::Interface*, Model) -> bool;
+  auto save() -> void;
   auto unload() -> void;
   auto power() -> void;
   auto run() -> void;
@@ -19,6 +20,10 @@ struct System : IO {
   //io.cpp
   auto portRead(uint16 addr) -> uint8 override;
   auto portWrite(uint16 addr, uint8 data) -> void override;
+
+  //video.cpp
+  auto configureVideoPalette() -> void;
+  auto configureVideoEffects() -> void;
 
   //serialization.cpp
   auto serializeInit() -> void;
@@ -40,7 +45,9 @@ struct System : IO {
     bool rotate;
   } keypad;
 
-privileged:
+private:
+  Emulator::Interface* interface = nullptr;
+
   struct Registers {
     //$0060  DISP_MODE
     uint5 unknown;

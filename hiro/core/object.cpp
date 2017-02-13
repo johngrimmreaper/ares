@@ -100,6 +100,16 @@ auto mObject::parentComboButton(bool recursive) const -> mComboButton* {
 }
 #endif
 
+#if defined(Hiro_ComboEdit)
+auto mObject::parentComboEdit(bool recursive) const -> mComboEdit* {
+  if(auto comboEdit = dynamic_cast<mComboEdit*>(parent())) return comboEdit;
+  if(recursive) {
+    if(auto object = parent()) return object->parentComboEdit(true);
+  }
+  return nullptr;
+}
+#endif
+
 #if defined(Hiro_Frame)
 auto mObject::parentFrame(bool recursive) const -> mFrame* {
   if(auto frame = dynamic_cast<mFrame*>(parent())) return frame;
@@ -125,36 +135,6 @@ auto mObject::parentLayout(bool recursive) const -> mLayout* {
   if(auto layout = dynamic_cast<mLayout*>(parent())) return layout;
   if(recursive) {
     if(auto object = parent()) return object->parentLayout(true);
-  }
-  return nullptr;
-}
-#endif
-
-#if defined(Hiro_ListView)
-auto mObject::parentListView(bool recursive) const -> mListView* {
-  if(auto listView = dynamic_cast<mListView*>(parent())) return listView;
-  if(recursive) {
-    if(auto object = parent()) return object->parentListView(true);
-  }
-  return nullptr;
-}
-#endif
-
-#if defined(Hiro_ListView)
-auto mObject::parentListViewHeader(bool recursive) const -> mListViewHeader* {
-  if(auto listViewHeader = dynamic_cast<mListViewHeader*>(parent())) return listViewHeader;
-  if(recursive) {
-    if(auto object = parent()) return object->parentListViewHeader(true);
-  }
-  return nullptr;
-}
-#endif
-
-#if defined(Hiro_ListView)
-auto mObject::parentListViewItem(bool recursive) const -> mListViewItem* {
-  if(auto listViewItem = dynamic_cast<mListViewItem*>(parent())) return listViewItem;
-  if(recursive) {
-    if(auto object = parent()) return object->parentListViewItem(true);
   }
   return nullptr;
 }
@@ -215,6 +195,36 @@ auto mObject::parentTabFrameItem(bool recursive) const -> mTabFrameItem* {
   if(auto tabFrameItem = dynamic_cast<mTabFrameItem*>(parent())) return tabFrameItem;
   if(recursive) {
     if(auto object = parent()) return object->parentTabFrameItem(true);
+  }
+  return nullptr;
+}
+#endif
+
+#if defined(Hiro_TableView)
+auto mObject::parentTableView(bool recursive) const -> mTableView* {
+  if(auto tableView = dynamic_cast<mTableView*>(parent())) return tableView;
+  if(recursive) {
+    if(auto object = parent()) return object->parentTableView(true);
+  }
+  return nullptr;
+}
+#endif
+
+#if defined(Hiro_TableView)
+auto mObject::parentTableViewHeader(bool recursive) const -> mTableViewHeader* {
+  if(auto tableViewHeader = dynamic_cast<mTableViewHeader*>(parent())) return tableViewHeader;
+  if(recursive) {
+    if(auto object = parent()) return object->parentTableViewHeader(true);
+  }
+  return nullptr;
+}
+#endif
+
+#if defined(Hiro_TableView)
+auto mObject::parentTableViewItem(bool recursive) const -> mTableViewItem* {
+  if(auto tableViewItem = dynamic_cast<mTableViewItem*>(parent())) return tableViewItem;
+  if(recursive) {
+    if(auto object = parent()) return object->parentTableViewItem(true);
   }
   return nullptr;
 }

@@ -3,38 +3,30 @@
 namespace SuperFamicom {
 
 #include "gamepad/gamepad.cpp"
-#include "multitap/multitap.cpp"
 #include "mouse/mouse.cpp"
-#include "superscope/superscope.cpp"
+#include "super-multitap/super-multitap.cpp"
+#include "super-scope/super-scope.cpp"
 #include "justifier/justifier.cpp"
-#include "usart/usart.cpp"
 
 Controller::Controller(bool port) : port(port) {
-  if(!thread) create(Controller::Enter, 1);
+  if(!handle()) create(Controller::Enter, 1);
+}
+
+Controller::~Controller() {
+  scheduler.remove(*this);
 }
 
 auto Controller::Enter() -> void {
   while(true) {
-    if(co_active() == device.controllerPort1->thread) device.controllerPort1->main();
-    if(co_active() == device.controllerPort2->thread) device.controllerPort2->main();
+    scheduler.synchronize();
+    if(peripherals.controllerPort1->active()) peripherals.controllerPort1->main();
+    if(peripherals.controllerPort2->active()) peripherals.controllerPort2->main();
   }
 }
 
 auto Controller::main() -> void {
   step(1);
-}
-
-auto Controller::step(uint clocks) -> void {
-  clock += clocks * (uint64)cpu.frequency;
-  synchronizeCPU();
-}
-
-auto Controller::synchronizeCPU() -> void {
-  if(CPU::Threaded) {
-    if(clock >= 0 && !scheduler.synchronizing()) co_switch(cpu.thread);
-  } else {
-    while(clock >= 0) cpu.main();
-  }
+  synchronize(cpu);
 }
 
 auto Controller::iobit() -> bool {

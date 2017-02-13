@@ -5,14 +5,14 @@ using namespace nall;
 using namespace hiro;
 
 auto locate(string name) -> string {
-  string location = {programpath(), name};
+  string location = {Path::program(), name};
   if(inode::exists(location)) return location;
 
-  location = {configpath(), "icarus/", name};
+  location = {Path::config(), "icarus/", name};
   if(inode::exists(location)) return location;
 
-  directory::create({localpath(), "icarus/"});
-  return {localpath(), "icarus/", name};
+  directory::create({Path::local(), "icarus/"});
+  return {Path::local(), "icarus/", name};
 }
 
 #include "settings.cpp"
@@ -20,8 +20,12 @@ Settings settings;
 
 #include "heuristics/famicom.cpp"
 #include "heuristics/super-famicom.cpp"
+#include "heuristics/master-system.cpp"
+#include "heuristics/mega-drive.cpp"
+#include "heuristics/pc-engine.cpp"
 #include "heuristics/game-boy.cpp"
 #include "heuristics/game-boy-advance.cpp"
+#include "heuristics/game-gear.cpp"
 #include "heuristics/wonderswan.cpp"
 #include "heuristics/bs-memory.cpp"
 #include "heuristics/sufami-turbo.cpp"
@@ -30,9 +34,13 @@ Settings settings;
 #include "core/core.cpp"
 #include "core/famicom.cpp"
 #include "core/super-famicom.cpp"
+#include "core/master-system.cpp"
+#include "core/mega-drive.cpp"
+#include "core/pc-engine.cpp"
 #include "core/game-boy.cpp"
 #include "core/game-boy-color.cpp"
 #include "core/game-boy-advance.cpp"
+#include "core/game-gear.cpp"
 #include "core/wonderswan.cpp"
 #include "core/wonderswan-color.cpp"
 #include "core/bs-memory.cpp"
@@ -46,7 +54,7 @@ Icarus icarus;
 #include "ui/error-dialog.cpp"
 
 #include <nall/main.hpp>
-auto nall::main(lstring args) -> void {
+auto nall::main(string_vector args) -> void {
   if(args.size() == 2 && args[1] == "--name") {
     return print("icarus");
   }
@@ -66,10 +74,24 @@ auto nall::main(lstring args) -> void {
     if(string source = BrowserDialog()
     .setTitle("Load ROM Image")
     .setPath(settings["icarus/Path"].text())
-    .setFilters("ROM Files|*.fc:*.nes:*.sfc:*.smc:*.gb:*.gbc:*.gba:*.ws:*.wsc:*.bs:*.st:*.zip")
-    .openFile()) {
+    .setFilters("ROM Files|"
+      "*.fc:*.nes:"
+      "*.sfc:*.smc:"
+      "*.ms:*.sms:"
+      "*.md:*.smd:*.gen:"
+      "*.pce:"
+      "*.gb:"
+      "*.gbc:"
+      "*.gba:"
+      "*.gg:"
+      "*.ws:"
+      "*.wsc:"
+      "*.bs:"
+      "*.st:"
+      "*.zip"
+    ).openFile()) {
       if(string target = icarus.import(source)) {
-        settings["icarus/Path"].setValue(pathname(source));
+        settings["icarus/Path"].setValue(Location::path(source));
         return print(target, "\n");
       }
     }

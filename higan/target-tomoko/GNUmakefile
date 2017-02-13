@@ -1,13 +1,15 @@
 name := higan
-flags += -DSFC_SUPERGAMEBOY
+#flags += -DSFC_SUPERGAMEBOY
 
 include fc/GNUmakefile
 include sfc/GNUmakefile
+include ms/GNUmakefile
+include md/GNUmakefile
+include pce/GNUmakefile
 include gb/GNUmakefile
 include gba/GNUmakefile
 include ws/GNUmakefile
 include processor/GNUmakefile
-include emulator/GNUmakefile
 
 ui_objects := ui-tomoko ui-program ui-configuration ui-input
 ui_objects += ui-settings ui-tools ui-presentation
@@ -17,7 +19,7 @@ ui_objects += $(if $(call streq,$(platform),windows),ui-resource)
 # platform
 ifeq ($(platform),windows)
   ruby += video.direct3d video.wgl video.directdraw video.gdi
-  ruby += audio.xaudio2 audio.directsound
+  ruby += audio.wasapi audio.xaudio2 audio.directsound
   ruby += input.windows
 else ifeq ($(platform),macosx)
   ruby += video.cgl
@@ -45,8 +47,6 @@ link += $(hirolink)
 objects := $(ui_objects) $(objects)
 objects := $(patsubst %,obj/%.o,$(objects))
 
-obj/libco.o: ../libco/libco.c $(call rwildcard,../libco/)
-
 obj/ruby.o: ../ruby/ruby.cpp $(call rwildcard,../ruby/)
 	$(compiler) $(rubyflags) -c $< -o $@
 
@@ -63,11 +63,11 @@ obj/ui-tools.o: $(ui)/tools/tools.cpp $(call rwildcard,$(ui)/)
 obj/ui-presentation.o: $(ui)/presentation/presentation.cpp $(call rwildcard,$(ui)/)
 
 obj/ui-resource.o:
-	windres data/resource.rc obj/ui-resource.o
+	$(windres) data/resource.rc obj/ui-resource.o
 
 # targets
 build: $(objects)
-	$(call unique,$(compiler) -o out/$(name) $(objects) $(link))
+	$(strip $(compiler) -o out/$(name) $(objects) $(link))
 ifeq ($(platform),macosx)
 	@if [ -d out/$(name).app ]; then rm -r out/$(name).app; fi
 	mkdir -p out/$(name).app/Contents/MacOS/
@@ -86,7 +86,7 @@ else ifeq ($(platform),macosx)
 	mkdir -p ~/Emulation/System/
 	cp -R out/$(name).app /Applications/$(name).app
 	cp data/cheats.bml ~/Library/Application\ Support/$(name)/
-	cp -R profile/* ~/Library/Application\ Support/$(name)/
+	cp -R systems/* ~/Library/Application\ Support/$(name)/
 else ifneq ($(filter $(platform),linux bsd),)
 	mkdir -p $(prefix)/bin/
 	mkdir -p $(prefix)/share/icons/
@@ -95,7 +95,7 @@ else ifneq ($(filter $(platform),linux bsd),)
 	cp data/$(name).desktop $(prefix)/share/applications/$(name).desktop
 	cp data/$(name).png $(prefix)/share/icons/$(name).png
 	cp data/cheats.bml $(prefix)/share/$(name)/cheats.bml
-	cp -R profile/* $(prefix)/share/$(name)/
+	cp -R systems/* $(prefix)/share/$(name)/
 endif
 
 uninstall:

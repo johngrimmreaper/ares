@@ -1,32 +1,36 @@
-#include "video.hpp"
-
 struct PPU : Thread, MMIO {
+  auto enabled() const -> bool;
+
   static auto Enter() -> void;
   auto main() -> void;
-  auto add_clocks(uint clocks) -> void;
+  auto mode(uint) -> void;
+  auto stat() -> void;
+  auto coincidence() -> bool;
+  auto refresh() -> void;
+  auto step(uint clocks) -> void;
 
   auto hflip(uint data) const -> uint;
 
-  //mmio.cpp
-  auto vram_addr(uint16 addr) const -> uint;
-  auto mmio_read(uint16 addr) -> uint8;
-  auto mmio_write(uint16 addr, uint8 data) -> void;
+  //io.cpp
+  auto vramAddress(uint16 addr) const -> uint;
+  auto readIO(uint16 addr) -> uint8;
+  auto writeIO(uint16 addr, uint8 data) -> void;
 
   //dmg.cpp
-  auto dmg_read_tile(bool select, uint x, uint y, uint& data) -> void;
-  auto dmg_scanline() -> void;
-  auto dmg_run() -> void;
-  auto dmg_run_bg() -> void;
-  auto dmg_run_window() -> void;
-  auto dmg_run_ob() -> void;
+  auto readTileDMG(bool select, uint x, uint y, uint& data) -> void;
+  auto scanlineDMG() -> void;
+  auto runDMG() -> void;
+  auto runBackgroundDMG() -> void;
+  auto runWindowDMG() -> void;
+  auto runObjectsDMG() -> void;
 
   //cgb.cpp
-  auto cgb_read_tile(bool select, uint x, uint y, uint& attr, uint& data) -> void;
-  auto cgb_scanline() -> void;
-  auto cgb_run() -> void;
-  auto cgb_run_bg() -> void;
-  auto cgb_run_window() -> void;
-  auto cgb_run_ob() -> void;
+  auto readTileCGB(bool select, uint x, uint y, uint& attr, uint& data) -> void;
+  auto scanlineCGB() -> void;
+  auto runCGB() -> void;
+  auto runBackgroundCGB() -> void;
+  auto runWindowCGB() -> void;
+  auto runObjectsCGB() -> void;
 
   auto power() -> void;
 
@@ -43,23 +47,25 @@ struct PPU : Thread, MMIO {
   function<auto () -> void> run;
 
   struct Status {
+    bool irq;  //STAT IRQ line
     uint lx;
 
     //$ff40  LCDC
-    bool display_enable;
-    bool window_tilemap_select;
-    bool window_display_enable;
-    bool bg_tiledata_select;
-    bool bg_tilemap_select;
-    bool ob_size;
-    bool ob_enable;
-    bool bg_enable;
+    bool displayEnable;
+    bool windowTilemapSelect;
+    bool windowDisplayEnable;
+    bool bgTiledataSelect;
+    bool bgTilemapSelect;
+    bool obSize;
+    bool obEnable;
+    bool bgEnable;
 
     //$ff41  STAT
-    bool interrupt_lyc;
-    bool interrupt_oam;
-    bool interrupt_vblank;
-    bool interrupt_hblank;
+    bool interruptLYC;
+    bool interruptOAM;
+    bool interruptVblank;
+    bool interruptHblank;
+    uint2 mode;
 
     //$ff42  SCY
     uint8 scy;
@@ -74,9 +80,9 @@ struct PPU : Thread, MMIO {
     uint8 lyc;
 
     //$ff46  DMA
-    bool dma_active;
-    uint dma_clock;
-    uint8 dma_bank;
+    bool dmaActive;
+    uint dmaClock;
+    uint8 dmaBank;
 
     //$ff4a  WY
     uint8 wy;
@@ -85,14 +91,14 @@ struct PPU : Thread, MMIO {
     uint8 wx;
 
     //$ff4f  VBK
-    bool vram_bank;
+    bool vramBank;
 
     //$ff68  BGPI
-    bool bgpi_increment;
+    bool bgpiIncrement;
     uint6 bgpi;
 
     //$ff6a  OBPI
-    bool obpi_increment;
+    bool obpiIncrement;
     uint8 obpi;
   } status;
 

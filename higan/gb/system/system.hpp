@@ -1,5 +1,3 @@
-class Interface;
-
 enum class Input : uint {
   Up, Down, Left, Right, B, A, Select, Start,
 };
@@ -11,11 +9,9 @@ struct System {
     GameBoyColor,
   };
 
-  System();
-
-  auto loaded() const -> bool;
-  auto revision() const -> Revision;
-  auto clocksExecuted() const -> uint;
+  auto loaded() const -> bool { return _loaded; }
+  auto revision() const -> Revision { return _revision; }
+  auto clocksExecuted() const -> uint { return _clocksExecuted; }
 
   inline auto dmg() const { return _revision == Revision::GameBoy; }
   inline auto sgb() const { return _revision == Revision::SuperGameBoy; }
@@ -25,9 +21,14 @@ struct System {
   auto runToSave() -> void;
 
   auto init() -> void;
-  auto load(Revision) -> void;
+  auto load(Emulator::Interface*, Revision) -> bool;
+  auto save() -> void;
   auto unload() -> void;
   auto power() -> void;
+
+  //video.cpp
+  auto configureVideoPalette() -> void;
+  auto configureVideoEffects() -> void;
 
   //serialization.cpp
   auto serialize() -> serializer;
@@ -36,6 +37,8 @@ struct System {
   auto serialize(serializer&) -> void;
   auto serializeAll(serializer&) -> void;
   auto serializeInit() -> void;
+
+  Emulator::Interface* interface = nullptr;
 
   struct BootROM {
     uint8 dmg[ 256];

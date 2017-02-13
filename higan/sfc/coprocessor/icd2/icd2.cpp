@@ -6,8 +6,8 @@ ICD2 icd2;
 
 #if defined(SFC_SUPERGAMEBOY)
 
-#include "interface/interface.cpp"
-#include "mmio/mmio.cpp"
+#include "interface.cpp"
+#include "io.cpp"
 #include "serialization.cpp"
 
 auto ICD2::Enter() -> void {
@@ -24,23 +24,22 @@ auto ICD2::main() -> void {
     step(GameBoy::system._clocksExecuted);
     GameBoy::system._clocksExecuted = 0;
   } else {  //DMG halted
-    audio.coprocessorSample(0, 0);
-    step(1);
+    stream->sample(0.0, 0.0);
+    step(2);  //two clocks per audio sample
   }
-  synchronizeCPU();
+  synchronize(cpu);
 }
 
 auto ICD2::init() -> void {
 }
 
-auto ICD2::load() -> void {
+auto ICD2::load() -> bool {
   bind = GameBoy::interface->bind;
   hook = GameBoy::interface->hook;
   GameBoy::interface->bind = this;
   GameBoy::interface->hook = this;
-  interface->loadRequest(ID::GameBoy, "Game Boy", "gb", false);
   GameBoy::interface->load(GameBoy::ID::SuperGameBoy);
-  cartridge.loadGameBoy();
+  return cartridge.loadGameBoy();
 }
 
 auto ICD2::unload() -> void {
@@ -50,12 +49,12 @@ auto ICD2::unload() -> void {
 }
 
 auto ICD2::power() -> void {
-  audio.coprocessorEnable(true);
-  audio.coprocessorFrequency(2 * 1024 * 1024);
 }
 
-auto ICD2::reset() -> void {
-  create(ICD2::Enter, cpu.frequency / 5);
+auto ICD2::reset(bool soft) -> void {
+  auto frequency = system.colorburst() * 6.0;
+  create(ICD2::Enter, frequency / 5);
+  if(!soft) stream = Emulator::audio.createStream(2, frequency / 10);
 
   r6003 = 0x00;
   r6004 = 0xff;
@@ -63,19 +62,19 @@ auto ICD2::reset() -> void {
   r6006 = 0xff;
   r6007 = 0xff;
   for(auto& r : r7000) r = 0x00;
-  mlt_req = 0;
+  mltReq = 0;
 
   for(auto& n : output) n = 0xff;
-  read_bank = 0;
-  read_addr = 0;
-  write_bank = 0;
-  write_addr = 0;
+  readBank = 0;
+  readAddress = 0;
+  writeBank = 0;
+  writeAddress = 0;
 
-  packetsize = 0;
-  joyp_id = 3;
-  joyp15lock = 0;
-  joyp14lock = 0;
-  pulselock = true;
+  packetSize = 0;
+  joypID = 3;
+  joyp15Lock = 0;
+  joyp14Lock = 0;
+  pulseLock = true;
 
   GameBoy::system.init();
   GameBoy::system.power();

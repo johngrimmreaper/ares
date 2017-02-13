@@ -54,6 +54,7 @@
 #define Hiro_CheckButton
 #define Hiro_CheckLabel
 #define Hiro_ComboButton
+#define Hiro_ComboEdit
 #define Hiro_Console
 #define Hiro_Frame
 #define Hiro_HexEdit
@@ -62,23 +63,22 @@
 #define Hiro_IconView
 #define Hiro_Label
 #define Hiro_LineEdit
-#define Hiro_ListView
 #define Hiro_ProgressBar
 #define Hiro_RadioButton
 #define Hiro_RadioLabel
 #define Hiro_SourceEdit
 #define Hiro_TabFrame
+#define Hiro_TableView
 #define Hiro_TextEdit
 #define Hiro_TreeView
 #define Hiro_VerticalScrollBar
 #define Hiro_VerticalSlider
 #define Hiro_Viewport
 
-#define Hiro_FixedLayout
-#define Hiro_HorizontalLayout
-#define Hiro_VerticalLayout
+//platform-specific exclusions
 
 #if defined(HIRO_WINDOWS) || defined(HIRO_COCOA) || defined(HIRO_QT)
+  #undef Hiro_ComboEdit
   #undef Hiro_Console
   #undef Hiro_IconView
   #undef Hiro_SourceEdit
@@ -87,6 +87,16 @@
 
 #if defined(HIRO_COCOA)
   #undef Hiro_HexEdit
+#endif
+
+//extensions
+
+#define Hiro_FixedLayout
+#define Hiro_HorizontalLayout
+#define Hiro_VerticalLayout
+
+#if defined(Hiro_TableView)
+  #define Hiro_ListView
 #endif
 
 #if defined(Hiro_Button) && defined(Hiro_Canvas) && defined(Hiro_Label)

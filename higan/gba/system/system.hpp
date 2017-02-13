@@ -2,12 +2,12 @@ enum class Input : uint {
   A, B, Select, Start, Right, Left, Up, Down, R, L,
 };
 
-struct BIOS : Memory {
+struct BIOS {
   BIOS();
   ~BIOS();
 
-  auto read(uint mode, uint32 addr) -> uint32 override;
-  auto write(uint mode, uint32 addr, uint32 word) -> void override;
+  auto read(uint mode, uint32 addr) -> uint32;
+  auto write(uint mode, uint32 addr, uint32 word) -> void;
 
   uint8* data = nullptr;
   uint size = 0;
@@ -15,22 +15,31 @@ struct BIOS : Memory {
 };
 
 struct System {
-  auto loaded() const -> bool;
+  auto loaded() const -> bool { return _loaded; }
 
   auto init() -> void;
   auto term() -> void;
-  auto load() -> void;
+  auto load(Emulator::Interface*) -> bool;
+  auto save() -> void;
   auto unload() -> void;
   auto power() -> void;
   auto run() -> void;
   auto runToSave() -> void;
 
+  //video.cpp
+  auto configureVideoPalette() -> void;
+  auto configureVideoEffects() -> void;
+
+  //serialization.cpp
   auto serialize() -> serializer;
   auto unserialize(serializer&) -> bool;
 
   auto serialize(serializer&) -> void;
   auto serializeAll(serializer&) -> void;
   auto serializeInit() -> void;
+
+private:
+  Emulator::Interface* interface = nullptr;
 
   struct Information {
     string manifest;

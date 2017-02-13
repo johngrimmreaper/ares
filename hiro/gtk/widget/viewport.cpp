@@ -5,8 +5,8 @@ namespace hiro {
 static auto Viewport_dropEvent(GtkWidget* widget, GdkDragContext* context, signed x, signed y,
 GtkSelectionData* data, unsigned type, unsigned timestamp, pViewport* p) -> void {
   if(!p->state().droppable) return;
-  lstring paths = DropPaths(data);
-  if(paths.empty()) return;
+  auto paths = DropPaths(data);
+  if(!paths) return;
   p->self().doDrop(paths);
 }
 

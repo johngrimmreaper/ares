@@ -41,16 +41,45 @@ Board::Board(Markup::Node& document) {
   if(chrrom.size) chrrom.data = new uint8_t[chrrom.size]();
   if(chrram.size) chrram.data = new uint8_t[chrram.size]();
 
-  if(auto name = prom["name"].text()) interface->loadRequest(ID::ProgramROM, name, true);
-  if(auto name = pram["name"].text()) interface->loadRequest(ID::ProgramRAM, name, false);
-  if(auto name = crom["name"].text()) interface->loadRequest(ID::CharacterROM, name, true);
-  if(auto name = cram["name"].text()) interface->loadRequest(ID::CharacterRAM, name, false);
-
-  if(auto name = pram["name"].text()) Famicom::cartridge.memory.append({ID::ProgramRAM, name});
-  if(auto name = cram["name"].text()) Famicom::cartridge.memory.append({ID::CharacterRAM, name});
+  if(prgrom.name = prom["name"].text()) {
+    if(auto fp = platform->open(cartridge.pathID(), prgrom.name, File::Read, File::Required)) {
+      fp->read(prgrom.data, min(prgrom.size, fp->size()));
+    }
+  }
+  if(prgram.name = pram["name"].text()) {
+    if(auto fp = platform->open(cartridge.pathID(), prgram.name, File::Read)) {
+      fp->read(prgram.data, min(prgram.size, fp->size()));
+    }
+  }
+  if(chrrom.name = crom["name"].text()) {
+    if(auto fp = platform->open(cartridge.pathID(), chrrom.name, File::Read, File::Required)) {
+      fp->read(chrrom.data, min(chrrom.size, fp->size()));
+    }
+  }
+  if(chrram.name = cram["name"].text()) {
+    if(auto fp = platform->open(cartridge.pathID(), chrram.name, File::Read)) {
+      fp->read(chrram.data, min(chrram.size, fp->size()));
+    }
+  }
 
   prgram.writable = true;
   chrram.writable = true;
+}
+
+auto Board::save() -> void {
+  auto document = BML::unserialize(cartridge.manifest());
+
+  if(auto name = document["board/prg/ram/name"].text()) {
+    if(auto fp = platform->open(cartridge.pathID(), name, File::Write)) {
+      fp->write(prgram.data, prgram.size);
+    }
+  }
+
+  if(auto name = document["board/chr/ram/name"].text()) {
+    if(auto fp = platform->open(cartridge.pathID(), name, File::Write)) {
+      fp->write(chrram.data, chrram.size);
+    }
+  }
 }
 
 auto Board::Memory::read(uint addr) const -> uint8 {
@@ -80,22 +109,22 @@ auto Board::mirror(uint addr, uint size) -> uint {
 }
 
 auto Board::main() -> void {
-  cartridge.clock += 12 * 4095;
+  cartridge.step(12 * 4095);
   tick();
 }
 
 auto Board::tick() -> void {
-  cartridge.clock += 12;
-  if(cartridge.clock >= 0 && !scheduler.synchronizing()) co_switch(cpu.thread);
+  cartridge.step(12);
+  cartridge.synchronize(cpu);
 }
 
-auto Board::chr_read(uint addr) -> uint8 {
+auto Board::readCHR(uint addr) -> uint8 {
   if(chrram.size) return chrram.data[mirror(addr, chrram.size)];
   if(chrrom.size) return chrrom.data[mirror(addr, chrrom.size)];
   return 0u;
 }
 
-auto Board::chr_write(uint addr, uint8 data) -> void {
+auto Board::writeCHR(uint addr, uint8 data) -> void {
   if(chrram.size) chrram.data[mirror(addr, chrram.size)] = data;
 }
 

@@ -2,34 +2,50 @@
 
 namespace Famicom {
 
+#include "peripherals.cpp"
+#include "video.cpp"
 #include "serialization.cpp"
 System system;
-
-auto System::loaded() const -> bool { return _loaded; }
+Scheduler scheduler;
+Cheat cheat;
 
 auto System::run() -> void {
-  scheduler.enter();
+  if(scheduler.enter() == Scheduler::Event::Frame) ppu.refresh();
 }
 
 auto System::runToSave() -> void {
-  scheduler.synchronize(ppu.thread);
-  scheduler.synchronize(cpu.thread);
-  scheduler.synchronize(apu.thread);
-  scheduler.synchronize(cartridge.thread);
+  scheduler.synchronize(cpu);
+  scheduler.synchronize(apu);
+  scheduler.synchronize(ppu);
+  scheduler.synchronize(cartridge);
+  for(auto peripheral : cpu.peripherals) scheduler.synchronize(*peripheral);
 }
 
-auto System::load() -> void {
-  interface->loadRequest(ID::SystemManifest, "manifest.bml", true);
+auto System::load(Emulator::Interface* interface) -> bool {
+  information = Information();
+  if(auto fp = platform->open(ID::System, "manifest.bml", File::Read, File::Required)) {
+    information.manifest = fp->reads();
+  } else {
+    return false;
+  }
   auto document = BML::unserialize(information.manifest);
-  cartridge.load();
+  if(!cartridge.load()) return false;
+
+  this->interface = interface;
+  information.colorburst = Emulator::Constants::Colorburst::NTSC;
   serializeInit();
-  _loaded = true;
+  return information.loaded = true;
+}
+
+auto System::save() -> void {
+  cartridge.save();
 }
 
 auto System::unload() -> void {
   if(!loaded()) return;
+  peripherals.unload();
   cartridge.unload();
-  _loaded = false;
+  information.loaded = false;
 }
 
 auto System::power() -> void {
@@ -37,24 +53,29 @@ auto System::power() -> void {
   cpu.power();
   apu.power();
   ppu.power();
-  input.reset();
   reset();
 }
 
 auto System::reset() -> void {
+  Emulator::video.reset();
+  Emulator::video.setInterface(interface);
+  configureVideoPalette();
+  configureVideoEffects();
+
+  Emulator::audio.reset();
+  Emulator::audio.setInterface(interface);
+
+  scheduler.reset();
   cartridge.reset();
   cpu.reset();
   apu.reset();
   ppu.reset();
-  input.reset();
-  scheduler.reset();
-  video.reset();
+  scheduler.primary(cpu);
+  peripherals.reset();
 }
 
 auto System::init() -> void {
   assert(interface != nullptr);
-  input.connect(0, Input::Device::Joypad);
-  input.connect(1, Input::Device::None);
 }
 
 auto System::term() -> void {

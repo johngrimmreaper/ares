@@ -1,32 +1,34 @@
 #include "../tomoko.hpp"
 #include <fc/interface/interface.hpp>
 #include <sfc/interface/interface.hpp>
+#include <ms/interface/interface.hpp>
+#include <md/interface/interface.hpp>
+#include <pce/interface/interface.hpp>
 #include <gb/interface/interface.hpp>
 #include <gba/interface/interface.hpp>
 #include <ws/interface/interface.hpp>
 #include "interface.cpp"
-#include "media.cpp"
+#include "medium.cpp"
 #include "state.cpp"
 #include "utility.cpp"
 unique_pointer<Program> program;
 
-Program::Program(lstring args) {
+Program::Program(string_vector args) {
   program = this;
   Application::onMain({&Program::main, this});
 
+  Emulator::platform = this;
   emulators.append(new Famicom::Interface);
   emulators.append(new SuperFamicom::Interface);
+  emulators.append(new MasterSystem::MasterSystemInterface);
+  emulators.append(new MegaDrive::Interface);
+  emulators.append(new PCEngine::Interface);
   emulators.append(new GameBoy::Interface);
   emulators.append(new GameBoyAdvance::Interface);
+  emulators.append(new MasterSystem::GameGearInterface);
   emulators.append(new WonderSwan::Interface);
-  for(auto& emulator : emulators) emulator->bind = this;
 
-  new InputManager;
-  new SettingsManager;
-  new CheatDatabase;
-  new ToolsManager;
   new Presentation;
-
   presentation->setVisible();
 
   video = Video::create(settings["Video/Driver"].text());
@@ -34,11 +36,12 @@ Program::Program(lstring args) {
   video->set(Video::Synchronize, settings["Video/Synchronize"].boolean());
   if(!video->init()) video = Video::create("None");
 
+  presentation->clearViewport();
+
   audio = Audio::create(settings["Audio/Driver"].text());
   audio->set(Audio::Device, settings["Audio/Device"].text());
   audio->set(Audio::Handle, presentation->viewport.handle());
   audio->set(Audio::Synchronize, settings["Audio/Synchronize"].boolean());
-  audio->set(Audio::Frequency, 96000u);
   audio->set(Audio::Latency, 80u);
   if(!audio->init()) audio = Audio::create("None");
 
@@ -47,50 +50,37 @@ Program::Program(lstring args) {
   input->onChange({&InputManager::onChange, &inputManager()});
   if(!input->init()) input = Input::create("None");
 
-  dsp.setPrecision(16);
-  dsp.setBalance(0.0);
-  dsp.setFrequency(32040);
-  dsp.setResampler(DSP::ResampleEngine::Sinc);
-  dsp.setResamplerFrequency(96000);
+  new InputManager;
+  new SettingsManager;
+  new CheatDatabase;
+  new ToolsManager;
+  new AboutWindow;
 
-  presentation->drawSplashScreen();
+  presentation->setFocused();
 
   updateVideoShader();
-  updateAudioVolume();
+  updateAudioDriver();
+  updateAudioEffects();
 
-  args.takeFirst();  //ignore program location in argument parsing
+  args.takeLeft();  //ignore program location in argument parsing
   for(auto& argument : args) {
     if(argument == "--fullscreen") {
       presentation->toggleFullScreen();
-    } else {
-      load(argument);
-    }
-  }
-}
-
-auto Program::load(string location) -> void {
-  if(directory::exists(location)) {
-    loadMedia(location);
-  } else if(file::exists(location)) {
-    //special handling to allow importing the Game Boy Advance BIOS
-    if(file::size(location) == 16384 && file::sha256(location).beginsWith("fd2547724b505f48")) {
-      auto target = locate("Game Boy Advance.sys/");
-      if(file::copy(location, {target, "bios.rom"})) {
-        MessageDialog().setTitle(Emulator::Name).setText("Game Boy Advance BIOS imported successfully!").information();
+    } else if(directory::exists(argument)) {
+      mediumQueue.append(argument);
+    } else if(file::exists(argument)) {
+      if(auto result = execute("icarus", "--import", argument)) {
+        mediumQueue.append(result.output.strip());
       }
-      return;
-    }
-
-    //ask icarus to import the game; and play it upon success
-    if(auto result = execute("icarus", "--import", location)) {
-      loadMedia(result.strip());
     }
   }
+  loadMedium();
 }
 
 auto Program::main() -> void {
   updateStatusText();
   inputManager->poll();
+  inputManager->pollHotkeys();
 
   if(!emulator || !emulator->loaded() || pause || (!presentation->focused() && settings["Input/FocusLoss/Pause"].boolean())) {
     audio->clear();
@@ -102,7 +92,8 @@ auto Program::main() -> void {
 }
 
 auto Program::quit() -> void {
-  unloadMedia();
+  hasQuit = true;
+  unloadMedium();
   settings.quit();
   inputManager->quit();
   Application::quit();

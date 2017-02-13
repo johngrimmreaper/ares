@@ -9,18 +9,19 @@ struct BSMemory : Memory {
   auto read(uint24 addr, uint8) -> uint8;
   auto write(uint24 addr, uint8 data) -> void;
 
+  uint pathID = 0;
   MappedRAM memory;
   bool readonly;
 
 private:
   struct {
     uint command;
-    uint8 write_old;
-    uint8 write_new;
+    uint8 writeOld;
+    uint8 writeNew;
 
-    bool flash_enable;
-    bool read_enable;
-    bool write_enable;
+    bool flashEnable;
+    bool readEnable;
+    bool writeEnable;
   } regs;
 };
 

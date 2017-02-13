@@ -2,54 +2,54 @@
 
 namespace GameBoy {
 
+#include "video.cpp"
 #include "serialization.cpp"
 System system;
-
-auto System::loaded() const -> bool { return _loaded; }
-auto System::revision() const -> Revision { return _revision; }
-auto System::clocksExecuted() const -> uint { return _clocksExecuted; }
-
-System::System() {
-  for(auto& byte : bootROM.dmg) byte = 0;
-  for(auto& byte : bootROM.sgb) byte = 0;
-  for(auto& byte : bootROM.cgb) byte = 0;
-}
+Scheduler scheduler;
+Cheat cheat;
 
 auto System::run() -> void {
-  scheduler.enter();
+  if(scheduler.enter() == Scheduler::Event::Frame) ppu.refresh();
 }
 
 auto System::runToSave() -> void {
-  scheduler.synchronize(cpu.thread);
-  scheduler.synchronize(ppu.thread);
-  scheduler.synchronize(apu.thread);
+  scheduler.synchronize(cpu);
+  scheduler.synchronize(ppu);
+  scheduler.synchronize(apu);
 }
 
 auto System::init() -> void {
   assert(interface != nullptr);
 }
 
-auto System::load(Revision revision) -> void {
+auto System::load(Emulator::Interface* interface, Revision revision) -> bool {
   _revision = revision;
 
-  interface->loadRequest(ID::SystemManifest, "manifest.bml", true);
+  if(auto fp = platform->open(ID::System, "manifest.bml", File::Read, File::Required)) {
+    information.manifest = fp->reads();
+  } else return false;
+
   auto document = BML::unserialize(information.manifest);
   string path = "system/cpu/rom/name";
   if(revision == Revision::SuperGameBoy) path = "board/icd2/rom/name";
 
-  if(auto bootROM = document[path].text()) {
-    interface->loadRequest(
-      revision == Revision::GameBoy ? ID::GameBoyBootROM
-    : revision == Revision::SuperGameBoy ? ID::SuperGameBoyBootROM
-    : revision == Revision::GameBoyColor ? ID::GameBoyColorBootROM
-    : ID::GameBoyBootROM,
-      bootROM, true
-    );
+  if(auto name = document[path].text()) {
+    if(auto fp = platform->open(ID::System, name, File::Read, File::Required)) {
+      if(revision == Revision::GameBoy) fp->read(bootROM.dmg, 256);
+      if(revision == Revision::SuperGameBoy) fp->read(bootROM.sgb, 256);
+      if(revision == Revision::GameBoyColor) fp->read(bootROM.cgb, 2048);
+    }
   }
 
-  cartridge.load(revision);
+  if(!cartridge.load(revision)) return false;
   serializeInit();
-  _loaded = true;
+  this->interface = interface;
+  return _loaded = true;
+}
+
+auto System::save() -> void {
+  if(!loaded()) return;
+  cartridge.save();
 }
 
 auto System::unload() -> void {
@@ -59,13 +59,23 @@ auto System::unload() -> void {
 }
 
 auto System::power() -> void {
+  if(!system.sgb()) {
+    Emulator::video.reset();
+    Emulator::video.setInterface(interface);
+    configureVideoPalette();
+    configureVideoEffects();
+
+    Emulator::audio.reset();
+    Emulator::audio.setInterface(interface);
+  }
+
+  scheduler.reset();
   bus.power();
   cartridge.power();
   cpu.power();
   ppu.power();
   apu.power();
-  video.power();
-  scheduler.power();
+  scheduler.primary(cpu);
 
   _clocksExecuted = 0;
 }

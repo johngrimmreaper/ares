@@ -8,34 +8,22 @@ SMP smp;
 #include "timing.cpp"
 #include "serialization.cpp"
 
-auto SMP::step(uint clocks) -> void {
-  clock += clocks * (uint64)cpu.frequency;
-  dsp.clock -= clocks;
-}
-
-auto SMP::synchronizeCPU() -> void {
-  if(CPU::Threaded) {
-    if(clock >= 0 && !scheduler.synchronizing()) co_switch(cpu.thread);
-  } else {
-    while(clock >= 0) cpu.main();
-  }
-}
-
-auto SMP::synchronizeDSP() -> void {
-  if(DSP::Threaded) {
-    if(dsp.clock < 0 && !scheduler.synchronizing()) co_switch(dsp.thread);
-  } else {
-    while(dsp.clock < 0) dsp.main();
-  }
-}
-
 auto SMP::Enter() -> void {
   while(true) scheduler.synchronize(), smp.main();
 }
 
 auto SMP::main() -> void {
-  debugger.op_exec(regs.pc);
-  op_step();
+  instruction();
+}
+
+auto SMP::load(Markup::Node node) -> bool {
+  if(auto name = node["smp/rom/name"].text()) {
+    if(auto fp = platform->open(ID::System, name, File::Read, File::Required)) {
+      fp->read(iplrom, 64);
+      return true;
+    }
+  }
+  return false;
 }
 
 auto SMP::power() -> void {
@@ -46,7 +34,7 @@ auto SMP::power() -> void {
 }
 
 auto SMP::reset() -> void {
-  create(Enter, system.apuFrequency());
+  create(Enter, 32040.0 * 768.0);
 
   regs.pc.l = iplrom[62];
   regs.pc.h = iplrom[63];
@@ -62,27 +50,27 @@ auto SMP::reset() -> void {
   apuram[0x00f6] = 0x00;
   apuram[0x00f7] = 0x00;
 
-  status.clockCounter = 0;
-  status.dspCounter = 0;
-  status.timerStep = 3;
+  io.clockCounter = 0;
+  io.dspCounter = 0;
+  io.timerStep = 3;
 
   //$00f0
-  status.clockSpeed = 0;
-  status.timerSpeed = 0;
-  status.timersEnable = true;
-  status.ramDisable = false;
-  status.ramWritable = true;
-  status.timersDisable = false;
+  io.clockSpeed = 0;
+  io.timerSpeed = 0;
+  io.timersEnable = true;
+  io.ramDisable = false;
+  io.ramWritable = true;
+  io.timersDisable = false;
 
   //$00f1
-  status.iplromEnable = true;
+  io.iplromEnable = true;
 
   //$00f2
-  status.dspAddr = 0x00;
+  io.dspAddr = 0x00;
 
   //$00f8,$00f9
-  status.ram00f8 = 0x00;
-  status.ram00f9 = 0x00;
+  io.ram00f8 = 0x00;
+  io.ram00f9 = 0x00;
 
   timer0.stage0 = 0;
   timer1.stage0 = 0;

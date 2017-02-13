@@ -3,16 +3,11 @@
 namespace WonderSwan {
 
 System system;
+Scheduler scheduler;
+Cheat cheat;
 #include "io.cpp"
+#include "video.cpp"
 #include "serialization.cpp"
-
-auto System::loaded() const -> bool { return _loaded; }
-auto System::model() const -> Model { return _model; }
-auto System::orientation() const -> bool { return _orientation; }
-auto System::color() const -> bool { return r.color; }
-auto System::planar() const -> bool { return r.format == 0; }
-auto System::packed() const -> bool { return r.format == 1; }
-auto System::depth() const -> bool { return r.color && r.depth == 1; }
 
 auto System::init() -> void {
   assert(interface != nullptr);
@@ -21,10 +16,13 @@ auto System::init() -> void {
 auto System::term() -> void {
 }
 
-auto System::load(Model model) -> void {
+auto System::load(Emulator::Interface* interface, Model model) -> bool {
   _model = model;
 
-  interface->loadRequest(ID::SystemManifest, "manifest.bml", true);
+  if(auto fp = platform->open(ID::System, "manifest.bml", File::Read, File::Required)) {
+    information.manifest = fp->reads();
+  } else return false;
+
   auto document = BML::unserialize(information.manifest);
 
   //note: IPLROM is currently undumped; otherwise we'd load it here ...
@@ -35,13 +33,23 @@ auto System::load(Model model) -> void {
     eeprom.erase();
     //initialize user-data section
     for(uint addr = 0x0030; addr <= 0x003a; addr++) eeprom[addr] = 0x0000;
-    interface->loadRequest(ID::SystemEEPROM, eeprom.name(), false);
+    if(auto fp = platform->open(ID::System, eeprom.name(), File::Read)) {
+      fp->read(eeprom.data(), eeprom.size());
+    }
   }
 
-  cartridge.load();
-  _loaded = true;
-  _orientation = cartridge.information.orientation;
+  if(!cartridge.load()) return false;
+
   serializeInit();
+  _orientation = cartridge.information.orientation;
+  this->interface = interface;
+  return _loaded = true;
+}
+
+auto System::save() -> void {
+  if(!loaded()) return;
+
+  cartridge.save();
 }
 
 auto System::unload() -> void {
@@ -55,6 +63,15 @@ auto System::unload() -> void {
 }
 
 auto System::power() -> void {
+  Emulator::video.reset();
+  Emulator::video.setInterface(interface);
+  configureVideoPalette();
+  configureVideoEffects();
+
+  Emulator::audio.reset();
+  Emulator::audio.setInterface(interface);
+
+  scheduler.reset();
   bus.power();
   iram.power();
   eeprom.power();
@@ -62,7 +79,7 @@ auto System::power() -> void {
   ppu.power();
   apu.power();
   cartridge.power();
-  scheduler.power();
+  scheduler.primary(cpu);
 
   bus.map(this, 0x0060);
   bus.map(this, 0x00ba, 0x00be);
@@ -74,31 +91,34 @@ auto System::power() -> void {
 }
 
 auto System::run() -> void {
-  scheduler.enter();
+  if(scheduler.enter() == Scheduler::Event::Frame) ppu.refresh();
   pollKeypad();
 }
 
 auto System::runToSave() -> void {
-  scheduler.synchronize(cpu.thread);
-  scheduler.synchronize(ppu.thread);
-  scheduler.synchronize(apu.thread);
-  scheduler.synchronize(cartridge.thread);
+  scheduler.synchronize(cpu);
+  scheduler.synchronize(ppu);
+  scheduler.synchronize(apu);
+  scheduler.synchronize(cartridge);
 }
 
 auto System::pollKeypad() -> void {
+  uint port = !_orientation ? ID::Port::HardwareHorizontal : ID::Port::HardwareVertical;
+  uint device = ID::Device::Controls;
   bool rotate = keypad.rotate;
-  keypad.y1 = interface->inputPoll(_orientation, 0, 0);
-  keypad.y2 = interface->inputPoll(_orientation, 0, 1);
-  keypad.y3 = interface->inputPoll(_orientation, 0, 2);
-  keypad.y4 = interface->inputPoll(_orientation, 0, 3);
-  keypad.x1 = interface->inputPoll(_orientation, 0, 4);
-  keypad.x2 = interface->inputPoll(_orientation, 0, 5);
-  keypad.x3 = interface->inputPoll(_orientation, 0, 6);
-  keypad.x4 = interface->inputPoll(_orientation, 0, 7);
-  keypad.b = interface->inputPoll(_orientation, 0, 8);
-  keypad.a = interface->inputPoll(_orientation, 0, 9);
-  keypad.start = interface->inputPoll(_orientation, 0, 10);
-  keypad.rotate = interface->inputPoll(_orientation, 0, 11);
+
+  keypad.y1 = platform->inputPoll(port, device, 0);
+  keypad.y2 = platform->inputPoll(port, device, 1);
+  keypad.y3 = platform->inputPoll(port, device, 2);
+  keypad.y4 = platform->inputPoll(port, device, 3);
+  keypad.x1 = platform->inputPoll(port, device, 4);
+  keypad.x2 = platform->inputPoll(port, device, 5);
+  keypad.x3 = platform->inputPoll(port, device, 6);
+  keypad.x4 = platform->inputPoll(port, device, 7);
+  keypad.b = platform->inputPoll(port, device, 8);
+  keypad.a = platform->inputPoll(port, device, 9);
+  keypad.start = platform->inputPoll(port, device, 10);
+  keypad.rotate = platform->inputPoll(port, device, 11);
 
   if(keypad.y1 || keypad.y2 || keypad.y3 || keypad.y4
   || keypad.x1 || keypad.x2 || keypad.x3 || keypad.x4

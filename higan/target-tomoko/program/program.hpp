@@ -1,26 +1,24 @@
-struct Program : Emulator::Interface::Bind {
+struct Program : Emulator::Platform {
   //program.cpp
-  Program(lstring args);
-  auto load(string) -> void;
+  Program(string_vector args);
   auto main() -> void;
   auto quit() -> void;
 
   //interface.cpp
-  auto loadRequest(uint id, string name, string type, bool required) -> void override;
-  auto loadRequest(uint id, string path, bool required) -> void override;
-  auto saveRequest(uint id, string path) -> void override;
+  auto path(uint id) -> string override;
+  auto open(uint id, string name, vfs::file::mode mode, bool required) -> vfs::shared::file override;
+  auto load(uint id, string name, string type) -> maybe<uint> override;
   auto videoRefresh(const uint32* data, uint pitch, uint width, uint height) -> void override;
-  auto audioSample(int16 lsample, int16 rsample) -> void override;
+  auto audioSample(const double* samples, uint channels) -> void override;
   auto inputPoll(uint port, uint device, uint input) -> int16 override;
   auto inputRumble(uint port, uint device, uint input, bool enable) -> void override;
-  auto dipSettings(const Markup::Node& node) -> uint override;
-  auto path(uint group) -> string override;
+  auto dipSettings(Markup::Node node) -> uint override;
   auto notify(string text) -> void override;
 
-  //media.cpp
-  auto loadMedia(string location) -> void;
-  auto loadMedia(Emulator::Interface& interface, Emulator::Interface::Media& media, string location) -> void;
-  auto unloadMedia() -> void;
+  //medium.cpp
+  auto loadMedium() -> void;
+  auto loadMedium(Emulator::Interface& interface, const Emulator::Interface::Medium& medium) -> void;
+  auto unloadMedium() -> void;
 
   //state.cpp
   auto stateName(uint slot, bool manager = false) -> string;
@@ -29,22 +27,21 @@ struct Program : Emulator::Interface::Bind {
 
   //utility.cpp
   auto powerCycle() -> void;
-  auto softReset() -> void;
   auto connectDevices() -> void;
   auto showMessage(const string& text) -> void;
   auto updateStatusText() -> void;
+  auto updateVideoPalette() -> void;
   auto updateVideoShader() -> void;
-  auto updateAudio() -> void;
-  auto updateAudioVolume() -> void;
-  auto updateDSP() -> void;
+  auto updateAudioDriver() -> void;
+  auto updateAudioEffects() -> void;
 
-  DSP dsp;
+  bool hasQuit = false;
   bool pause = false;
 
   vector<Emulator::Interface*> emulators;
 
-  vector<string> mediaPaths;
-  vector<string> folderPaths;
+  vector<string> mediumQueue;  //for command-line and drag-and-drop loading
+  vector<string> mediumPaths;  //for keeping track of loaded folder locations
 
   string statusText;
   string statusMessage;

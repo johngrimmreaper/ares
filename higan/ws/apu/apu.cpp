@@ -56,16 +56,17 @@ auto APU::dacRun() -> void {
     right = 0;
   }
 
-  interface->audioSample(left, right);
+  stream->sample(left / 32768.0, right / 32768.0);
 }
 
 auto APU::step(uint clocks) -> void {
-  clock += clocks;
-  if(clock >= 0 && !scheduler.synchronizing()) co_switch(cpu.thread);
+  Thread::step(clocks);
+  synchronize(cpu);
 }
 
 auto APU::power() -> void {
   create(APU::Enter, 3'072'000);
+  stream = Emulator::audio.createStream(2, 3'072'000.0);
 
   bus.map(this, 0x004a, 0x004c);
   bus.map(this, 0x004e, 0x0050);

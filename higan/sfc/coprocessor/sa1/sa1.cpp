@@ -2,13 +2,12 @@
 
 namespace SuperFamicom {
 
-SA1 sa1;
-
+#include "bus.cpp"
+#include "dma.cpp"
+#include "memory.cpp"
+#include "io.cpp"
 #include "serialization.cpp"
-#include "bus/bus.cpp"
-#include "dma/dma.cpp"
-#include "memory/memory.cpp"
-#include "mmio/mmio.cpp"
+SA1 sa1;
 
 auto SA1::Enter() -> void {
   while(true) scheduler.synchronize(), sa1.main();
@@ -18,12 +17,12 @@ auto SA1::main() -> void {
   if(mmio.sa1_rdyb || mmio.sa1_resb) {
     //SA-1 co-processor is asleep
     tick();
-    synchronizeCPU();
+    synchronize(cpu);
     return;
   }
 
-  if(status.interrupt_pending) {
-    status.interrupt_pending = false;
+  if(status.interruptPending) {
+    status.interruptPending = false;
     interrupt();
     return;
   }
@@ -31,53 +30,54 @@ auto SA1::main() -> void {
   instruction();
 }
 
+//override R65816::interrupt() to support SA-1 vector location IO registers
 auto SA1::interrupt() -> void {
-  read(regs.pc.d);
-  io();
-  if(!regs.e) writestack(regs.pc.b);
-  writestack(regs.pc.h);
-  writestack(regs.pc.l);
-  writestack(regs.e ? (regs.p & ~0x10) : regs.p);
-  regs.pc.w = regs.vector;
-  regs.pc.b = 0x00;
-  regs.p.i = 1;
-  regs.p.d = 0;
+  read(r.pc.d);
+  idle();
+  if(!r.e) writeSP(r.pc.b);
+  writeSP(r.pc.h);
+  writeSP(r.pc.l);
+  writeSP(r.e ? (r.p & ~0x10) : r.p);
+  r.pc.w = r.vector;
+  r.pc.b = 0x00;
+  r.p.i = 1;
+  r.p.d = 0;
 }
 
 auto SA1::lastCycle() -> void {
   if(mmio.sa1_nmi && !mmio.sa1_nmicl) {
-    status.interrupt_pending = true;
-    regs.vector = mmio.cnv;
+    status.interruptPending = true;
+    r.vector = mmio.cnv;
     mmio.sa1_nmifl = true;
     mmio.sa1_nmicl = 1;
-    regs.wai = false;
-  } else if(!regs.p.i) {
+    r.wai = false;
+  } else if(!r.p.i) {
     if(mmio.timer_irqen && !mmio.timer_irqcl) {
-      status.interrupt_pending = true;
-      regs.vector = mmio.civ;
+      status.interruptPending = true;
+      r.vector = mmio.civ;
       mmio.timer_irqfl = true;
-      regs.wai = false;
+      r.wai = false;
     } else if(mmio.dma_irqen && !mmio.dma_irqcl) {
-      status.interrupt_pending = true;
-      regs.vector = mmio.civ;
+      status.interruptPending = true;
+      r.vector = mmio.civ;
       mmio.dma_irqfl = true;
-      regs.wai = false;
+      r.wai = false;
     } else if(mmio.sa1_irq && !mmio.sa1_irqcl) {
-      status.interrupt_pending = true;
-      regs.vector = mmio.civ;
+      status.interruptPending = true;
+      r.vector = mmio.civ;
       mmio.sa1_irqfl = true;
-      regs.wai = false;
+      r.wai = false;
     }
   }
 }
 
 auto SA1::interruptPending() const -> bool {
-  return status.interrupt_pending;
+  return status.interruptPending;
 }
 
 auto SA1::tick() -> void {
   step(2);
-  if(++status.tick_counter == 0) synchronizeCPU();
+  if(++status.counter == 0) synchronize(cpu);
 
   //adjust counters:
   //note that internally, status counters are in clocks;
@@ -100,13 +100,13 @@ auto SA1::tick() -> void {
   //test counters for timer IRQ
   switch((mmio.ven << 1) + (mmio.hen << 0)) {
   case 0: break;
-  case 1: if(status.hcounter == (mmio.hcnt << 2)) trigger_irq(); break;
-  case 2: if(status.vcounter == mmio.vcnt && status.hcounter == 0) trigger_irq(); break;
-  case 3: if(status.vcounter == mmio.vcnt && status.hcounter == (mmio.hcnt << 2)) trigger_irq(); break;
+  case 1: if(status.hcounter == (mmio.hcnt << 2)) triggerIRQ(); break;
+  case 2: if(status.vcounter == mmio.vcnt && status.hcounter == 0) triggerIRQ(); break;
+  case 3: if(status.vcounter == mmio.vcnt && status.hcounter == (mmio.hcnt << 2)) triggerIRQ(); break;
   }
 }
 
-auto SA1::trigger_irq() -> void {
+auto SA1::triggerIRQ() -> void {
   mmio.timer_irqfl = true;
   if(mmio.timer_irqen) mmio.timer_irqcl = 0;
 }
@@ -124,33 +124,35 @@ auto SA1::unload() -> void {
 }
 
 auto SA1::power() -> void {
-  regs.a = regs.x = regs.y = 0x0000;
-  regs.s = 0x01ff;
+  r.a = 0x0000;
+  r.x = 0x0000;
+  r.y = 0x0000;
+  r.s = 0x01ff;
 }
 
 auto SA1::reset() -> void {
-  create(SA1::Enter, system.cpuFrequency());
+  create(SA1::Enter, system.colorburst() * 6.0);
 
   cpubwram.dma = false;
   for(auto addr : range(iram.size())) {
     iram.write(addr, 0x00);
   }
 
-  regs.pc.d   = 0x000000;
-  regs.x.h    = 0x00;
-  regs.y.h    = 0x00;
-  regs.s.h    = 0x01;
-  regs.d      = 0x0000;
-  regs.db     = 0x00;
-  regs.p      = 0x34;
-  regs.e      = 1;
-  regs.mdr    = 0x00;
-  regs.wai    = false;
-  regs.vector = 0x0000;
+  r.pc.d   = 0x000000;
+  r.x.h    = 0x00;
+  r.y.h    = 0x00;
+  r.s.h    = 0x01;
+  r.d      = 0x0000;
+  r.db     = 0x00;
+  r.p      = 0x34;
+  r.e      = 1;
+  r.mdr    = 0x00;
+  r.wai    = false;
+  r.vector = 0x0000;
 
-  status.tick_counter = 0;
+  status.counter = 0;
 
-  status.interrupt_pending = false;
+  status.interruptPending = false;
 
   status.scanlines = (system.region() == System::Region::NTSC ? 262 : 312);
   status.vcounter  = 0;
@@ -276,9 +278,7 @@ auto SA1::reset() -> void {
   mmio.bbf = 0;
 
   //$2240-$224f BRF
-  for(unsigned i = 0; i < 16; i++) {
-    mmio.brf[i] = 0x00;
-  }
+  for(auto& n : mmio.brf) n = 0x00;
 
   //$2250 MCNT
   mmio.acm = 0;

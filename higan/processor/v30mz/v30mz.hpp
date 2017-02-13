@@ -23,7 +23,7 @@ struct V30MZ {
   virtual auto in(uint16 port) -> uint8 = 0;
   virtual auto out(uint16 port, uint8 data) -> void = 0;
 
-  auto debug(string text) -> void;
+  auto warning(string text) -> void;
   auto power() -> void;
   auto exec() -> void;
   auto interrupt(uint8 vector) -> void;
@@ -156,8 +156,8 @@ struct V30MZ {
   auto opStoreFlagsAcc();
   auto opLoadAccFlags();
   auto opComplementCarry();
-  auto opClearFlag(bool&);
-  auto opSetFlag(bool&);
+  auto opClearFlag(uint);
+  auto opSetFlag(uint);
 
   //instructions-group.cpp
   auto opGroup1MemImm(Size, bool);
@@ -247,20 +247,25 @@ struct V30MZ {
     uint16_t* s[8]{&es, &cs, &ss, &ds, &es, &cs, &ss, &ds};
 
     struct Flags {
-      //registers.cpp
-      operator uint16_t() const;
-      auto operator=(uint16_t data);
+      union {
+        uint16_t data = 0;
+        BooleanBitField<uint16_t, 15> m;  //mode
+        BooleanBitField<uint16_t, 11> v;  //overflow
+        BooleanBitField<uint16_t, 10> d;  //direction
+        BooleanBitField<uint16_t,  9> i;  //interrupt
+        BooleanBitField<uint16_t,  8> b;  //break
+        BooleanBitField<uint16_t,  7> s;  //sign
+        BooleanBitField<uint16_t,  6> z;  //zero
+        BooleanBitField<uint16_t,  4> h;  //half-carry
+        BooleanBitField<uint16_t,  2> p;  //parity
+        BooleanBitField<uint16_t,  0> c;  //carry
+      };
 
-      bool m;  //mode
-      bool v;  //overflow
-      bool d;  //direction
-      bool i;  //interrupt
-      bool b;  //break
-      bool s;  //sign
-      bool z;  //zero
-      bool h;  //half-carry
-      bool p;  //parity
-      bool c;  //carry
+      operator uint() const { return data & 0x8fd5 | 0x7002; }
+      auto& operator =(uint value) { return data  = value, *this; }
+      auto& operator&=(uint value) { return data &= value, *this; }
+      auto& operator|=(uint value) { return data |= value, *this; }
+      auto& operator^=(uint value) { return data ^= value, *this; }
     } f;
   } r;
 };

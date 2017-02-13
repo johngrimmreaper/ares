@@ -1,14 +1,21 @@
-struct Cartridge : MMIO, property<Cartridge> {
-  auto load(System::Revision revision) -> void;
+struct Cartridge : MMIO {
+  auto pathID() const -> uint { return information.pathID; }
+  auto sha256() const -> string { return information.sha256; }
+  auto manifest() const -> string { return information.manifest; }
+  auto title() const -> string { return information.title; }
+
+  auto load(System::Revision revision) -> bool;
+  auto save() -> void;
   auto unload() -> void;
 
-  auto rom_read(uint addr) -> uint8;
-  auto rom_write(uint addr, uint8 data) -> void;
-  auto ram_read(uint addr) -> uint8;
-  auto ram_write(uint addr, uint8 data) -> void;
+  auto readROM(uint addr) -> uint8;
+  auto writeROM(uint addr, uint8 data) -> void;
 
-  auto mmio_read(uint16 addr) -> uint8;
-  auto mmio_write(uint16 addr, uint8 data) -> void;
+  auto readRAM(uint addr) -> uint8;
+  auto writeRAM(uint addr, uint8 data) -> void;
+
+  auto readIO(uint16 addr) -> uint8;
+  auto writeIO(uint16 addr, uint8 data) -> void;
 
   auto power() -> void;
 
@@ -16,6 +23,7 @@ struct Cartridge : MMIO, property<Cartridge> {
 
   #include "mbc0/mbc0.hpp"
   #include "mbc1/mbc1.hpp"
+  #include "mbc1m/mbc1m.hpp"
   #include "mbc2/mbc2.hpp"
   #include "mbc3/mbc3.hpp"
   #include "mbc5/mbc5.hpp"
@@ -26,6 +34,7 @@ struct Cartridge : MMIO, property<Cartridge> {
   enum Mapper : uint {
     MBC0,
     MBC1,
+    MBC1M,
     MBC2,
     MBC3,
     MBC5,
@@ -36,38 +45,25 @@ struct Cartridge : MMIO, property<Cartridge> {
   };
 
   struct Information {
-    string markup;
+    uint pathID = 0;
+    string sha256;
+    string manifest;
     string title;
 
-    Mapper mapper;
-    bool ram;
-    bool battery;
-    bool rtc;
-    bool rumble;
-
-    uint romsize;
-    uint ramsize;
+    Mapper mapper = Mapper::Unknown;
+    boolean ram;
+    boolean battery;
+    boolean rtc;
+    boolean rumble;
   } information;
 
-  auto manifest() const -> string;
-  auto title() const -> string;
-
   struct Memory {
-    uint id;
-    string name;
-  };
-  vector<Memory> memory;
-
-  readonly<string> sha256;
-
-  uint8* romdata = nullptr;
-  uint romsize = 0;
-
-  uint8* ramdata = nullptr;
-  uint ramsize = 0;
+    uint8* data = nullptr;
+    uint size = 0;
+  } rom, ram;
 
   MMIO* mapper = nullptr;
-  bool bootrom_enable = true;
+  bool bootromEnable = true;
 };
 
 extern Cartridge cartridge;

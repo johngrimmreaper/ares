@@ -2,11 +2,11 @@
 
 namespace GameBoy {
 
-#include "sequencer/sequencer.cpp"
-#include "square1/square1.cpp"
-#include "square2/square2.cpp"
-#include "wave/wave.cpp"
-#include "noise/noise.cpp"
+#include "sequencer.cpp"
+#include "square1.cpp"
+#include "square2.cpp"
+#include "wave.cpp"
+#include "noise.cpp"
 #include "serialization.cpp"
 APU apu;
 
@@ -25,7 +25,12 @@ auto APU::main() -> void {
   hipass(sequencer.left, sequencer.leftBias);
   hipass(sequencer.right, sequencer.rightBias);
 
-  interface->audioSample(sequencer.left, sequencer.right);
+  if(!system.sgb()) {
+    stream->sample(sequencer.left / 32768.0, sequencer.right / 32768.0);
+  } else {
+    double samples[] = {sequencer.left / 32768.0, sequencer.right / 32768.0};
+  //interface->audioSample(samples, 2);
+  }
 
   if(cycle == 0) {  //512hz
     if(phase == 0 || phase == 2 || phase == 4 || phase == 6) {  //256hz
@@ -46,8 +51,8 @@ auto APU::main() -> void {
   }
   cycle++;
 
-  clock += cpu.frequency;
-  if(clock >= 0 && !scheduler.synchronizing()) co_switch(cpu.thread);
+  Thread::step(1);
+  synchronize(cpu);
 }
 
 //filter to remove DC bias
@@ -58,6 +63,7 @@ auto APU::hipass(int16& sample, int64& bias) -> void {
 
 auto APU::power() -> void {
   create(Enter, 2 * 1024 * 1024);
+  if(!system.sgb()) stream = Emulator::audio.createStream(2, 2 * 1024 * 1024);
   for(uint n = 0xff10; n <= 0xff3f; n++) bus.mmio[n] = this;
 
   square1.power();
@@ -72,7 +78,7 @@ auto APU::power() -> void {
   for(auto& n : wave.pattern) n = r();
 }
 
-auto APU::mmio_read(uint16 addr) -> uint8 {
+auto APU::readIO(uint16 addr) -> uint8 {
   if(addr >= 0xff10 && addr <= 0xff14) return square1.read(addr);
   if(addr >= 0xff15 && addr <= 0xff19) return square2.read(addr);
   if(addr >= 0xff1a && addr <= 0xff1e) return wave.read(addr);
@@ -82,7 +88,7 @@ auto APU::mmio_read(uint16 addr) -> uint8 {
   return 0xff;
 }
 
-auto APU::mmio_write(uint16 addr, uint8 data) -> void {
+auto APU::writeIO(uint16 addr, uint8 data) -> void {
   if(!sequencer.enable) {
     bool valid = addr == 0xff26;  //NR52
     if(!system.cgb()) {

@@ -4,7 +4,7 @@ namespace GameBoyAdvance {
 
 #include "prefetch.cpp"
 #include "bus.cpp"
-#include "mmio.cpp"
+#include "io.cpp"
 #include "memory.cpp"
 #include "dma.cpp"
 #include "timer.cpp"
@@ -56,14 +56,14 @@ auto CPU::main() -> void {
 
   if(regs.mode == Registers::Mode::Stop) {
     if(!(regs.irq.enable & regs.irq.flag & Interrupt::Keypad)) {
-      sync_step(16);  //STOP does not advance timers
+      syncStep(16);  //STOP does not advance timers
     } else {
       regs.mode = Registers::Mode::Normal;
     }
     return;
   }
 
-  dma_run();
+  dmaRun();
 
   if(regs.mode == Registers::Mode::Halt) {
     if(!(regs.irq.enable & regs.irq.flag)) {
@@ -78,25 +78,26 @@ auto CPU::main() -> void {
 }
 
 auto CPU::step(uint clocks) -> void {
-  timer_step(clocks);
-  sync_step(clocks);
+  timerStep(clocks);
+  syncStep(clocks);
 }
 
-auto CPU::sync_step(uint clocks) -> void {
-  ppu.clock -= clocks;
-  if(ppu.clock < 0) co_switch(ppu.thread);
-
-  apu.clock -= clocks;
-  if(apu.clock < 0) co_switch(apu.thread);
+auto CPU::syncStep(uint clocks) -> void {
+  Thread::step(clocks);
+  synchronize(ppu);
+  synchronize(apu);
 }
 
-auto CPU::keypad_run() -> void {
-  if(regs.keypad.control.enable == false) return;
+auto CPU::keypadRun() -> void {
+  //lookup table to convert button indexes to Emulator::Interface indexes
+  static const uint lookup[] = {5, 4, 8, 9, 3, 2, 0, 1, 7, 6};
+
+  if(!regs.keypad.control.enable) return;
 
   bool test = regs.keypad.control.condition;  //0 = OR, 1 = AND
   for(auto n : range(10)) {
-    if(regs.keypad.control.flag[n] == false) continue;
-    bool input = interface->inputPoll(0, 0, n);
+    if(!regs.keypad.control.flag[n]) continue;
+    bool input = platform->inputPoll(0, 0, lookup[n]);
     if(regs.keypad.control.condition == 0) test |= input;
     if(regs.keypad.control.condition == 1) test &= input;
   }
@@ -147,7 +148,7 @@ auto CPU::power() -> void {
   for(auto& swait : regs.wait.control.swait) swait = 0;
   regs.wait.control.phi = 0;
   regs.wait.control.prefetch = 0;
-  regs.wait.control.gametype = 0;
+  regs.wait.control.gametype = 0;  //0 = GBA, 1 = GBC
   regs.postboot = 0;
   regs.mode = Registers::Mode::Normal;
   regs.clock = 0;
@@ -163,13 +164,13 @@ auto CPU::power() -> void {
 
   active.dma = false;
 
-  for(uint n = 0x0b0; n <= 0x0df; n++) bus.mmio[n] = this;  //DMA
-  for(uint n = 0x100; n <= 0x10f; n++) bus.mmio[n] = this;  //Timers
-  for(uint n = 0x120; n <= 0x12b; n++) bus.mmio[n] = this;  //Serial
-  for(uint n = 0x130; n <= 0x133; n++) bus.mmio[n] = this;  //Keypad
-  for(uint n = 0x134; n <= 0x159; n++) bus.mmio[n] = this;  //Serial
-  for(uint n = 0x200; n <= 0x209; n++) bus.mmio[n] = this;  //System
-  for(uint n = 0x300; n <= 0x301; n++) bus.mmio[n] = this;  //System
+  for(uint n = 0x0b0; n <= 0x0df; n++) bus.io[n] = this;  //DMA
+  for(uint n = 0x100; n <= 0x10f; n++) bus.io[n] = this;  //Timers
+  for(uint n = 0x120; n <= 0x12b; n++) bus.io[n] = this;  //Serial
+  for(uint n = 0x130; n <= 0x133; n++) bus.io[n] = this;  //Keypad
+  for(uint n = 0x134; n <= 0x159; n++) bus.io[n] = this;  //Serial
+  for(uint n = 0x200; n <= 0x209; n++) bus.io[n] = this;  //System
+  for(uint n = 0x300; n <= 0x301; n++) bus.io[n] = this;  //System
   //0x080-0x083 mirrored via gba/memory/memory.cpp          //System
 }
 

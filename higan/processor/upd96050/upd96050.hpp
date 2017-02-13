@@ -32,19 +32,40 @@ struct uPD96050 {
   uint16 dataROM[2048];
   uint16 dataRAM[2048];
 
-  //registers.cpp
   struct Flag {
-    inline operator uint() const;
-    inline auto operator=(uint d) -> uint;
+    union {
+      uint8_t data = 0;
+      BooleanBitField<uint8_t, 5> s1;
+      BooleanBitField<uint8_t, 4> s0;
+      BooleanBitField<uint8_t, 3> c;
+      BooleanBitField<uint8_t, 2> z;
+      BooleanBitField<uint8_t, 1> ov1;
+      BooleanBitField<uint8_t, 0> ov0;
+    };
 
-    bool s1, s0, c, z, ov1, ov0;
+    inline operator uint() const { return data & 0x3f; }
+    inline auto& operator=(uint value) { return data = value, *this; }
+    inline auto& operator=(const Flag& value) { return data = value.data, *this; }
   };
 
   struct Status {
-    inline operator uint() const;
-    inline auto operator=(uint d) -> uint;
+    union {
+      uint16_t data = 0;
+      BooleanBitField<uint16_t, 15> rqm;
+      BooleanBitField<uint16_t, 14> usf1;
+      BooleanBitField<uint16_t, 13> usf0;
+      BooleanBitField<uint16_t, 12> drs;
+      BooleanBitField<uint16_t, 11> dma;
+      BooleanBitField<uint16_t, 10> drc;
+      BooleanBitField<uint16_t,  9> soc;
+      BooleanBitField<uint16_t,  8> sic;
+      BooleanBitField<uint16_t,  7> ei;
+      BooleanBitField<uint16_t,  1> p1;
+      BooleanBitField<uint16_t,  0> p0;
+    };
 
-    bool rqm, usf1, usf0, drs, dma, drc, soc, sic, ei, p1, p0;
+    inline operator uint() const { return data & 0xff83; }
+    inline auto& operator=(uint value) { return data = value, *this; }
   };
 
   struct Regs {

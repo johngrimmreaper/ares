@@ -82,14 +82,14 @@ struct VideoGLX : Video, OpenGL {
 
     if(name == Video::Filter && value.is<unsigned>()) {
       settings.filter = value.get<unsigned>();
-      if(settings.shader.empty()) OpenGL::filter = settings.filter ? GL_LINEAR : GL_NEAREST;
+      if(!settings.shader) OpenGL::filter = settings.filter ? GL_LINEAR : GL_NEAREST;
       return true;
     }
 
     if(name == Video::Shader && value.is<string>()) {
       settings.shader = value.get<string>();
       OpenGL::shader(settings.shader);
-      if(settings.shader.empty()) OpenGL::filter = settings.filter ? GL_LINEAR : GL_NEAREST;
+      if(!settings.shader) OpenGL::filter = settings.filter ? GL_LINEAR : GL_NEAREST;
       return true;
     }
 
@@ -182,7 +182,6 @@ struct VideoGLX : Video, OpenGL {
 
     //glXSwapInterval is used to toggle Vsync
     //note that the ordering is very important! MESA declares SGI, but the SGI function does nothing
-                         glXSwapInterval = (signed (*)(signed))glGetProcAddress("glXSwapIntervalEXT");
     if(!glXSwapInterval) glXSwapInterval = (signed (*)(signed))glGetProcAddress("glXSwapIntervalMESA");
     if(!glXSwapInterval) glXSwapInterval = (signed (*)(signed))glGetProcAddress("glXSwapIntervalSGI");
 

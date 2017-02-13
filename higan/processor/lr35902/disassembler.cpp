@@ -1,3 +1,7 @@
+static auto hex(uintmax value, long precision = 0, char padchar = '0') -> string {
+  return nall::hex(value, precision, padchar);
+}
+
 auto LR35902::disassemble(uint16 pc) -> string {
   char output[80];
   memset(output, ' ', sizeof output);
@@ -20,10 +24,10 @@ auto LR35902::disassemble(uint16 pc) -> string {
 }
 
 auto LR35902::disassembleOpcode(uint16 pc) -> string {
-  uint8 opcode = debugger_read(pc);
-  uint8 p0 = debugger_read(pc + 1);
-  uint8 p1 = debugger_read(pc + 2);
-  uint8 p2 = debugger_read(pc + 3);
+  uint8 opcode = debuggerRead(pc);
+  uint8 p0 = debuggerRead(pc + 1);
+  uint8 p1 = debuggerRead(pc + 2);
+  uint8 p2 = debuggerRead(pc + 3);
 
   switch(opcode) {
     case 0x00: return { "nop" };
@@ -288,10 +292,10 @@ auto LR35902::disassembleOpcode(uint16 pc) -> string {
 }
 
 auto LR35902::disassembleOpcodeCB(uint16 pc) -> string {
-  uint8 opcode = debugger_read(pc);
-  uint8 p0 = debugger_read(pc + 1);
-  uint8 p1 = debugger_read(pc + 2);
-  uint8 p2 = debugger_read(pc + 3);
+  uint8 opcode = debuggerRead(pc);
+  uint8 p0 = debuggerRead(pc + 1);
+  uint8 p1 = debuggerRead(pc + 2);
+  uint8 p2 = debuggerRead(pc + 3);
 
   switch(opcode) {
     case 0x00: return { "rlc  b" };

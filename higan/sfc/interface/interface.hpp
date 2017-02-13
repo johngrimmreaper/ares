@@ -2,127 +2,72 @@ namespace SuperFamicom {
 
 struct ID {
   enum : uint {
-    //cartridges (folders)
     System,
     SuperFamicom,
     GameBoy,
     BSMemory,
-    SufamiTurboSlotA,
-    SufamiTurboSlotB,
-
-    //memory (files)
-    SystemManifest,
-    IPLROM,
-
-    Manifest,
-    ROM,
-    RAM,
-
-    EventROM0,
-    EventROM1,
-    EventROM2,
-    EventROM3,
-    EventRAM,
-
-    SA1ROM,
-    SA1IRAM,
-    SA1BWRAM,
-
-    SuperFXROM,
-    SuperFXRAM,
-
-    ArmDSPPROM,
-    ArmDSPDROM,
-    ArmDSPRAM,
-
-    HitachiDSPROM,
-    HitachiDSPRAM,
-    HitachiDSPDROM,
-    HitachiDSPDRAM,
-
-    Nec7725DSPPROM,
-    Nec7725DSPDROM,
-    Nec7725DSPRAM,
-
-    Nec96050DSPPROM,
-    Nec96050DSPDROM,
-    Nec96050DSPRAM,
-
-    EpsonRTC,
-    SharpRTC,
-
-    SPC7110PROM,
-    SPC7110DROM,
-    SPC7110RAM,
-
-    SDD1ROM,
-    SDD1RAM,
-
-    OBC1RAM,
-
-    MCCROM,
-    MCCRAM,
-
-    SuperGameBoyManifest,
-    SuperGameBoyBootROM,
-
-    GameBoyManifest,
-    GameBoyROM,
-    GameBoyRAM,
-
-    BSMemoryManifest,
-    BSMemoryROM,
-
-    SufamiTurboSlotAManifest,
-    SufamiTurboSlotAROM,
-    SufamiTurboSlotARAM,
-
-    SufamiTurboSlotBManifest,
-    SufamiTurboSlotBROM,
-    SufamiTurboSlotBRAM,
-
-    //device ports (bitmask)
-    ControllerPort1 = 1,
-    ControllerPort2 = 2,
-    ExpansionPort   = 4,
+    SufamiTurboA,
+    SufamiTurboB,
   };
+
+  struct Port { enum : uint {
+    Controller1,
+    Controller2,
+    Expansion,
+  };};
+
+  struct Device { enum : uint {
+    None,
+    Gamepad,
+    Mouse,
+    SuperMultitap,
+    SuperScope,
+    Justifier,
+    Justifiers,
+
+    Satellaview,
+    S21FX,
+  };};
 };
 
 struct Interface : Emulator::Interface {
+  using Emulator::Interface::load;
+
   Interface();
 
-  auto manifest() -> string;
-  auto title() -> string;
-  auto videoFrequency() -> double;
-  auto audioFrequency() -> double;
+  auto manifest() -> string override;
+  auto title() -> string override;
 
-  auto loaded() -> bool;
-  auto sha256() -> string;
-  auto group(uint id) -> uint;
-  auto load(uint id) -> void;
-  auto save() -> void;
-  auto load(uint id, const stream& stream) -> void;
-  auto save(uint id, const stream& stream) -> void;
-  auto unload() -> void;
+  auto videoSize() -> VideoSize override;
+  auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
+  auto videoFrequency() -> double override;
+  auto videoColors() -> uint32 override;
+  auto videoColor(uint32 color) -> uint64 override;
 
-  auto connect(uint port, uint device) -> void;
-  auto power() -> void;
-  auto reset() -> void;
-  auto run() -> void;
+  auto audioFrequency() -> double override;
 
-  auto rtc() -> bool;
-  auto rtcsync() -> void;
+  auto loaded() -> bool override;
+  auto sha256() -> string override;
+  auto load(uint id) -> bool override;
+  auto save() -> void override;
+  auto unload() -> void override;
 
-  auto serialize() -> serializer;
-  auto unserialize(serializer&) -> bool;
+  auto connect(uint port, uint device) -> void override;
+  auto power() -> void override;
+  auto reset() -> void override;
+  auto run() -> void override;
 
-  auto cheatSet(const lstring&) -> void;
+  auto rtc() -> bool override;
+  auto rtcsync() -> void override;
+
+  auto serialize() -> serializer override;
+  auto unserialize(serializer&) -> bool override;
+
+  auto cheatSet(const string_vector&) -> void override;
 
   auto cap(const string& name) -> bool override;
   auto get(const string& name) -> any override;
   auto set(const string& name, const any& value) -> bool override;
-
-  vector<Device> device;
 };
 
 struct Settings {
@@ -136,7 +81,6 @@ struct Settings {
   bool random = true;
 };
 
-extern Interface* interface;
 extern Settings settings;
 
 }

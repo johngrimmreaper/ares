@@ -1,8 +1,10 @@
 #pragma once
 
 /* Document Markup Language (DML) v1.0 parser
- * revision 0.03
+ * revision 0.04
  */
+
+#include <nall/location.hpp>
 
 namespace nall { namespace {
 
@@ -45,7 +47,7 @@ auto DML::parse(const string& filedata, const string& pathname) -> string {
 }
 
 auto DML::parse(const string& filename) -> string {
-  if(!settings.path) settings.path = pathname(filename);
+  if(!settings.path) settings.path = Location::path(filename);
   string document = settings.reader ? settings.reader(filename) : string::read(filename);
   parseDocument(document, settings.path, 0);
   return state.output;
@@ -61,21 +63,21 @@ auto DML::parseDocument(const string& filedata, const string& pathname, uint dep
 }
 
 auto DML::parseBlock(string& block, const string& pathname, uint depth) -> bool {
-  if(block.rstrip().empty()) return true;
+  if(!block.stripRight()) return true;
   auto lines = block.split("\n");
 
   //include
   if(block.beginsWith("<include ") && block.endsWith(">")) {
     string filename{pathname, block.trim("<include ", ">", 1L).strip()};
     string document = settings.reader ? settings.reader(filename) : string::read(filename);
-    parseDocument(document, nall::pathname(filename), depth + 1);
+    parseDocument(document, Location::path(filename), depth + 1);
   }
 
   //html
   else if(block.beginsWith("<html>\n") && settings.allowHTML) {
     for(auto n : range(lines)) {
       if(n == 0 || !lines[n].beginsWith("  ")) continue;
-      state.output.append(lines[n].ltrim("  ", 1L), "\n");
+      state.output.append(lines[n].trimLeft("  ", 1L), "\n");
     }
   }
 
@@ -85,22 +87,22 @@ auto DML::parseBlock(string& block, const string& pathname, uint depth) -> bool 
       if(state.sections++) state.output.append("</section>");
       state.output.append("<section>");
     }
-    auto content = lines.takeFirst().ltrim("# ", 1L).split(" => ", 1L);
+    auto content = lines.takeLeft().trimLeft("# ", 1L).split("::", 1L).strip();
     auto data = markup(content[0]);
-    auto name = escape(content(1, crc32(data)));
+    auto name = escape(content(1, data.hash()));
     state.output.append("<header id=\"", name, "\">", data);
     for(auto& line : lines) {
       if(!line.beginsWith("# ")) continue;
-      state.output.append("<span>", line.ltrim("# ", 1L), "</span>");
+      state.output.append("<span>", line.trimLeft("# ", 1L), "</span>");
     }
     state.output.append("</header>\n");
   }
 
   //header
   else if(auto depth = count(block, '=')) {
-    auto content = slice(lines.takeFirst(), depth + 1).split(" => ", 1L);
+    auto content = slice(lines.takeLeft(), depth + 1).split("::", 1L).strip();
     auto data = markup(content[0]);
-    auto name = escape(content(1, crc32(data)));
+    auto name = escape(content(1, data.hash()));
     if(depth <= 6) {
       state.output.append("<h", depth, " id=\"", name, "\">", data);
       for(auto& line : lines) {
@@ -119,9 +121,9 @@ auto DML::parseBlock(string& block, const string& pathname, uint depth) -> bool 
       if(auto depth = count(line, '-')) {
         while(level < depth) level++, state.output.append("<ul>\n");
         while(level > depth) level--, state.output.append("</ul>\n");
-        auto content = slice(line, depth + 1).split(" => ", 1L);
+        auto content = slice(line, depth + 1).split("::", 1L).strip();
         auto data = markup(content[0]);
-        auto name = escape(content(1, crc32(data)));
+        auto name = escape(content(1, data.hash()));
         state.output.append("<li><a href=\"#", name, "\">", data, "</a></li>\n");
       }
     }
@@ -162,9 +164,9 @@ auto DML::parseBlock(string& block, const string& pathname, uint depth) -> bool 
     state.output.append("<pre>");
     for(auto& line : lines) {
       if(!line.beginsWith("  ")) continue;
-      state.output.append(escape(line.ltrim("  ", 1L)), "\n");
+      state.output.append(escape(line.trimLeft("  ", 1L)), "\n");
     }
-    state.output.rtrim("\n", 1L).append("</pre>\n");
+    state.output.trimRight("\n", 1L).append("</pre>\n");
   }
 
   //divider
@@ -202,66 +204,66 @@ auto DML::escape(const string& text) -> string {
   return output;
 }
 
-auto DML::markup(const string& text) -> string {
-  string output;
+auto DML::markup(const string& s) -> string {
+  string t;
 
-  char match = 0;
-  uint offset = 0;
-  for(uint n = 0; n < text.size();) {
-    char a = n ? text[n - 1] : 0;
-    char b = text[n];
-    char c = text[n++ + 1];
+  boolean strong;
+  boolean emphasis;
+  boolean insertion;
+  boolean deletion;
+  boolean code;
 
-    bool d = !a || a == ' ' || a == '\t' || a == '\r' || a == '\n';  //is previous character whitespace?
-    bool e = !c || c == ' ' || c == '\t' || c == '\r' || c == '\n';  //is next character whitespace?
-    bool f = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');  //is next character alphanumeric?
+  natural link, linkBase;
+  natural embed, embedBase;
 
-    if(!match && d && !e) {
-      if(b == '*') { match = '*'; offset = n; continue; }
-      if(b == '/') { match = '/'; offset = n; continue; }
-      if(b == '_') { match = '_'; offset = n; continue; }
-      if(b == '~') { match = '~'; offset = n; continue; }
-      if(b == '|') { match = '|'; offset = n; continue; }
-      if(b == '[') { match = ']'; offset = n; continue; }
-      if(b == '{') { match = '}'; offset = n; continue; }
+  for(uint n = 0; n < s.size();) {
+    char a = s[n];
+    char b = s[n + 1];
+
+    if(!link && !embed) {
+      if(a == '*' && b == '*') { t.append(strong.flip() ? "<strong>" : "</strong>"); n += 2; continue; }
+      if(a == '/' && b == '/') { t.append(emphasis.flip() ? "<em>" : "</em>"); n += 2; continue; }
+      if(a == '_' && b == '_') { t.append(insertion.flip() ? "<ins>" : "</ins>"); n += 2; continue; }
+      if(a == '~' && b == '~') { t.append(deletion.flip() ? "<del>" : "</del>"); n += 2; continue; }
+      if(a == '|' && b == '|') { t.append(code.flip() ? "<code>" : "</code>"); n += 2; continue; }
+      if(a =='\\' && b =='\\') { t.append("<br>"); n += 2; continue; }
     }
 
-    //if we reach the end of the string without a match; force a match so the content is still output
-    if(match && b != match && !c) { b = match; f = 0; n++; }
-
-    if(match && b == match && !f) {
-      match = 0;
-      auto content = slice(text, offset, n - offset - 1);
-      if(b == '*') { output.append("<strong>", escape(content), "</strong>"); continue; }
-      if(b == '/') { output.append("<em>", escape(content), "</em>"); continue; }
-      if(b == '_') { output.append("<ins>", escape(content), "</ins>"); continue; }
-      if(b == '~') { output.append("<del>", escape(content), "</del>"); continue; }
-      if(b == '|') { output.append("<code>", escape(content), "</code>"); continue; }
-      if(b == ']') {
-        auto p = content.split(" => ", 1L);
-        p[0].replace("@/", settings.host);
-        output.append("<a href=\"", escape(p[0]), "\">", escape(p(1, p[0])), "</a>");
-        continue;
-      }
-      if(b == '}') {
-        auto p = content.split(" => ", 1L);
-        p[0].replace("@/", settings.host);
-        output.append("<img src=\"", escape(p[0]), "\" alt=\"", escape(p(1, "")), "\">");
-        continue;
-      }
-      continue;
+    if(!embed) {
+      if(link == 0 && a == '[' && b == '[') { t.append("<a href=\""); link = 1; linkBase = n += 2; continue; }
+      if(link == 1 && a == ':' && b == ':') { t.append("\">"); link = 2; n += 2; continue; }
+      if(link == 1 && a == ']' && b == ']') { t.append("\">", slice(s, linkBase, n - linkBase), "</a>"); n += 2; link = 0; continue; }
+      if(link == 2 && a == ']' && b == ']') { t.append("</a>"); n += 2; link = 0; continue; }
+      if(link == 1 && a == '@' && b == '/') { t.append(settings.host); n += 2; continue; }
     }
 
-    if(match) continue;
-    if(b == '\\' && c) { output.append(c); n++; continue; }  //character escaping
-    if(b == '&') { output.append("&amp;"); continue; }       //entity escaping
-    if(b == '<') { output.append("&lt;"); continue; }        //...
-    if(b == '>') { output.append("&gt;"); continue; }        //...
-    if(b == '"') { output.append("&quot;"); continue; }      //...
-    output.append(b);
+    if(!link) {
+      if(embed == 0 && a == '{' && b == '{') { t.append("<img src=\""); embed = 1; embedBase = n += 2; continue; }
+      if(embed == 1 && a == ':' && b == ':') { t.append("\" alt=\""); embed = 2; n += 2; continue; }
+      if(embed != 0 && a == '}' && b == '}') { t.append("\">"); embed = 0; n += 2; continue; }
+      if(embed == 1 && a == '@' && b == '/') { t.append(settings.host); n += 2; continue; }
+    }
+
+    if(a =='\\') { t.append(b); n += 2; continue; }
+    if(a == '&') { t.append("&amp;"); n++; continue; }
+    if(a == '<') { t.append("&lt;"); n++; continue; }
+    if(a == '>') { t.append("&gt;"); n++; continue; }
+    if(a == '"') { t.append("&quot;"); n++; continue; }
+
+    t.append(a);
+    n++;
   }
 
-  return output;
+  if(strong) t.append("</strong>");
+  if(emphasis) t.append("</em>");
+  if(insertion) t.append("</ins>");
+  if(deletion) t.append("</del>");
+  if(code) t.append("</code>");
+  if(link == 1) t.append("\">", slice(s, linkBase, s.size() - linkBase), "</a>");
+  if(link == 2) t.append("</a>");
+  if(embed != 0) t.append("\">");
+
+  return t;
 }
 
 }}

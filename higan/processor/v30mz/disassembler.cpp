@@ -1,3 +1,5 @@
+using format = string_format;
+
 //todo: this is horribly broken in many cases; needs a total rewrite
 auto V30MZ::disassemble(uint16 cs, uint16 ip, bool registers, bool bytes) -> string {
   string s;
@@ -376,9 +378,9 @@ auto V30MZ::disassemble(uint16 cs, uint16 ip, bool registers, bool bytes) -> str
   if(bytes) {
     b = "  ";
     while(bytesRead) {
-      b.append(hex(bytesRead.takeFirst(), 2L), " ");
+      b.append(hex(bytesRead.takeLeft(), 2L), " ");
     }
-    b.rstrip();
+    b.stripRight();
   }
 
   return {hex(ea, 5L), "  ", s, l, b};

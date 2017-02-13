@@ -86,7 +86,7 @@ struct Group : sGroup {
   template<typename T = Object> auto objects() const -> vector<T> {
     vector<T> objects;
     for(auto object : self().objects()) {
-      if(auto cast = object.cast<T>()) objects.append(cast);
+      if(auto casted = object.cast<T>()) objects.append(casted);
     }
     return objects;
   }
@@ -234,14 +234,14 @@ struct Canvas : sCanvas {
   auto color() const { return self().color(); }
   auto data() { return self().data(); }
   auto droppable() const { return self().droppable(); }
-  auto doDrop(lstring names) { return self().doDrop(names); }
+  auto doDrop(string_vector names) { return self().doDrop(names); }
   auto doMouseLeave() const { return self().doMouseLeave(); }
   auto doMouseMove(Position position) const { return self().doMouseMove(position); }
   auto doMousePress(Mouse::Button button) const { return self().doMousePress(button); }
   auto doMouseRelease(Mouse::Button button) const { return self().doMouseRelease(button); }
   auto gradient() const { return self().gradient(); }
   auto icon() const { return self().icon(); }
-  auto onDrop(const function<void (lstring)>& callback = {}) { return self().onDrop(callback), *this; }
+  auto onDrop(const function<void (string_vector)>& callback = {}) { return self().onDrop(callback), *this; }
   auto onMouseLeave(const function<void ()>& callback = {}) { return self().onMouseLeave(callback), *this; }
   auto onMouseMove(const function<void (Position)>& callback = {}) { return self().onMouseMove(callback), *this; }
   auto onMousePress(const function<void (Mouse::Button)>& callback = {}) { return self().onMousePress(callback), *this; }
@@ -318,6 +318,42 @@ struct ComboButton : sComboButton {
   auto reset() { return self().reset(), *this; }
   auto selected() const { return self().selected(); }
   auto setParent(mObject* parent = nullptr, signed offset = -1) { return self().setParent(parent, offset), *this; }
+};
+#endif
+
+#if defined(Hiro_ComboEdit)
+struct ComboEditItem : sComboEditItem {
+  DeclareSharedObject(ComboEditItem)
+  using internalType = mComboEditItem;
+
+  auto icon() const { return self().icon(); }
+  auto setIcon(const image& icon = {}) { return self().setIcon(icon), *this; }
+  auto setText(const string& text = "") { return self().setText(text), *this; }
+  auto text() const { return self().text(); }
+};
+#endif
+
+#if defined(Hiro_ComboEdit)
+struct ComboEdit : sComboEdit {
+  DeclareSharedWidget(ComboEdit)
+  using internalType = mComboEdit;
+
+  auto append(sComboEditItem item) { return self().append(item), *this; }
+  auto backgroundColor() const { return self().backgroundColor(); }
+  auto doActivate() const { return self().doActivate(); }
+  auto doChange() const { return self().doChange(); }
+  auto foregroundColor() const { return self().foregroundColor(); }
+  auto item(uint position) const { return self().item(position); }
+  auto itemCount() const { return self().itemCount(); }
+  auto items() const { return self().items(); }
+  auto onActivate(const function<void ()>& callback = {}) { return self().onActivate(callback), *this; }
+  auto onChange(const function<void ()>& callback = {}) { return self().onChange(callback), *this; }
+  auto remove(sComboEditItem item) { return self().remove(item), *this; }
+  auto reset() { return self().reset(), *this; }
+  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
+  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
+  auto setText(const string& text = "") { return self().setText(text), *this; }
+  auto text() const { return self().text(); }
 };
 #endif
 
@@ -485,136 +521,6 @@ struct LineEdit : sLineEdit {
 };
 #endif
 
-#if defined(Hiro_ListView)
-struct ListViewColumn : sListViewColumn {
-  DeclareSharedObject(ListViewColumn)
-  using internalType = mListViewColumn;
-
-  auto active() const { return self().active(); }
-  auto alignment() const { return self().alignment(); }
-  auto backgroundColor() const { return self().backgroundColor(); }
-  auto editable() const { return self().editable(); }
-  auto expandable() const { return self().expandable(); }
-  auto foregroundColor() const { return self().foregroundColor(); }
-  auto horizontalAlignment() const { return self().horizontalAlignment(); }
-  auto icon() const { return self().icon(); }
-  auto resizable() const { return self().resizable(); }
-  auto setActive() { return self().setActive(), *this; }
-  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
-  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
-  auto setEditable(bool editable = true) { return self().setEditable(editable), *this; }
-  auto setExpandable(bool expandable = true) { return self().setExpandable(expandable), *this; }
-  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
-  auto setIcon(const image& icon = {}) { return self().setIcon(icon), *this; }
-  auto setResizable(bool resizable = true) { return self().setResizable(resizable), *this; }
-  auto setSortable(bool sortable = true) { return self().setSortable(sortable), *this; }
-  auto setText(const string& text = "") { return self().setText(text), *this; }
-  auto setWidth(signed width = 0) { return self().setWidth(width), *this; }
-  auto sortable() const { return self().sortable(); }
-  auto text() const { return self().text(); }
-  auto verticalAlignment() const { return self().verticalAlignment(); }
-  auto width() const { return self().width(); }
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct ListViewHeader : sListViewHeader {
-  DeclareSharedObject(ListViewHeader)
-  using internalType = mListViewHeader;
-
-  auto append(sListViewColumn column) { return self().append(column), *this; }
-  auto column(unsigned position) const { return self().column(position); }
-  auto columnCount() const { return self().columnCount(); }
-  auto columns() const { return self().columns(); }
-  auto remove(sListViewColumn column) { return self().remove(column), *this; }
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct ListViewCell : sListViewCell {
-  DeclareSharedObject(ListViewCell)
-  using internalType = mListViewCell;
-
-  auto alignment() const { return self().alignment(); }
-  auto backgroundColor() const { return self().backgroundColor(); }
-  auto checkable() const { return self().checkable(); }
-  auto checked() const { return self().checked(); }
-  auto foregroundColor() const { return self().foregroundColor(); }
-  auto icon() const { return self().icon(); }
-  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
-  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
-  auto setCheckable(bool checkable = true) const { return self().setCheckable(checkable), *this; }
-  auto setChecked(bool checked = true) const { return self().setChecked(checked), *this; }
-  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
-  auto setIcon(const image& icon = {}) { return self().setIcon(icon), *this; }
-  auto setText(const string& text = "") { return self().setText(text), *this; }
-  auto text() const { return self().text(); }
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct ListViewItem : sListViewItem {
-  DeclareSharedObject(ListViewItem)
-  using internalType = mListViewItem;
-
-  auto alignment() const { return self().alignment(); }
-  auto append(sListViewCell cell) { return self().append(cell), *this; }
-  auto backgroundColor() const { return self().backgroundColor(); }
-  auto cell(unsigned position) const { return self().cell(position); }
-  auto cellCount() const { return self().cellCount(); }
-  auto cells() const { return self().cells(); }
-  auto foregroundColor() const { return self().foregroundColor(); }
-  auto remove(sListViewCell cell) { return self().remove(cell), *this; }
-  auto selected() const { return self().selected(); }
-  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
-  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
-  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
-  auto setSelected(bool selected = true) { return self().setSelected(selected), *this; }
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct ListView : sListView {
-  DeclareSharedWidget(ListView)
-  using internalType = mListView;
-
-  auto alignment() const { return self().alignment(); }
-  auto append(sListViewHeader header) { return self().append(header), *this; }
-  auto append(sListViewItem item) { return self().append(item), *this; }
-  auto backgroundColor() const { return self().backgroundColor(); }
-  auto batchable() const { return self().batchable(); }
-  auto batched() const { return self().batched(); }
-  auto bordered() const { return self().bordered(); }
-  auto doActivate() const { return self().doActivate(); }
-  auto doChange() const { return self().doChange(); }
-  auto doContext() const { return self().doContext(); }
-  auto doEdit(sListViewCell cell) const { return self().doEdit(cell); }
-  auto doSort(sListViewColumn column) const { return self().doSort(column); }
-  auto doToggle(sListViewCell cell) const { return self().doToggle(cell); }
-  auto foregroundColor() const { return self().foregroundColor(); }
-  auto header() const { return self().header(); }
-  auto item(unsigned position) const { return self().item(position); }
-  auto itemCount() const { return self().itemCount(); }
-  auto items() const { return self().items(); }
-  auto onActivate(const function<void ()>& callback = {}) { return self().onActivate(callback), *this; }
-  auto onChange(const function<void ()>& callback = {}) { return self().onChange(callback), *this; }
-  auto onContext(const function<void ()>& callback = {}) { return self().onContext(callback), *this; }
-  auto onEdit(const function<void (ListViewCell)>& callback = {}) { return self().onEdit(callback), *this; }
-  auto onSort(const function<void (ListViewColumn)>& callback = {}) { return self().onSort(callback), *this; }
-  auto onToggle(const function<void (ListViewCell)>& callback = {}) { return self().onToggle(callback), *this; }
-  auto remove(sListViewHeader header) { return self().remove(header), *this; }
-  auto remove(sListViewItem item) { return self().remove(item), *this; }
-  auto reset() { return self().reset(), *this; }
-  auto resizeColumns() { return self().resizeColumns(), *this; }
-  auto selected() const { return self().selected(); }
-  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
-  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
-  auto setBatchable(bool batchable = true) { return self().setBatchable(batchable), *this; }
-  auto setBordered(bool bordered = true) { return self().setBordered(bordered), *this; }
-  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
-};
-#endif
-
 #if defined(Hiro_ProgressBar)
 struct ProgressBar : sProgressBar {
   DeclareSharedWidget(ProgressBar)
@@ -719,6 +625,138 @@ struct TabFrame : sTabFrame {
   auto reset() { return self().reset(), *this; }
   auto selected() const { return self().selected(); }
   auto setNavigation(Navigation navigation = Navigation::Top) { return self().setNavigation(navigation), *this; }
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct TableViewColumn : sTableViewColumn {
+  DeclareSharedObject(TableViewColumn)
+  using internalType = mTableViewColumn;
+
+  auto active() const { return self().active(); }
+  auto alignment() const { return self().alignment(); }
+  auto backgroundColor() const { return self().backgroundColor(); }
+  auto editable() const { return self().editable(); }
+  auto expandable() const { return self().expandable(); }
+  auto foregroundColor() const { return self().foregroundColor(); }
+  auto horizontalAlignment() const { return self().horizontalAlignment(); }
+  auto icon() const { return self().icon(); }
+  auto resizable() const { return self().resizable(); }
+  auto setActive() { return self().setActive(), *this; }
+  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
+  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
+  auto setEditable(bool editable = true) { return self().setEditable(editable), *this; }
+  auto setExpandable(bool expandable = true) { return self().setExpandable(expandable), *this; }
+  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
+  auto setIcon(const image& icon = {}) { return self().setIcon(icon), *this; }
+  auto setResizable(bool resizable = true) { return self().setResizable(resizable), *this; }
+  auto setSortable(bool sortable = true) { return self().setSortable(sortable), *this; }
+  auto setText(const string& text = "") { return self().setText(text), *this; }
+  auto setWidth(signed width = 0) { return self().setWidth(width), *this; }
+  auto sortable() const { return self().sortable(); }
+  auto text() const { return self().text(); }
+  auto verticalAlignment() const { return self().verticalAlignment(); }
+  auto width() const { return self().width(); }
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct TableViewHeader : sTableViewHeader {
+  DeclareSharedObject(TableViewHeader)
+  using internalType = mTableViewHeader;
+
+  auto append(sTableViewColumn column) { return self().append(column), *this; }
+  auto column(unsigned position) const { return self().column(position); }
+  auto columnCount() const { return self().columnCount(); }
+  auto columns() const { return self().columns(); }
+  auto remove(sTableViewColumn column) { return self().remove(column), *this; }
+  auto reset() { return self().reset(), *this; }
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct TableViewCell : sTableViewCell {
+  DeclareSharedObject(TableViewCell)
+  using internalType = mTableViewCell;
+
+  auto alignment() const { return self().alignment(); }
+  auto backgroundColor() const { return self().backgroundColor(); }
+  auto checkable() const { return self().checkable(); }
+  auto checked() const { return self().checked(); }
+  auto foregroundColor() const { return self().foregroundColor(); }
+  auto icon() const { return self().icon(); }
+  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
+  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
+  auto setCheckable(bool checkable = true) const { return self().setCheckable(checkable), *this; }
+  auto setChecked(bool checked = true) const { return self().setChecked(checked), *this; }
+  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
+  auto setIcon(const image& icon = {}) { return self().setIcon(icon), *this; }
+  auto setText(const string& text = "") { return self().setText(text), *this; }
+  auto text() const { return self().text(); }
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct TableViewItem : sTableViewItem {
+  DeclareSharedObject(TableViewItem)
+  using internalType = mTableViewItem;
+
+  auto alignment() const { return self().alignment(); }
+  auto append(sTableViewCell cell) { return self().append(cell), *this; }
+  auto backgroundColor() const { return self().backgroundColor(); }
+  auto cell(unsigned position) const { return self().cell(position); }
+  auto cellCount() const { return self().cellCount(); }
+  auto cells() const { return self().cells(); }
+  auto foregroundColor() const { return self().foregroundColor(); }
+  auto remove(sTableViewCell cell) { return self().remove(cell), *this; }
+  auto reset() { return self().reset(), *this; }
+  auto selected() const { return self().selected(); }
+  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
+  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
+  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
+  auto setSelected(bool selected = true) { return self().setSelected(selected), *this; }
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct TableView : sTableView {
+  DeclareSharedWidget(TableView)
+  using internalType = mTableView;
+
+  auto alignment() const { return self().alignment(); }
+  auto append(sTableViewHeader header) { return self().append(header), *this; }
+  auto append(sTableViewItem item) { return self().append(item), *this; }
+  auto backgroundColor() const { return self().backgroundColor(); }
+  auto batchable() const { return self().batchable(); }
+  auto batched() const { return self().batched(); }
+  auto bordered() const { return self().bordered(); }
+  auto doActivate() const { return self().doActivate(); }
+  auto doChange() const { return self().doChange(); }
+  auto doContext() const { return self().doContext(); }
+  auto doEdit(sTableViewCell cell) const { return self().doEdit(cell); }
+  auto doSort(sTableViewColumn column) const { return self().doSort(column); }
+  auto doToggle(sTableViewCell cell) const { return self().doToggle(cell); }
+  auto foregroundColor() const { return self().foregroundColor(); }
+  auto header() const { return self().header(); }
+  auto item(unsigned position) const { return self().item(position); }
+  auto itemCount() const { return self().itemCount(); }
+  auto items() const { return self().items(); }
+  auto onActivate(const function<void ()>& callback = {}) { return self().onActivate(callback), *this; }
+  auto onChange(const function<void ()>& callback = {}) { return self().onChange(callback), *this; }
+  auto onContext(const function<void ()>& callback = {}) { return self().onContext(callback), *this; }
+  auto onEdit(const function<void (TableViewCell)>& callback = {}) { return self().onEdit(callback), *this; }
+  auto onSort(const function<void (TableViewColumn)>& callback = {}) { return self().onSort(callback), *this; }
+  auto onToggle(const function<void (TableViewCell)>& callback = {}) { return self().onToggle(callback), *this; }
+  auto remove(sTableViewHeader header) { return self().remove(header), *this; }
+  auto remove(sTableViewItem item) { return self().remove(item), *this; }
+  auto reset() { return self().reset(), *this; }
+  auto resizeColumns() { return self().resizeColumns(), *this; }
+  auto selected() const { return self().selected(); }
+  auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
+  auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
+  auto setBatchable(bool batchable = true) { return self().setBatchable(batchable), *this; }
+  auto setBordered(bool bordered = true) { return self().setBordered(bordered), *this; }
+  auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
 };
 #endif
 
@@ -835,14 +873,14 @@ struct Viewport : sViewport {
   DeclareSharedWidget(Viewport)
   using internalType = mViewport;
 
-  auto doDrop(lstring names) const { return self().doDrop(names); }
+  auto doDrop(string_vector names) const { return self().doDrop(names); }
   auto doMouseLeave() const { return self().doMouseLeave(); }
   auto doMouseMove(Position position) const { return self().doMouseMove(position); }
   auto doMousePress(Mouse::Button button) const { return self().doMousePress(button); }
   auto doMouseRelease(Mouse::Button button) const { return self().doMouseRelease(button); }
   auto droppable() const { return self().droppable(); }
   auto handle() const { return self().handle(); }
-  auto onDrop(const function<void (lstring)>& callback = {}) { return self().onDrop(callback), *this; }
+  auto onDrop(const function<void (string_vector)>& callback = {}) { return self().onDrop(callback), *this; }
   auto onMouseLeave(const function<void ()>& callback = {}) { return self().onMouseLeave(callback), *this; }
   auto onMouseMove(const function<void (Position)>& callback = {}) { return self().onMouseMove(callback), *this; }
   auto onMousePress(const function<void (Mouse::Button)>& callback = {}) { return self().onMousePress(callback), *this; }
@@ -899,7 +937,7 @@ struct Window : sWindow {
   auto append(sStatusBar statusBar) { return self().append(statusBar), *this; }
   auto backgroundColor() const { return self().backgroundColor(); }
   auto doClose() const { return self().doClose(); }
-  auto doDrop(lstring names) const { return self().doDrop(names); }
+  auto doDrop(string_vector names) const { return self().doDrop(names); }
   auto doKeyPress(signed key) const { return self().doKeyPress(key); }
   auto doKeyRelease(signed key) const { return self().doKeyRelease(key); }
   auto doMove() const { return self().doMove(); }
@@ -912,7 +950,7 @@ struct Window : sWindow {
   auto menuBar() const { return self().menuBar(); }
   auto modal() const { return self().modal(); }
   auto onClose(const function<void ()>& callback = {}) { return self().onClose(callback), *this; }
-  auto onDrop(const function<void (lstring)>& callback = {}) { return self().onDrop(callback), *this; }
+  auto onDrop(const function<void (string_vector)>& callback = {}) { return self().onDrop(callback), *this; }
   auto onKeyPress(const function<void (signed)>& callback = {}) { return self().onKeyPress(callback), *this; }
   auto onKeyRelease(const function<void (signed)>& callback = {}) { return self().onKeyRelease(callback), *this; }
   auto onMove(const function<void ()>& callback = {}) { return self().onMove(callback), *this; }

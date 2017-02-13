@@ -1,9 +1,10 @@
 #include <nall/platform.hpp>
-#include <nall/config.hpp>
+#include <nall/chrono.hpp>
 #include <nall/directory.hpp>
 #include <nall/function.hpp>
 #include <nall/image.hpp>
 #include <nall/maybe.hpp>
+#include <nall/path.hpp>
 #include <nall/range.hpp>
 #include <nall/set.hpp>
 #include <nall/shared-pointer.hpp>
@@ -15,13 +16,13 @@
 
 using nall::function;
 using nall::image;
-using nall::lstring;
 using nall::maybe;
 using nall::nothing;
 using nall::set;
 using nall::shared_pointer;
 using nall::shared_pointer_weak;
 using nall::string;
+using nall::string_vector;
 using nall::vector;
 
 namespace hiro {
@@ -58,6 +59,8 @@ Declare(CheckButton)
 Declare(CheckLabel)
 Declare(ComboButton)
 Declare(ComboButtonItem)
+Declare(ComboEdit)
+Declare(ComboEditItem)
 Declare(Console)
 Declare(Frame)
 Declare(HexEdit)
@@ -67,17 +70,17 @@ Declare(IconView)
 Declare(IconViewItem)
 Declare(Label)
 Declare(LineEdit)
-Declare(ListView)
-Declare(ListViewHeader)
-Declare(ListViewColumn)
-Declare(ListViewItem)
-Declare(ListViewCell)
 Declare(ProgressBar)
 Declare(RadioButton)
 Declare(RadioLabel)
 Declare(SourceEdit)
 Declare(TabFrame)
 Declare(TabFrameItem)
+Declare(TableView)
+Declare(TableViewHeader)
+Declare(TableViewColumn)
+Declare(TableViewItem)
+Declare(TableViewCell)
 Declare(TextEdit)
 Declare(TreeView)
 Declare(TreeViewItem)
@@ -201,6 +204,8 @@ struct Position {
 
   Position();
   Position(signed x, signed y);
+  template<typename X, typename Y>
+  Position(X x, Y y) : Position((signed)x, (signed)y) {}
 
   explicit operator bool() const;
   auto operator==(const Position& source) const -> bool;
@@ -228,6 +233,8 @@ struct Size {
 
   Size();
   Size(signed width, signed height);
+  template<typename W, typename H>
+  Size(W width, H height) : Size((signed)width, (signed)height) {}
 
   explicit operator bool() const;
   auto operator==(const Size& source) const -> bool;
@@ -259,6 +266,8 @@ struct Geometry {
   Geometry();
   Geometry(Position position, Size size);
   Geometry(signed x, signed y, signed width, signed height);
+  template<typename X, typename Y, typename W, typename H>
+  Geometry(X x, Y y, W width, H height) : Geometry((signed)x, (signed)y, (signed)width, (signed)height) {}
 
   explicit operator bool() const;
   auto operator==(const Geometry& source) const -> bool;
@@ -474,14 +483,14 @@ struct BrowserWindow {
   auto directory() -> string;
   auto open() -> string;
   auto save() -> string;
-  auto setFilters(const lstring& filters = {"*"}) -> type&;
+  auto setFilters(const string_vector& filters = {"*"}) -> type&;
   auto setParent(sWindow parent) -> type&;
   auto setPath(const string& path = "") -> type&;
   auto setTitle(const string& title = "") -> type&;
 
 //private:
   struct State {
-    lstring filters;
+    string_vector filters;
     sWindow parent;
     string path;
     string title;
@@ -572,18 +581,19 @@ struct mObject {
   auto offset() const -> signed;
   auto parent() const -> mObject*;
   auto parentComboButton(bool recursive = false) const -> mComboButton*;
+  auto parentComboEdit(bool recursive = false) const -> mComboEdit*;
   auto parentFrame(bool recursive = false) const -> mFrame*;
   auto parentIconView(bool recursive = false) const -> mIconView*;
   auto parentLayout(bool recursive = false) const -> mLayout*;
-  auto parentListView(bool recursive = false) const -> mListView*;
-  auto parentListViewHeader(bool recursive = false) const -> mListViewHeader*;
-  auto parentListViewItem(bool recursive = false) const -> mListViewItem*;
   auto parentMenu(bool recursive = false) const -> mMenu*;
   auto parentMenuBar(bool recursive = false) const -> mMenuBar*;
   auto parentPopupMenu(bool recursive = false) const -> mPopupMenu*;
   auto parentSizable(bool recursive = false) const -> mSizable*;
   auto parentTabFrame(bool recursive = false) const -> mTabFrame*;
   auto parentTabFrameItem(bool recursive = false) const -> mTabFrameItem*;
+  auto parentTableView(bool recursive = false) const -> mTableView*;
+  auto parentTableViewHeader(bool recursive = false) const -> mTableViewHeader*;
+  auto parentTableViewItem(bool recursive = false) const -> mTableViewItem*;
   auto parentTreeView(bool recursive = false) const -> mTreeView*;
   auto parentTreeViewItem(bool recursive = false) const -> mTreeViewItem*;
   auto parentWidget(bool recursive = false) const -> mWidget*;
@@ -663,7 +673,7 @@ struct mWindow : mObject {
   auto append(sStatusBar statusBar) -> type&;
   auto backgroundColor() const -> Color;
   auto doClose() const -> void;
-  auto doDrop(lstring) const -> void;
+  auto doDrop(string_vector) const -> void;
   auto doKeyPress(signed) const -> void;
   auto doKeyRelease(signed) const -> void;
   auto doMove() const -> void;
@@ -676,7 +686,7 @@ struct mWindow : mObject {
   auto menuBar() const -> MenuBar;
   auto modal() const -> bool;
   auto onClose(const function<void ()>& callback = {}) -> type&;
-  auto onDrop(const function<void (lstring)>& callback = {}) -> type&;
+  auto onDrop(const function<void (string_vector)>& callback = {}) -> type&;
   auto onKeyPress(const function<void (signed)>& callback = {}) -> type&;
   auto onKeyRelease(const function<void (signed)>& callback = {}) -> type&;
   auto onMove(const function<void ()>& callback = {}) -> type&;
@@ -713,7 +723,7 @@ struct mWindow : mObject {
     sMenuBar menuBar;
     bool modal = false;
     function<void ()> onClose;
-    function<void (lstring)> onDrop;
+    function<void (string_vector)> onDrop;
     function<void (signed)> onKeyPress;
     function<void (signed)> onKeyRelease;
     function<void ()> onMove;
@@ -985,14 +995,14 @@ struct mCanvas : mWidget {
   auto color() const -> Color;
   auto data() -> uint32_t*;
   auto droppable() const -> bool;
-  auto doDrop(lstring names) const -> void;
+  auto doDrop(string_vector names) const -> void;
   auto doMouseLeave() const -> void;
   auto doMouseMove(Position position) const -> void;
   auto doMousePress(Mouse::Button button) const -> void;
   auto doMouseRelease(Mouse::Button button) const -> void;
   auto gradient() const -> Gradient;
   auto icon() const -> image;
-  auto onDrop(const function<void (lstring)>& callback = {}) -> type&;
+  auto onDrop(const function<void (string_vector)>& callback = {}) -> type&;
   auto onMouseLeave(const function<void ()>& callback = {}) -> type&;
   auto onMouseMove(const function<void (Position)>& callback = {}) -> type&;
   auto onMousePress(const function<void (Mouse::Button)>& callback = {}) -> type&;
@@ -1011,7 +1021,7 @@ struct mCanvas : mWidget {
     bool droppable = false;
     Gradient gradient;
     image icon;
-    function<void (lstring)> onDrop;
+    function<void (string_vector)> onDrop;
     function<void ()> onMouseLeave;
     function<void (Position)> onMouseMove;
     function<void (Mouse::Button)> onMousePress;
@@ -1111,6 +1121,61 @@ struct mComboButtonItem : mObject {
   struct State {
     image icon;
     bool selected = false;
+    string text;
+  } state;
+};
+#endif
+
+#if defined(Hiro_ComboEdit)
+struct mComboEdit : mWidget {
+  Declare(ComboEdit)
+  using mObject::remove;
+
+  auto append(sComboEditItem item) -> type&;
+  auto backgroundColor() const -> Color;
+  auto doActivate() const -> void;
+  auto doChange() const -> void;
+  auto foregroundColor() const -> Color;
+  auto item(uint position) const -> ComboEditItem;
+  auto itemCount() const -> uint;
+  auto items() const -> vector<ComboEditItem>;
+  auto onActivate(const function<void ()>& callback = {}) -> type&;
+  auto onChange(const function<void ()>& callback = {}) -> type&;
+  auto remove(sComboEditItem item) -> type&;
+  auto reset() -> type&;
+  auto setBackgroundColor(Color color = {}) -> type&;
+  auto setForegroundColor(Color color = {}) -> type&;
+  auto setParent(mObject* parent = nullptr, int offset = -1) -> type& override;
+  auto setText(const string& text = "") -> type&;
+  auto text() const -> string;
+
+//private:
+  struct State {
+    Color backgroundColor;
+    Color foregroundColor;
+    vector<sComboEditItem> items;
+    function<void ()> onActivate;
+    function<void ()> onChange;
+    string text;
+  } state;
+
+  auto destruct() -> void override;
+};
+#endif
+
+#if defined(Hiro_ComboEdit)
+struct mComboEditItem : mObject {
+  Declare(ComboEditItem)
+
+  auto icon() const -> image;
+  auto remove() -> type& override;
+  auto setIcon(const image& icon = {}) -> type&;
+  auto setText(const string& text = "") -> type&;
+  auto text() const -> string;
+
+//private:
+  struct State {
+    image icon;
     string text;
   } state;
 };
@@ -1356,205 +1421,6 @@ struct mLineEdit : mWidget {
 };
 #endif
 
-#if defined(Hiro_ListView)
-struct mListView : mWidget {
-  Declare(ListView)
-  using mObject::remove;
-
-  auto alignment() const -> Alignment;
-  auto append(sListViewHeader column) -> type&;
-  auto append(sListViewItem item) -> type&;
-  auto backgroundColor() const -> Color;
-  auto batchable() const -> bool;
-  auto batched() const -> vector<ListViewItem>;
-  auto bordered() const -> bool;
-  auto doActivate() const -> void;
-  auto doChange() const -> void;
-  auto doContext() const -> void;
-  auto doEdit(sListViewCell cell) const -> void;
-  auto doSort(sListViewColumn column) const -> void;
-  auto doToggle(sListViewCell cell) const -> void;
-  auto foregroundColor() const -> Color;
-  auto header() const -> ListViewHeader;
-  auto item(unsigned position) const -> ListViewItem;
-  auto itemCount() const -> unsigned;
-  auto items() const -> vector<ListViewItem>;
-  auto onActivate(const function<void ()>& callback = {}) -> type&;
-  auto onChange(const function<void ()>& callback = {}) -> type&;
-  auto onContext(const function<void ()>& callback = {}) -> type&;
-  auto onEdit(const function<void (ListViewCell)>& callback = {}) -> type&;
-  auto onSort(const function<void (ListViewColumn)>& callback = {}) -> type&;
-  auto onToggle(const function<void (ListViewCell)>& callback = {}) -> type&;
-  auto remove(sListViewHeader column) -> type&;
-  auto remove(sListViewItem item) -> type&;
-  auto reset() -> type&;
-  auto resizeColumns() -> type&;
-  auto selected() const -> ListViewItem;
-  auto setAlignment(Alignment alignment = {}) -> type&;
-  auto setBackgroundColor(Color color = {}) -> type&;
-  auto setBatchable(bool batchable = true) -> type&;
-  auto setBordered(bool bordered = true) -> type&;
-  auto setForegroundColor(Color color = {}) -> type&;
-  auto setParent(mObject* parent = nullptr, signed offset = -1) -> type& override;
-
-//private:
-  struct State {
-    unsigned activeColumn = 0;
-    Alignment alignment;
-    Color backgroundColor;
-    bool batchable = false;
-    bool bordered = false;
-    Color foregroundColor;
-    sListViewHeader header;
-    vector<sListViewItem> items;
-    function<void ()> onActivate;
-    function<void ()> onChange;
-    function<void ()> onContext;
-    function<void (ListViewCell)> onEdit;
-    function<void (ListViewColumn)> onSort;
-    function<void (ListViewCell)> onToggle;
-  } state;
-
-  auto destruct() -> void override;
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct mListViewHeader : mObject {
-  Declare(ListViewHeader)
-
-  auto append(sListViewColumn column) -> type&;
-  auto column(unsigned position) const -> ListViewColumn;
-  auto columnCount() const -> unsigned;
-  auto columns() const -> vector<ListViewColumn>;
-  auto remove() -> type& override;
-  auto remove(sListViewColumn column) -> type&;
-  auto setParent(mObject* parent = nullptr, signed offset = -1) -> type& override;
-
-//private:
-  struct State {
-    vector<sListViewColumn> columns;
-  } state;
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct mListViewColumn : mObject {
-  Declare(ListViewColumn)
-
-  auto active() const -> bool;
-  auto alignment() const -> Alignment;
-  auto backgroundColor() const -> Color;
-  auto editable() const -> bool;
-  auto expandable() const -> bool;
-  auto foregroundColor() const -> Color;
-  auto horizontalAlignment() const -> double;
-  auto icon() const -> image;
-  auto remove() -> type& override;
-  auto resizable() const -> bool;
-  auto setActive() -> type&;
-  auto setAlignment(Alignment alignment = {}) -> type&;
-  auto setBackgroundColor(Color color = {}) -> type&;
-  auto setEditable(bool editable = true) -> type&;
-  auto setExpandable(bool expandable = true) -> type&;
-  auto setForegroundColor(Color color = {}) -> type&;
-  auto setHorizontalAlignment(double alignment = 0.0) -> type&;
-  auto setIcon(const image& icon = {}) -> type&;
-  auto setResizable(bool resizable = true) -> type&;
-  auto setSortable(bool sortable = true) -> type&;
-  auto setText(const string& text = "") -> type&;
-  auto setVerticalAlignment(double alignment = 0.5) -> type&;
-  auto setVisible(bool visible = true) -> type&;
-  auto setWidth(signed width = 0) -> type&;
-  auto sortable() const -> bool;
-  auto text() const -> string;
-  auto verticalAlignment() const -> double;
-  auto width() const -> signed;
-
-//private:
-  struct State {
-    Alignment alignment;
-    Color backgroundColor;
-    bool editable = false;
-    bool expandable = false;
-    Color foregroundColor;
-    double horizontalAlignment = 0.0;
-    image icon;
-    bool resizable = true;
-    bool sortable = false;
-    string text;
-    double verticalAlignment = 0.5;
-    bool visible = true;
-    signed width = 0;
-  } state;
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct mListViewItem : mObject {
-  Declare(ListViewItem)
-
-  auto alignment() const -> Alignment;
-  auto append(sListViewCell cell) -> type&;
-  auto backgroundColor() const -> Color;
-  auto cell(unsigned position) const -> ListViewCell;
-  auto cellCount() const -> unsigned;
-  auto cells() const -> vector<ListViewCell>;
-  auto foregroundColor() const -> Color;
-  auto remove() -> type& override;
-  auto remove(sListViewCell cell) -> type&;
-  auto selected() const -> bool;
-  auto setAlignment(Alignment alignment = {}) -> type&;
-  auto setBackgroundColor(Color color = {}) -> type&;
-  auto setFocused() -> type& override;
-  auto setForegroundColor(Color color = {}) -> type&;
-  auto setParent(mObject* parent = nullptr, signed offset = -1) -> type& override;
-  auto setSelected(bool selected = true) -> type&;
-
-//private:
-  struct State {
-    Alignment alignment;
-    Color backgroundColor;
-    vector<sListViewCell> cells;
-    Color foregroundColor;
-    bool selected = false;
-  } state;
-};
-#endif
-
-#if defined(Hiro_ListView)
-struct mListViewCell : mObject {
-  Declare(ListViewCell)
-
-  auto alignment(bool recursive = false) const -> Alignment;
-  auto backgroundColor(bool recursive = false) const -> Color;
-  auto checkable() const -> bool;
-  auto checked() const -> bool;
-  auto font(bool recursive = false) const -> Font;
-  auto foregroundColor(bool recursive = false) const -> Color;
-  auto icon() const -> image;
-  auto setAlignment(Alignment alignment = {}) -> type&;
-  auto setBackgroundColor(Color color = {}) -> type&;
-  auto setCheckable(bool checkable = true) -> type&;
-  auto setChecked(bool checked = true) -> type&;
-  auto setForegroundColor(Color color = {}) -> type&;
-  auto setIcon(const image& icon = {}) -> type&;
-  auto setText(const string& text = "") -> type&;
-  auto text() const -> string;
-
-//private:
-  struct State {
-    Alignment alignment;
-    Color backgroundColor;
-    bool checkable = false;
-    bool checked = false;
-    Color foregroundColor;
-    image icon;
-    string text;
-  } state;
-};
-#endif
-
 #if defined(Hiro_ProgressBar)
 struct mProgressBar : mWidget {
   Declare(ProgressBar)
@@ -1715,6 +1581,207 @@ struct mTabFrameItem : mObject {
   } state;
 
   auto destruct() -> void override;
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct mTableView : mWidget {
+  Declare(TableView)
+  using mObject::remove;
+
+  auto alignment() const -> Alignment;
+  auto append(sTableViewHeader column) -> type&;
+  auto append(sTableViewItem item) -> type&;
+  auto backgroundColor() const -> Color;
+  auto batchable() const -> bool;
+  auto batched() const -> vector<TableViewItem>;
+  auto bordered() const -> bool;
+  auto doActivate() const -> void;
+  auto doChange() const -> void;
+  auto doContext() const -> void;
+  auto doEdit(sTableViewCell cell) const -> void;
+  auto doSort(sTableViewColumn column) const -> void;
+  auto doToggle(sTableViewCell cell) const -> void;
+  auto foregroundColor() const -> Color;
+  auto header() const -> TableViewHeader;
+  auto item(unsigned position) const -> TableViewItem;
+  auto itemCount() const -> unsigned;
+  auto items() const -> vector<TableViewItem>;
+  auto onActivate(const function<void ()>& callback = {}) -> type&;
+  auto onChange(const function<void ()>& callback = {}) -> type&;
+  auto onContext(const function<void ()>& callback = {}) -> type&;
+  auto onEdit(const function<void (TableViewCell)>& callback = {}) -> type&;
+  auto onSort(const function<void (TableViewColumn)>& callback = {}) -> type&;
+  auto onToggle(const function<void (TableViewCell)>& callback = {}) -> type&;
+  auto remove(sTableViewHeader column) -> type&;
+  auto remove(sTableViewItem item) -> type&;
+  auto reset() -> type&;
+  auto resizeColumns() -> type&;
+  auto selected() const -> TableViewItem;
+  auto setAlignment(Alignment alignment = {}) -> type&;
+  auto setBackgroundColor(Color color = {}) -> type&;
+  auto setBatchable(bool batchable = true) -> type&;
+  auto setBordered(bool bordered = true) -> type&;
+  auto setForegroundColor(Color color = {}) -> type&;
+  auto setParent(mObject* parent = nullptr, signed offset = -1) -> type& override;
+
+//private:
+  struct State {
+    unsigned activeColumn = 0;
+    Alignment alignment;
+    Color backgroundColor;
+    bool batchable = false;
+    bool bordered = false;
+    Color foregroundColor;
+    sTableViewHeader header;
+    vector<sTableViewItem> items;
+    function<void ()> onActivate;
+    function<void ()> onChange;
+    function<void ()> onContext;
+    function<void (TableViewCell)> onEdit;
+    function<void (TableViewColumn)> onSort;
+    function<void (TableViewCell)> onToggle;
+  } state;
+
+  auto destruct() -> void override;
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct mTableViewHeader : mObject {
+  Declare(TableViewHeader)
+
+  auto append(sTableViewColumn column) -> type&;
+  auto column(unsigned position) const -> TableViewColumn;
+  auto columnCount() const -> unsigned;
+  auto columns() const -> vector<TableViewColumn>;
+  auto remove() -> type& override;
+  auto remove(sTableViewColumn column) -> type&;
+  auto reset() -> type&;
+  auto setParent(mObject* parent = nullptr, signed offset = -1) -> type& override;
+
+//private:
+  struct State {
+    vector<sTableViewColumn> columns;
+  } state;
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct mTableViewColumn : mObject {
+  Declare(TableViewColumn)
+
+  auto active() const -> bool;
+  auto alignment() const -> Alignment;
+  auto backgroundColor() const -> Color;
+  auto editable() const -> bool;
+  auto expandable() const -> bool;
+  auto foregroundColor() const -> Color;
+  auto horizontalAlignment() const -> double;
+  auto icon() const -> image;
+  auto remove() -> type& override;
+  auto resizable() const -> bool;
+  auto setActive() -> type&;
+  auto setAlignment(Alignment alignment = {}) -> type&;
+  auto setBackgroundColor(Color color = {}) -> type&;
+  auto setEditable(bool editable = true) -> type&;
+  auto setExpandable(bool expandable = true) -> type&;
+  auto setForegroundColor(Color color = {}) -> type&;
+  auto setHorizontalAlignment(double alignment = 0.0) -> type&;
+  auto setIcon(const image& icon = {}) -> type&;
+  auto setResizable(bool resizable = true) -> type&;
+  auto setSortable(bool sortable = true) -> type&;
+  auto setText(const string& text = "") -> type&;
+  auto setVerticalAlignment(double alignment = 0.5) -> type&;
+  auto setVisible(bool visible = true) -> type&;
+  auto setWidth(signed width = 0) -> type&;
+  auto sortable() const -> bool;
+  auto text() const -> string;
+  auto verticalAlignment() const -> double;
+  auto width() const -> signed;
+
+//private:
+  struct State {
+    Alignment alignment;
+    Color backgroundColor;
+    bool editable = false;
+    bool expandable = false;
+    Color foregroundColor;
+    double horizontalAlignment = 0.0;
+    image icon;
+    bool resizable = true;
+    bool sortable = false;
+    string text;
+    double verticalAlignment = 0.5;
+    bool visible = true;
+    signed width = 0;
+  } state;
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct mTableViewItem : mObject {
+  Declare(TableViewItem)
+
+  auto alignment() const -> Alignment;
+  auto append(sTableViewCell cell) -> type&;
+  auto backgroundColor() const -> Color;
+  auto cell(unsigned position) const -> TableViewCell;
+  auto cellCount() const -> unsigned;
+  auto cells() const -> vector<TableViewCell>;
+  auto foregroundColor() const -> Color;
+  auto remove() -> type& override;
+  auto remove(sTableViewCell cell) -> type&;
+  auto reset() -> type&;
+  auto selected() const -> bool;
+  auto setAlignment(Alignment alignment = {}) -> type&;
+  auto setBackgroundColor(Color color = {}) -> type&;
+  auto setFocused() -> type& override;
+  auto setForegroundColor(Color color = {}) -> type&;
+  auto setParent(mObject* parent = nullptr, signed offset = -1) -> type& override;
+  auto setSelected(bool selected = true) -> type&;
+
+//private:
+  struct State {
+    Alignment alignment;
+    Color backgroundColor;
+    vector<sTableViewCell> cells;
+    Color foregroundColor;
+    bool selected = false;
+  } state;
+};
+#endif
+
+#if defined(Hiro_TableView)
+struct mTableViewCell : mObject {
+  Declare(TableViewCell)
+
+  auto alignment(bool recursive = false) const -> Alignment;
+  auto backgroundColor(bool recursive = false) const -> Color;
+  auto checkable() const -> bool;
+  auto checked() const -> bool;
+  auto font(bool recursive = false) const -> Font;
+  auto foregroundColor(bool recursive = false) const -> Color;
+  auto icon() const -> image;
+  auto setAlignment(Alignment alignment = {}) -> type&;
+  auto setBackgroundColor(Color color = {}) -> type&;
+  auto setCheckable(bool checkable = true) -> type&;
+  auto setChecked(bool checked = true) -> type&;
+  auto setForegroundColor(Color color = {}) -> type&;
+  auto setIcon(const image& icon = {}) -> type&;
+  auto setText(const string& text = "") -> type&;
+  auto text() const -> string;
+
+//private:
+  struct State {
+    Alignment alignment;
+    Color backgroundColor;
+    bool checkable = false;
+    bool checked = false;
+    Color foregroundColor;
+    image icon;
+    string text;
+  } state;
 };
 #endif
 
@@ -1883,14 +1950,14 @@ struct mVerticalSlider : mWidget {
 struct mViewport : mWidget {
   Declare(Viewport)
 
-  auto doDrop(lstring names) const -> void;
+  auto doDrop(string_vector names) const -> void;
   auto doMouseLeave() const -> void;
   auto doMouseMove(Position position) const -> void;
   auto doMousePress(Mouse::Button button) const -> void;
   auto doMouseRelease(Mouse::Button button) const -> void;
   auto droppable() const -> bool;
   auto handle() const -> uintptr_t;
-  auto onDrop(const function<void (lstring)>& callback = {}) -> type&;
+  auto onDrop(const function<void (string_vector)>& callback = {}) -> type&;
   auto onMouseLeave(const function<void ()>& callback = {}) -> type&;
   auto onMouseMove(const function<void (Position position)>& callback = {}) -> type&;
   auto onMousePress(const function<void (Mouse::Button)>& callback = {}) -> type&;
@@ -1900,7 +1967,7 @@ struct mViewport : mWidget {
 //private:
   struct State {
     bool droppable = false;
-    function<void (lstring)> onDrop;
+    function<void (string_vector)> onDrop;
     function<void ()> onMouseLeave;
     function<void (Position)> onMouseMove;
     function<void (Mouse::Button)> onMousePress;

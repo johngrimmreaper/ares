@@ -1,6 +1,6 @@
 //ARMv3 (ARM60)
 
-struct ArmDSP : Processor::ARM, Coprocessor {
+struct ArmDSP : Processor::ARM, Thread {
   #include "registers.hpp"
 
   ArmDSP();
@@ -11,12 +11,12 @@ struct ArmDSP : Processor::ARM, Coprocessor {
   auto main() -> void;
 
   auto step(uint clocks) -> void override;
-  auto bus_idle() -> void override;
-  auto bus_read(uint mode, uint32 addr) -> uint32 override;
-  auto bus_write(uint mode, uint32 addr, uint32 word) -> void override;
+  auto _idle() -> void override;
+  auto _read(uint mode, uint32 addr) -> uint32 override;
+  auto _write(uint mode, uint32 addr, uint32 word) -> void override;
 
-  auto mmio_read(uint24 addr, uint8 data) -> uint8;
-  auto mmio_write(uint24 addr, uint8 data) -> void;
+  auto read(uint24 addr, uint8 data) -> uint8;
+  auto write(uint24 addr, uint8 data) -> void;
 
   auto init() -> void;
   auto load() -> void;

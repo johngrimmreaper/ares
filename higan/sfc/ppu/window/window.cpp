@@ -1,167 +1,107 @@
-PPU::Window::Window(PPU& self) : self(self) {
-}
-
 auto PPU::Window::scanline() -> void {
   x = 0;
 }
 
 auto PPU::Window::run() -> void {
-  bool main, sub;
-  one = (x >= regs.one_left && x <= regs.one_right);
-  two = (x >= regs.two_left && x <= regs.two_right);
+  bool one = (x >= io.oneLeft && x <= io.oneRight);
+  bool two = (x >= io.twoLeft && x <= io.twoRight);
   x++;
 
-  test(
-    main, sub,
-    regs.bg1_one_enable, regs.bg1_one_invert,
-    regs.bg1_two_enable, regs.bg1_two_invert,
-    regs.bg1_mask, regs.bg1_main_enable, regs.bg1_sub_enable
-  );
-  if(main) self.bg1.output.main.priority = 0;
-  if(sub) self.bg1.output.sub.priority = 0;
-
-  test(
-    main, sub,
-    regs.bg2_one_enable, regs.bg2_one_invert,
-    regs.bg2_two_enable, regs.bg2_two_invert,
-    regs.bg2_mask, regs.bg2_main_enable, regs.bg2_sub_enable
-  );
-  if(main) self.bg2.output.main.priority = 0;
-  if(sub) self.bg2.output.sub.priority = 0;
-
-  test(
-    main, sub,
-    regs.bg3_one_enable, regs.bg3_one_invert,
-    regs.bg3_two_enable, regs.bg3_two_invert,
-    regs.bg3_mask, regs.bg3_main_enable, regs.bg3_sub_enable
-  );
-  if(main) self.bg3.output.main.priority = 0;
-  if(sub) self.bg3.output.sub.priority = 0;
-
-  test(
-    main, sub,
-    regs.bg4_one_enable, regs.bg4_one_invert,
-    regs.bg4_two_enable, regs.bg4_two_invert,
-    regs.bg4_mask, regs.bg4_main_enable, regs.bg4_sub_enable
-  );
-  if(main) self.bg4.output.main.priority = 0;
-  if(sub) self.bg4.output.sub.priority = 0;
-
-  test(
-    main, sub,
-    regs.oam_one_enable, regs.oam_one_invert,
-    regs.oam_two_enable, regs.oam_two_invert,
-    regs.oam_mask, regs.oam_main_enable, regs.oam_sub_enable
-  );
-  if(main) self.sprite.output.main.priority = 0;
-  if(sub) self.sprite.output.sub.priority = 0;
-
-  test(
-    main, sub,
-    regs.col_one_enable, regs.col_one_invert,
-    regs.col_two_enable, regs.col_two_invert,
-    regs.col_mask, true, true
-  );
-
-  switch(regs.col_main_mask) {
-  case 0: main = true; break;
-  case 1: break;
-  case 2: main = !main; break;
-  case 3: main = false; break;
+  if(test(io.bg1.oneEnable, one ^ io.bg1.oneInvert, io.bg1.twoEnable, two ^ io.bg1.twoInvert, io.bg1.mask)) {
+    if(io.bg1.aboveEnable) ppu.bg1.output.above.priority = 0;
+    if(io.bg1.belowEnable) ppu.bg1.output.below.priority = 0;
   }
 
-  switch(regs.col_sub_mask) {
-  case 0: sub = true; break;
-  case 1: break;
-  case 2: sub = !sub; break;
-  case 3: sub = false; break;
+  if(test(io.bg2.oneEnable, one ^ io.bg2.oneInvert, io.bg2.twoEnable, two ^ io.bg2.twoInvert, io.bg2.mask)) {
+    if(io.bg2.aboveEnable) ppu.bg2.output.above.priority = 0;
+    if(io.bg2.belowEnable) ppu.bg2.output.below.priority = 0;
   }
 
-  output.main.color_enable = main;
-  output.sub.color_enable = sub;
+  if(test(io.bg3.oneEnable, one ^ io.bg3.oneInvert, io.bg3.twoEnable, two ^ io.bg3.twoInvert, io.bg3.mask)) {
+    if(io.bg3.aboveEnable) ppu.bg3.output.above.priority = 0;
+    if(io.bg3.belowEnable) ppu.bg3.output.below.priority = 0;
+  }
+
+  if(test(io.bg4.oneEnable, one ^ io.bg4.oneInvert, io.bg4.twoEnable, two ^ io.bg4.twoInvert, io.bg4.mask)) {
+    if(io.bg4.aboveEnable) ppu.bg4.output.above.priority = 0;
+    if(io.bg4.belowEnable) ppu.bg4.output.below.priority = 0;
+  }
+
+  if(test(io.obj.oneEnable, one ^ io.obj.oneInvert, io.obj.twoEnable, two ^ io.obj.twoInvert, io.obj.mask)) {
+    if(io.obj.aboveEnable) ppu.obj.output.above.priority = 0;
+    if(io.obj.belowEnable) ppu.obj.output.below.priority = 0;
+  }
+
+  bool value = test(io.col.oneEnable, one ^ io.col.oneInvert, io.col.twoEnable, two ^ io.col.twoInvert, io.col.mask);
+  bool array[] = {true, value, !value, false};
+  output.above.colorEnable = array[io.col.aboveMask];
+  output.below.colorEnable = array[io.col.belowMask];
 }
 
-auto PPU::Window::test(
-  bool& main, bool& sub,
-  bool one_enable, bool one_invert,
-  bool two_enable, bool two_invert,
-  uint8 mask, bool main_enable, bool sub_enable
-) -> void {
-  bool one = Window::one ^ one_invert;
-  bool two = Window::two ^ two_invert;
-  bool output;
-
-  if(one_enable == false && two_enable == false) {
-    output = false;
-  } else if(one_enable == true && two_enable == false) {
-    output = one;
-  } else if(one_enable == false && two_enable == true) {
-    output = two;
-  } else {
-    switch(mask) {
-    case 0: output = (one | two) == 1; break;
-    case 1: output = (one & two) == 1; break;
-    case 2: output = (one ^ two) == 1; break;
-    case 3: output = (one ^ two) == 0; break;
-    }
-  }
-
-  main = main_enable ? output : false;
-  sub = sub_enable ? output : false;
+auto PPU::Window::test(bool oneEnable, bool one, bool twoEnable, bool two, uint mask) -> bool {
+  if(!oneEnable) return two && twoEnable;
+  if(!twoEnable) return one;
+  if(mask == 0) return (one | two);
+  if(mask == 1) return (one & two);
+                return (one ^ two) == 3 - mask;
 }
 
 auto PPU::Window::reset() -> void {
-  regs.bg1_one_enable = random(false);
-  regs.bg1_one_invert = random(false);
-  regs.bg1_two_enable = random(false);
-  regs.bg1_two_invert = random(false);
-  regs.bg2_one_enable = random(false);
-  regs.bg2_one_invert = random(false);
-  regs.bg2_two_enable = random(false);
-  regs.bg2_two_invert = random(false);
-  regs.bg3_one_enable = random(false);
-  regs.bg3_one_invert = random(false);
-  regs.bg3_two_enable = random(false);
-  regs.bg3_two_invert = random(false);
-  regs.bg4_one_enable = random(false);
-  regs.bg4_one_invert = random(false);
-  regs.bg4_two_enable = random(false);
-  regs.bg4_two_invert = random(false);
-  regs.oam_one_enable = random(false);
-  regs.oam_one_invert = random(false);
-  regs.oam_two_enable = random(false);
-  regs.oam_two_invert = random(false);
-  regs.col_one_enable = random(false);
-  regs.col_one_invert = random(false);
-  regs.col_two_enable = random(false);
-  regs.col_two_invert = random(false);
-  regs.one_left = random(0x00);
-  regs.one_right = random(0x00);
-  regs.two_left = random(0x00);
-  regs.two_right = random(0x00);
-  regs.bg1_mask = random(0);
-  regs.bg2_mask = random(0);
-  regs.bg3_mask = random(0);
-  regs.bg4_mask = random(0);
-  regs.oam_mask = random(0);
-  regs.col_mask = random(0);
-  regs.bg1_main_enable = random(false);
-  regs.bg1_sub_enable = random(false);
-  regs.bg2_main_enable = random(false);
-  regs.bg2_sub_enable = random(false);
-  regs.bg3_main_enable = random(false);
-  regs.bg3_sub_enable = random(false);
-  regs.bg4_main_enable = random(false);
-  regs.bg4_sub_enable = random(false);
-  regs.oam_main_enable = random(false);
-  regs.oam_sub_enable = random(false);
-  regs.col_main_mask = random(0);
-  regs.col_sub_mask = random(0);
+  io.bg1.oneEnable = random(false);
+  io.bg1.oneInvert = random(false);
+  io.bg1.twoEnable = random(false);
+  io.bg1.twoInvert = random(false);
+  io.bg1.mask = random(0);
+  io.bg1.aboveEnable = random(false);
+  io.bg1.belowEnable = random(false);
 
-  output.main.color_enable = 0;
-  output.sub.color_enable = 0;
+  io.bg2.oneEnable = random(false);
+  io.bg2.oneInvert = random(false);
+  io.bg2.twoEnable = random(false);
+  io.bg2.twoInvert = random(false);
+  io.bg2.mask = random(0);
+  io.bg2.aboveEnable = random(false);
+  io.bg2.belowEnable = random(false);
+
+  io.bg3.oneEnable = random(false);
+  io.bg3.oneInvert = random(false);
+  io.bg3.twoEnable = random(false);
+  io.bg3.twoInvert = random(false);
+  io.bg3.mask = random(0);
+  io.bg3.aboveEnable = random(false);
+  io.bg3.belowEnable = random(false);
+
+  io.bg4.oneEnable = random(false);
+  io.bg4.oneInvert = random(false);
+  io.bg4.twoEnable = random(false);
+  io.bg4.twoInvert = random(false);
+  io.bg4.mask = random(0);
+  io.bg4.aboveEnable = random(false);
+  io.bg4.belowEnable = random(false);
+
+  io.obj.oneEnable = random(false);
+  io.obj.oneInvert = random(false);
+  io.obj.twoEnable = random(false);
+  io.obj.twoInvert = random(false);
+  io.obj.mask = random(0);
+  io.obj.aboveEnable = random(false);
+  io.obj.belowEnable = random(false);
+
+  io.col.oneEnable = random(false);
+  io.col.oneInvert = random(false);
+  io.col.twoEnable = random(false);
+  io.col.twoInvert = random(false);
+  io.col.mask = random(0);
+  io.col.aboveMask = random(0);
+  io.col.belowMask = random(0);
+
+  io.oneLeft = random(0x00);
+  io.oneRight = random(0x00);
+  io.twoLeft = random(0x00);
+  io.twoRight = random(0x00);
+
+  output.above.colorEnable = 0;
+  output.below.colorEnable = 0;
 
   x = 0;
-  one = 0;
-  two = 0;
 }

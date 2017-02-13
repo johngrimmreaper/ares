@@ -1,12 +1,10 @@
 include ../nall/GNUmakefile
 
 target := tomoko
-# target := loki
-profile := accuracy
 # console := true
 
 flags += -I. -I.. -O3
-objects := libco
+objects := libco emulator audio video resource
 
 # profile-guided optimization mode
 # pgo := instrument
@@ -26,7 +24,7 @@ ifeq ($(platform),windows)
   else
     link += -mwindows
   endif
-  link += -mthreads -luuid -lkernel32 -luser32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32
+  link += -mthreads -lpthread -luuid -lkernel32 -luser32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32
   link += -Wl,-enable-auto-import
   link += -Wl,-enable-runtime-pseudo-reloc
 else ifeq ($(platform),macosx)
@@ -53,6 +51,12 @@ compile = \
 %.o: $<; $(call compile)
 
 all: build;
+
+obj/libco.o: ../libco/libco.c $(call rwildcard,../libco)
+obj/emulator.o: emulator/emulator.cpp $(call rwildcard,emulator)
+obj/audio.o: audio/audio.cpp $(call rwildcard,audio)
+obj/video.o: video/video.cpp $(call rwildcard,video)
+obj/resource.o: resource/resource.cpp $(call rwildcard,resource)
 
 ui := target-$(target)
 include $(ui)/GNUmakefile

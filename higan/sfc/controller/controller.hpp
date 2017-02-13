@@ -15,13 +15,10 @@ struct Controller : Thread {
   enum : bool { Port1 = 0, Port2 = 1 };
 
   Controller(bool port);
-
+  virtual ~Controller();
   static auto Enter() -> void;
+
   virtual auto main() -> void;
-
-  auto step(uint clocks) -> void;
-  auto synchronizeCPU() -> void;
-
   auto iobit() -> bool;
   auto iobit(bool data) -> void;
   virtual auto data() -> uint2 { return 0; }
@@ -31,8 +28,7 @@ struct Controller : Thread {
 };
 
 #include "gamepad/gamepad.hpp"
-#include "multitap/multitap.hpp"
 #include "mouse/mouse.hpp"
-#include "superscope/superscope.hpp"
+#include "super-multitap/super-multitap.hpp"
+#include "super-scope/super-scope.hpp"
 #include "justifier/justifier.hpp"
-#include "usart/usart.hpp"

@@ -11,7 +11,7 @@ Settings::Settings() {
 
   set("UserInterface/ShowStatusBar", true);
 
-  set("Library/Location", {userpath(), "Emulation/"});
+  set("Library/Location", {Path::user(), "Emulation/"});
   set("Library/IgnoreManifests", false);
 
   set("Video/Driver", ruby::Video::optimalDriver());
@@ -22,6 +22,7 @@ Settings::Settings() {
   set("Video/BlurEmulation", true);
   set("Video/ColorEmulation", true);
   set("Video/ScanlineEmulation", false);
+
   set("Video/Saturation", 100);
   set("Video/Gamma", 100);
   set("Video/Luminance", 100);
@@ -32,19 +33,19 @@ Settings::Settings() {
 
   set("Audio/Driver", ruby::Audio::optimalDriver());
   set("Audio/Device", "");
+  set("Audio/Exclusive", false);
   set("Audio/Synchronize", true);
   set("Audio/Mute", false);
   set("Audio/Volume", 100);
-  set("Audio/Frequency", 48000);
+  set("Audio/Balance", 50);
+  set("Audio/Reverb/Enable", false);
   set("Audio/Latency", 60);
   set("Audio/Resampler", "Sinc");
 
   set("Input/Driver", ruby::Input::optimalDriver());
+  set("Input/Frequency", 5);
   set("Input/FocusLoss/Pause", false);
   set("Input/FocusLoss/AllowInput", false);
-
-  set("Timing/Video", 60.0);
-  set("Timing/Audio", 48000.0);
 }
 
 auto Settings::quit() -> void {
