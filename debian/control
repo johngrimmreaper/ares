@@ -32,8 +32,3 @@ Description: Accurate Nintendo multi-system emulator
  It focuses on accuracy and clean code, rather than speed and special
  features. It is meant as a reference emulator to document how the underlying
  hardware works. As a result the minimum system requirements are high.
- .
- There are three profiles that govern the amount of accuracy and required
- system resources of the SNES emulation. Which profile to use can be set with:
- .
- # update-alternatives --config higan
