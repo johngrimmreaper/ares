@@ -1,3 +1,0 @@
-# fortify breaks higan on architectures where libco/sjlj.c is used
-# so it is disabled there.
-higan: hardening-no-fortify-functions
