@@ -11,6 +11,6 @@ Author: Tobias Hansen <thansen@debian.org>
  
  auto Settings::quit() -> void {
 -  file::write(locate("settings.bml"), BML::serialize(*this));
-+  directory::create({configpath(), "higan/"});
-+  file::write({configpath(), "higan/", "settings.bml"}, BML::serialize(*this));
++  directory::create({Path::config(), "higan/"});
++  file::write({Path::config(), "higan/", "settings.bml"}, BML::serialize(*this));
  }
