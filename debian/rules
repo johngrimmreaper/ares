@@ -7,7 +7,7 @@ ifeq (,$(findstring $(DEB_BUILD_ARCH_CPU),"amd64 i386 powerpc"))
 endif
 
 %:
-	dh $@ --parallel --sourcedirectory=higan
+	dh $@ --sourcedirectory=higan
 
 override_dh_auto_clean:
 	$(MAKE) --directory=icarus clean

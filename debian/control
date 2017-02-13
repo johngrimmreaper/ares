@@ -3,7 +3,7 @@ Section: otherosfs
 Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Tobias Hansen <thansen@debian.org>
-Build-Depends: debhelper (>= 9),
+Build-Depends: debhelper (>= 10),
                pkg-config,
                libgtk2.0-dev,
                libgtksourceview2.0-dev,
