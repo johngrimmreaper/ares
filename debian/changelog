@@ -1,4 +1,4 @@
-higan (102-1) UNRELEASED; urgency=medium
+higan (102-1) experimental; urgency=medium
 
   * New upstream release. (Closes: #837553)
   * Higan no longer has profiles (accuracy, balanced, performance).
