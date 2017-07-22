@@ -1,32 +1,76 @@
-//Hudson Soft HuC6260 -- Video Color Encoder
 //Hudson Soft HuC6270 -- Video Display Controller
 
 struct VDC : Thread {
+  inline auto bus() const -> uint9 { return data; }
+  inline auto irqLine() const -> bool { return irq.line; }
+
   static auto Enter() -> void;
   auto main() -> void;
   auto step(uint clocks) -> void;
-  auto refresh() -> void;
+  auto scanline() -> void;
+  auto frame() -> void;
 
   auto power() -> void;
 
   //io.cpp
-  auto vramRead(uint16 addr) -> uint16;
-  auto vramWrite(uint16 addr, uint16 data) -> void;
+  auto read(uint2 addr) -> uint8;
+  auto write(uint2 addr, uint8 data) -> void;
 
-  auto read(uint11 addr) -> uint8;
-  auto write(uint11 addr, uint8 data) -> void;
+  //serialization.cpp
+  auto serialize(serializer&) -> void;
 
 private:
-  uint32 buffer[512 * 484];
+  uint9 data;
 
-  uint16 vram[0x8000];
-  uint16 satb[0x100];
-  uint9 cram[0x200];
+  struct VRAM {
+    //memory.cpp
+    auto read(uint16 addr) -> uint16;
+    auto write(uint16 addr, uint16 data) -> void;
 
-  struct State {
-    uint x;
-    uint y;
-  } state;
+    uint16 data[0x8000];
+
+    uint16 addressRead;
+    uint16 addressWrite;
+    uint16 addressIncrement;
+
+    uint16 dataRead;
+    uint16 dataWrite;
+  } vram;
+
+  struct SATB {
+    //memory.cpp
+    auto read(uint8 addr) -> uint16;
+    auto write(uint8 addr, uint16 data) -> void;
+
+    uint16 data[0x100];
+  } satb;
+
+  struct Timing {
+    uint5 horizontalSyncWidth;
+    uint7 horizontalDisplayStart;
+    uint7 horizontalDisplayLength;
+    uint7 horizontalDisplayEnd;
+
+    uint5 verticalSyncWidth;
+    uint8 verticalDisplayStart;
+    uint9 verticalDisplayLength;
+    uint8 verticalDisplayEnd;
+
+    bool  vpulse;
+    bool  hpulse;
+
+    uint  hclock;
+    uint  vclock;
+
+    uint  hoffset;
+    uint  voffset;
+
+    uint  hstart;
+    uint  vstart;
+
+    uint  hlength;
+    uint  vlength;
+  } timing;
 
   struct IRQ {
     enum class Line : uint {
@@ -56,9 +100,13 @@ private:
     bool pendingVblank;
     bool pendingTransferVRAM;
     bool pendingTransferSATB;
+
+    bool line;
   } irq;
 
   struct DMA {
+    VDC* vdc = nullptr;
+
     //dma.cpp
     auto step(uint clocks) -> void;
     auto vramStart() -> void;
@@ -80,6 +128,8 @@ private:
   } dma;
 
   struct Background {
+    VDC* vdc = nullptr;
+
     //background.cpp
     auto scanline(uint y) -> void;
     auto run(uint x, uint y) -> void;
@@ -87,16 +137,20 @@ private:
     bool   enable;
     uint10 hscroll;
     uint9  vscroll;
+    uint9  vcounter;
     uint8  width;
     uint8  height;
 
     uint10 hoffset;
     uint9  voffset;
 
-    maybe<uint9> color;
+    uint4 color;
+    uint4 palette;
   } background;
 
   struct Sprite {
+    VDC* vdc = nullptr;
+
     //sprite.cpp
     auto scanline(uint y) -> void;
     auto run(uint x, uint y) -> void;
@@ -114,71 +168,32 @@ private:
       bool   hflip;
       uint   height;
       bool   vflip;
+      bool   first;
     };
     array<Object, 64> objects;
 
-    maybe<uint9> color;
+    uint4 color;
+    uint4 palette;
     bool priority;
   } sprite;
 
   struct IO {
     uint5  address;
 
-    //VDC
-
-    //$00  MAWR (W)
-    uint16 vramAddressWrite;
-
-    //$01  MARR (W)
-    uint16 vramAddressRead;
-
-    //$02  VWR (W)
-    //$02  VRR (R)
-    uint16 vramDataWrite;
-    uint16 vramDataRead;
-
-    //$05  CR (W)
+    //$0005  CR (W)
     uint2  externalSync;
     uint2  displayOutput;
     bool   dramRefresh;
-    uint   vramAddressIncrement;
 
-    //$06  RCR
+    //$0006  RCR
     uint10 lineCoincidence;
 
-    //$09  MWR
+    //$0009  MWR
     uint2  vramAccess;
     uint2  spriteAccess;
     bool   cgMode;
-
-    //$0a  HSR
-    uint5  horizontalSyncWidth;
-    uint7  horizontalDisplayStart;
-
-    //$0b  HDR
-    uint7  horizontalDisplayWidth;
-    uint7  horizontalDisplayEnd;
-
-    //$0c  VPR
-    uint5  verticalSyncWidth;
-    uint8  verticalDisplayStart;
-
-    //$0d  VDR
-    uint9  verticalDisplayWidth;
-
-    //$0e  VCR
-    uint8  verticalDisplayEnd;
-
-    //VCE
-
-    //$00  CR
-    uint2  divisionRatio;
-    bool   colorBlur;
-    bool   grayscale;
-
-    //$02  CTA
-    uint9  colorAddress;
   } io;
 };
 
-extern VDC vdc;
+extern VDC vdc0;
+extern VDC vdc1;

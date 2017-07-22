@@ -1,4 +1,4 @@
-system region=auto name:Super Famicom
+system name:Super Famicom
   cpu version=2
     ram name=work.ram size=0x20000 volatile
   smp
@@ -9,4 +9,4 @@ system region=auto name:Super Famicom
   ppu2 version=3
     ram name=palette.ram size=512 volatile
   dsp
-    ram name=apu.ram size=0x20000 volatile
+    ram name=apu.ram size=0x10000 volatile

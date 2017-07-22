@@ -38,6 +38,7 @@ auto VDP::Sprite::scanline(uint y) -> void {
 
   uint7 link = 0;
   uint tiles = 0;
+  uint count = 0;
   do {
     auto& object = oam[link];
     link = object.link;
@@ -48,7 +49,7 @@ auto VDP::Sprite::scanline(uint y) -> void {
 
     objects.append(object);
     tiles += object.width >> 3;
-  } while(link && link < 80 && objects.size() < 20 && tiles < 40);
+  } while(link && link < 80 && objects.size() < 20 && tiles < 40 && ++count < 80);
 }
 
 auto VDP::Sprite::run(uint x, uint y) -> void {
@@ -72,7 +73,7 @@ auto VDP::Sprite::run(uint x, uint y) -> void {
     uint pixelY = objectY & 7;
     tileAddress += pixelY << 1 | pixelX >> 2;
 
-    uint16 tileData = vdp.vram[tileAddress];
+    uint16 tileData = vdp.vram.read(tileAddress);
     uint4 color = tileData >> (((pixelX & 3) ^ 3) << 2);
     if(color) {
       output.color = o.palette << 4 | color;
@@ -83,8 +84,5 @@ auto VDP::Sprite::run(uint x, uint y) -> void {
 }
 
 auto VDP::Sprite::power() -> void {
-}
-
-auto VDP::Sprite::reset() -> void {
   memory::fill(&io, sizeof(IO));
 }

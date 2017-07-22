@@ -2,29 +2,17 @@
 
 namespace Emulator {
 
-struct Platform {
-  virtual auto path(uint id) -> string { return ""; }
-  virtual auto open(uint id, string name, vfs::file::mode mode, bool required = false) -> vfs::shared::file { return {}; }
-  virtual auto load(uint id, string name, string type) -> maybe<uint> { return nothing; }
-  virtual auto videoRefresh(const uint32* data, uint pitch, uint width, uint height) -> void {}
-  virtual auto audioSample(const double* samples, uint channels) -> void {}
-  virtual auto inputPoll(uint port, uint device, uint input) -> int16 { return 0; }
-  virtual auto inputRumble(uint port, uint device, uint input, bool enable) -> void {}
-  virtual auto dipSettings(Markup::Node node) -> uint { return 0; }
-  virtual auto notify(string text) -> void { print(text, "\n"); }
-};
-
 struct Interface {
   struct Information {
     string manufacturer;
     string name;
     bool overscan;
-    bool resettable;
-    struct Capability {
-      bool states;
-      bool cheats;
-    } capability;
   } information;
+
+  struct Region {
+    string name;
+  };
+  vector<Region> regions;
 
   struct Medium {
     uint id;
@@ -56,14 +44,10 @@ struct Interface {
 
   //video information
   struct VideoSize { uint width, height; };
-  virtual auto videoSize() -> VideoSize = 0;
+  virtual auto videoResolution() -> VideoSize = 0;
   virtual auto videoSize(uint width, uint height, bool arc) -> VideoSize = 0;
-  virtual auto videoFrequency() -> double = 0;
   virtual auto videoColors() -> uint32 = 0;
   virtual auto videoColor(uint32 color) -> uint64 = 0;
-
-  //audio information
-  virtual auto audioFrequency() -> double = 0;
 
   //media interface
   virtual auto loaded() -> bool { return false; }
@@ -75,12 +59,11 @@ struct Interface {
   //system interface
   virtual auto connect(uint port, uint device) -> void {}
   virtual auto power() -> void {}
-  virtual auto reset() -> void {}
   virtual auto run() -> void {}
 
   //time functions
   virtual auto rtc() -> bool { return false; }
-  virtual auto rtcsync() -> void {}
+  virtual auto rtcSynchronize() -> void {}
 
   //state functions
   virtual auto serialize() -> serializer = 0;
@@ -97,15 +80,5 @@ struct Interface {
   //shared functions
   auto videoColor(uint16 r, uint16 g, uint16 b) -> uint32;
 };
-
-//nall/vfs shorthand constants for open(), load()
-struct File {
-  static const auto Read = vfs::file::mode::read;
-  static const auto Write = vfs::file::mode::write;
-  static const auto Optional = false;
-  static const auto Required = true;
-};
-
-extern Platform* platform;
 
 }

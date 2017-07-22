@@ -10,10 +10,6 @@ Interface::Interface() {
   information.manufacturer = "Nintendo";
   information.name         = "Super Famicom";
   information.overscan     = true;
-  information.resettable   = true;
-
-  information.capability.states = true;
-  information.capability.cheats = true;
 
   media.append({ID::SuperFamicom, "Super Famicom", "sfc"});
 
@@ -122,7 +118,7 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoSize() -> VideoSize {
+auto Interface::videoResolution() -> VideoSize {
   return {512, 480};
 }
 
@@ -131,13 +127,6 @@ auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
   uint h = 240;
   uint m = min(width / w, height / h);
   return {w * m, h * m};
-}
-
-auto Interface::videoFrequency() -> double {
-  switch(system.region()) { default:
-  case System::Region::NTSC: return (system.colorburst() * 6.0) / (262.0 * 1364.0 - 4.0);
-  case System::Region::PAL:  return (system.colorburst() * 6.0) / (312.0 * 1364.0);
-  }
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -150,7 +139,9 @@ auto Interface::videoColor(uint32 color) -> uint64 {
   uint b = color.bits(10,14);
   uint l = color.bits(15,18);
 
-  double L = (1.0 + l) / 16.0 * (l ? 1.0 : 0.5);
+  //luma=0 is not 100% black; but it's much darker than normal linear scaling
+  //exact effect seems to be analog; requires > 24-bit color depth to represent accurately
+  double L = (1.0 + l) / 16.0 * (l ? 1.0 : 0.25);
   uint64 R = L * image::normalize(r, 5, 16);
   uint64 G = L * image::normalize(g, 5, 16);
   uint64 B = L * image::normalize(b, 5, 16);
@@ -168,10 +159,6 @@ auto Interface::videoColor(uint32 color) -> uint64 {
   }
 
   return R << 32 | G << 16 | B << 0;
-}
-
-auto Interface::audioFrequency() -> double {
-  return 32040.0;
 }
 
 auto Interface::loaded() -> bool {
@@ -207,10 +194,6 @@ auto Interface::power() -> void {
   system.power();
 }
 
-auto Interface::reset() -> void {
-  system.reset();
-}
-
 auto Interface::run() -> void {
   system.run();
 }
@@ -221,7 +204,7 @@ auto Interface::rtc() -> bool {
   return false;
 }
 
-auto Interface::rtcsync() -> void {
+auto Interface::rtcSynchronize() -> void {
   if(cartridge.has.EpsonRTC) epsonrtc.sync();
   if(cartridge.has.SharpRTC) sharprtc.sync();
 }

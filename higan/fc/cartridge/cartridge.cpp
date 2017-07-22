@@ -4,6 +4,7 @@ namespace Famicom {
 
 #include "chip/chip.cpp"
 #include "board/board.cpp"
+#include "serialization.cpp"
 Cartridge cartridge;
 
 auto Cartridge::Enter() -> void {
@@ -15,8 +16,9 @@ auto Cartridge::main() -> void {
 }
 
 auto Cartridge::load() -> bool {
-  if(auto pathID = platform->load(ID::Famicom, "Famicom", "fc")) {
-    information.pathID = pathID();
+  if(auto loaded = platform->load(ID::Famicom, "Famicom", "fc", {"NTSC", "PAL"})) {
+    information.pathID = loaded.pathID();
+    information.region = loaded.option();
   } else return false;
 
   if(auto fp = platform->open(pathID(), "manifest.bml", File::Read, File::Required)) {
@@ -45,12 +47,8 @@ auto Cartridge::unload() -> void {
 }
 
 auto Cartridge::power() -> void {
+  create(Cartridge::Enter, system.frequency());
   board->power();
-}
-
-auto Cartridge::reset() -> void {
-  create(Cartridge::Enter, system.colorburst() * 6.0);
-  board->reset();
 }
 
 auto Cartridge::readPRG(uint addr) -> uint8 {
@@ -71,11 +69,6 @@ auto Cartridge::writeCHR(uint addr, uint8 data) -> void {
 
 auto Cartridge::scanline(uint y) -> void {
   return board->scanline(y);
-}
-
-auto Cartridge::serialize(serializer& s) -> void {
-  Thread::serialize(s);
-  return board->serialize(s);
 }
 
 }

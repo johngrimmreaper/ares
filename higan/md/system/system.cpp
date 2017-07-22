@@ -2,15 +2,25 @@
 
 namespace MegaDrive {
 
-#include "peripherals.cpp"
 System system;
 Scheduler scheduler;
+Cheat cheat;
+#include "peripherals.cpp"
+#include "serialization.cpp"
 
 auto System::run() -> void {
   if(scheduler.enter() == Scheduler::Event::Frame) vdp.refresh();
 }
 
-auto System::load(Emulator::Interface* interface) -> bool {
+auto System::runToSave() -> void {
+  scheduler.synchronize(cpu);
+  scheduler.synchronize(apu);
+  scheduler.synchronize(vdp);
+  scheduler.synchronize(psg);
+  scheduler.synchronize(ym2612);
+}
+
+auto System::load(Emulator::Interface* interface, maybe<Region> region) -> bool {
   information = {};
 
   if(auto fp = platform->open(ID::System, "manifest.bml", File::Read, File::Required)) {
@@ -20,7 +30,20 @@ auto System::load(Emulator::Interface* interface) -> bool {
   auto document = BML::unserialize(information.manifest);
   if(!cartridge.load()) return false;
 
-  information.colorburst = Emulator::Constants::Colorburst::NTSC;
+  if(cartridge.region() == "NTSC-J") {
+    information.region = Region::NTSCJ;
+    information.colorburst = Emulator::Constants::Colorburst::NTSC;
+  }
+  if(cartridge.region() == "NTSC-U") {
+    information.region = Region::NTSCU;
+    information.colorburst = Emulator::Constants::Colorburst::NTSC;
+  }
+  if(cartridge.region() == "PAL") {
+    information.region = Region::PAL;
+    information.colorburst = Emulator::Constants::Colorburst::PAL * 4.0 / 5.0;
+  }
+
+  serializeInit();
   this->interface = interface;
   return information.loaded = true;
 }
@@ -35,16 +58,6 @@ auto System::unload() -> void {
 }
 
 auto System::power() -> void {
-  cartridge.power();
-  cpu.power();
-  apu.power();
-  vdp.power();
-  psg.power();
-  ym2612.power();
-  reset();
-}
-
-auto System::reset() -> void {
   Emulator::video.reset();
   Emulator::video.setInterface(interface);
   Emulator::video.setPalette();
@@ -53,12 +66,12 @@ auto System::reset() -> void {
   Emulator::audio.setInterface(interface);
 
   scheduler.reset();
-  cartridge.reset();
-  cpu.reset();
+  cartridge.power();
+  cpu.power();
   apu.power();
-  vdp.reset();
-  psg.reset();
-  ym2612.reset();
+  vdp.power();
+  psg.power();
+  ym2612.power();
   scheduler.primary(cpu);
 
   peripherals.reset();

@@ -3,8 +3,6 @@ auto APU::Sequencer::run() -> void {
     center = 0;
     left   = 0;
     right  = 0;
-
-    centerBias = leftBias = rightBias = 0;
     return;
   }
 
@@ -91,10 +89,10 @@ auto APU::Sequencer::write(uint16 addr, uint8 data) -> void {
 
       if(!enable) {
         //power(bool) resets length counters when true (eg for CGB only)
-        apu.square1.power(system.cgb());
-        apu.square2.power(system.cgb());
-        apu.wave.power(system.cgb());
-        apu.noise.power(system.cgb());
+        apu.square1.power(Model::GameBoyColor());
+        apu.square2.power(Model::GameBoyColor());
+        apu.wave.power(Model::GameBoyColor());
+        apu.noise.power(Model::GameBoyColor());
         power();
       } else {
         apu.phase = 0;
@@ -121,10 +119,6 @@ auto APU::Sequencer::power() -> void {
   center = 0;
   left   = 0;
   right  = 0;
-
-  centerBias = 0;
-  leftBias = 0;
-  rightBias = 0;
 }
 
 auto APU::Sequencer::serialize(serializer& s) -> void {
@@ -145,8 +139,4 @@ auto APU::Sequencer::serialize(serializer& s) -> void {
   s.integer(center);
   s.integer(left);
   s.integer(right);
-
-  s.integer(centerBias);
-  s.integer(leftBias);
-  s.integer(rightBias);
 }

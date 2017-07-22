@@ -22,11 +22,14 @@ Program::Program(string_vector args) {
   emulators.append(new SuperFamicom::Interface);
   emulators.append(new MasterSystem::MasterSystemInterface);
   emulators.append(new MegaDrive::Interface);
-  emulators.append(new PCEngine::Interface);
-  emulators.append(new GameBoy::Interface);
+  emulators.append(new PCEngine::PCEngineInterface);
+  emulators.append(new PCEngine::SuperGrafxInterface);
+  emulators.append(new GameBoy::GameBoyInterface);
+  emulators.append(new GameBoy::GameBoyColorInterface);
   emulators.append(new GameBoyAdvance::Interface);
   emulators.append(new MasterSystem::GameGearInterface);
-  emulators.append(new WonderSwan::Interface);
+  emulators.append(new WonderSwan::WonderSwanInterface);
+  emulators.append(new WonderSwan::WonderSwanColorInterface);
 
   new Presentation;
   presentation->setVisible();
@@ -66,7 +69,8 @@ Program::Program(string_vector args) {
   for(auto& argument : args) {
     if(argument == "--fullscreen") {
       presentation->toggleFullScreen();
-    } else if(directory::exists(argument)) {
+    } else if(directory::exists(argument.split("|", 1L).right())) {
+      if(!argument.transform("\\", "/").endsWith("/")) argument.append("/");
       mediumQueue.append(argument);
     } else if(file::exists(argument)) {
       if(auto result = execute("icarus", "--import", argument)) {

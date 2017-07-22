@@ -6,14 +6,17 @@
 #include <emulator/emulator.hpp>
 #include <emulator/thread.hpp>
 #include <emulator/scheduler.hpp>
+#include <emulator/cheat.hpp>
 
 #include <processor/huc6280/huc6280.hpp>
 
 namespace PCEngine {
   #define platform Emulator::platform
-  using File = Emulator::File;
+  namespace File = Emulator::File;
   using Scheduler = Emulator::Scheduler;
+  using Cheat = Emulator::Cheat;
   extern Scheduler scheduler;
+  extern Cheat cheat;
 
   struct Thread : Emulator::Thread {
     auto create(auto (*entrypoint)() -> void, double frequency) -> void {
@@ -26,9 +29,16 @@ namespace PCEngine {
     }
   };
 
+  struct Model {
+    inline static auto PCEngine() -> bool;
+    inline static auto SuperGrafx() -> bool;
+  };
+
   #include <pce/controller/controller.hpp>
 
   #include <pce/cpu/cpu.hpp>
+  #include <pce/vpc/vpc.hpp>
+  #include <pce/vce/vce.hpp>
   #include <pce/vdc/vdc.hpp>
   #include <pce/psg/psg.hpp>
 

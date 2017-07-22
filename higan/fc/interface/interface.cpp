@@ -8,10 +8,6 @@ Interface::Interface() {
   information.manufacturer = "Nintendo";
   information.name         = "Famicom";
   information.overscan     = true;
-  information.resettable   = true;
-
-  information.capability.states = true;
-  information.capability.cheats = true;
 
   media.append({ID::Famicom, "Famicom", "fc"});
 
@@ -48,7 +44,7 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoSize() -> VideoSize {
+auto Interface::videoResolution() -> VideoSize {
   return {256, 240};
 }
 
@@ -57,10 +53,6 @@ auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
   uint h = 240;
   uint m = min(width / w, height / h);
   return {w * m, h * m};
-}
-
-auto Interface::videoFrequency() -> double {
-  return 21477272.0 / (262.0 * 1364.0 - 4.0);
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -118,10 +110,6 @@ auto Interface::videoColor(uint32 n) -> uint64 {
   return r << 32 | g << 16 | b << 0;
 }
 
-auto Interface::audioFrequency() -> double {
-  return 21477272.0 / 12.0;
-}
-
 auto Interface::loaded() -> bool {
   return system.loaded();
 }
@@ -149,10 +137,6 @@ auto Interface::connect(uint port, uint device) -> void {
 
 auto Interface::power() -> void {
   system.power();
-}
-
-auto Interface::reset() -> void {
-  system.reset();
 }
 
 auto Interface::run() -> void {

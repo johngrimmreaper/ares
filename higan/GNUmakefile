@@ -1,23 +1,12 @@
+build := release
 include ../nall/GNUmakefile
 
 target := tomoko
+objects := libco emulator audio video resource
 # console := true
 
-flags += -I. -I.. -O3
-objects := libco emulator audio video resource
+flags += -I. -I..
 
-# profile-guided optimization mode
-# pgo := instrument
-# pgo := optimize
-
-ifeq ($(pgo),instrument)
-  flags += -fprofile-generate
-  link += -lgcov
-else ifeq ($(pgo),optimize)
-  flags += -fprofile-use
-endif
-
-# platform
 ifeq ($(platform),windows)
   ifeq ($(console),true)
     link += -mconsole

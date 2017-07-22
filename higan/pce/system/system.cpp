@@ -4,14 +4,25 @@ namespace PCEngine {
 
 System system;
 Scheduler scheduler;
+Cheat cheat;
 #include "peripherals.cpp"
+#include "serialization.cpp"
 
 auto System::run() -> void {
-  if(scheduler.enter() == Scheduler::Event::Frame) vdc.refresh();
+  if(scheduler.enter() == Scheduler::Event::Frame) vce.refresh();
 }
 
-auto System::load(Emulator::Interface* interface) -> bool {
+auto System::runToSave() -> void {
+  scheduler.synchronize(cpu);
+  scheduler.synchronize(vce);
+  scheduler.synchronize(vdc0);
+  scheduler.synchronize(vdc1);
+  scheduler.synchronize(psg);
+}
+
+auto System::load(Emulator::Interface* interface, Model model) -> bool {
   information = {};
+  information.model = model;
 
   if(auto fp = platform->open(ID::System, "manifest.bml", File::Read, File::Required)) {
     information.manifest = fp->reads();
@@ -20,6 +31,8 @@ auto System::load(Emulator::Interface* interface) -> bool {
   auto document = BML::unserialize(information.manifest);
   if(!cartridge.load()) return false;
 
+  cpu.load();
+  serializeInit();
   this->interface = interface;
   information.colorburst = Emulator::Constants::Colorburst::NTSC;
   return information.loaded = true;
@@ -27,6 +40,7 @@ auto System::load(Emulator::Interface* interface) -> bool {
 
 auto System::save() -> void {
   cartridge.save();
+  cpu.save();
 }
 
 auto System::unload() -> void {
@@ -45,7 +59,10 @@ auto System::power() -> void {
   scheduler.reset();
   cartridge.power();
   cpu.power();
-  vdc.power();
+  vce.power();
+  vpc.power();
+  vdc0.power();
+  vdc1.power();
   psg.power();
   scheduler.primary(cpu);
 

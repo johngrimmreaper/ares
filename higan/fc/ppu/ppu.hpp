@@ -1,4 +1,8 @@
 struct PPU : Thread {
+  inline auto rate() const -> uint { return Region::NTSC() ? 4 : 5; }
+  inline auto vlines() const -> uint { return Region::NTSC() ? 262 : 312; }
+
+  //ppu.cpp
   static auto Enter() -> void;
   auto main() -> void;
   auto step(uint clocks) -> void;
@@ -8,7 +12,6 @@ struct PPU : Thread {
   auto refresh() -> void;
 
   auto power() -> void;
-  auto reset() -> void;
 
   //memory.cpp
   auto readCIRAM(uint11 addr) -> uint8;

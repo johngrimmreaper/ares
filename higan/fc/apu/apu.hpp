@@ -1,6 +1,9 @@
 struct APU : Thread {
   shared_pointer<Emulator::Stream> stream;
 
+  inline auto rate() const -> uint { return Region::NTSC() ? 12 : 16; }
+
+  //apu.cpp
   APU();
 
   static auto Enter() -> void;
@@ -10,33 +13,18 @@ struct APU : Thread {
   auto setSample(int16 sample) -> void;
 
   auto power() -> void;
-  auto reset() -> void;
 
   auto readIO(uint16 addr) -> uint8;
   auto writeIO(uint16 addr, uint8 data) -> void;
 
+  //serialization.cpp
   auto serialize(serializer&) -> void;
-
-  struct Filter {
-    auto runHipassStrong(int sample) -> int;
-    auto runHipassWeak(int sample) -> int;
-    auto runLopass(int sample) -> int;
-
-    auto serialize(serializer&) -> void;
-
-    enum : int { HiPassStrong = 225574, HiPassWeak = 57593, LoPass = 86322413 };
-
-    int64 hipassStrong;
-    int64 hipassWeak;
-    int64 lopass;
-  };
 
   struct Envelope {
     auto volume() const -> uint;
     auto clock() -> void;
 
     auto power() -> void;
-    auto reset() -> void;
 
     auto serialize(serializer&) -> void;
 
@@ -54,7 +42,6 @@ struct APU : Thread {
     auto clock(uint channel) -> void;
 
     auto power() -> void;
-    auto reset() -> void;
 
     auto serialize(serializer&) -> void;
 
@@ -73,7 +60,6 @@ struct APU : Thread {
     auto clock() -> uint8;
 
     auto power() -> void;
-    auto reset() -> void;
 
     auto serialize(serializer&) -> void;
 
@@ -95,7 +81,6 @@ struct APU : Thread {
     auto clock() -> uint8;
 
     auto power() -> void;
-    auto reset() -> void;
 
     auto serialize(serializer&) -> void;
 
@@ -117,7 +102,6 @@ struct APU : Thread {
     auto clock() -> uint8;
 
     auto power() -> void;
-    auto reset() -> void;
 
     auto serialize(serializer&) -> void;
 
@@ -138,7 +122,6 @@ struct APU : Thread {
     auto clock() -> uint8;
 
     auto power() -> void;
-    auto reset() -> void;
 
     auto serialize(serializer&) -> void;
 
@@ -181,7 +164,6 @@ struct APU : Thread {
   auto clockFrameCounter() -> void;
   auto clockFrameCounterDivider() -> void;
 
-  Filter filter;
   FrameCounter frame;
 
   uint8 enabledChannels;

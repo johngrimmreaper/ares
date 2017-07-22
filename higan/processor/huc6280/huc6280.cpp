@@ -22,10 +22,14 @@ namespace Processor {
 #define EA r.ea
 #define L lastCycle();
 #define ALU (this->*alu)
+
 #include "memory.cpp"
+#include "algorithms.cpp"
 #include "instruction.cpp"
 #include "instructions.cpp"
 #include "disassembler.cpp"
+#include "serialization.cpp"
+
 #undef A
 #undef X
 #undef Y

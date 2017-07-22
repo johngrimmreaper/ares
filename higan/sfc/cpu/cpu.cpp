@@ -8,12 +8,12 @@ CPU cpu;
 #include "io.cpp"
 #include "timing.cpp"
 #include "irq.cpp"
-#include "joypad.cpp"
 #include "serialization.cpp"
 
 auto CPU::interruptPending() const -> bool { return status.interruptPending; }
 auto CPU::pio() const -> uint8 { return io.pio; }
 auto CPU::joylatch() const -> bool { return io.joypadStrobeLatch; }
+auto CPU::synchronizing() const -> bool { return scheduler.synchronizing(); }
 
 CPU::CPU() {
   PPUcounter::scanline = {&CPU::scanline, this};
@@ -24,6 +24,9 @@ auto CPU::Enter() -> void {
 }
 
 auto CPU::main() -> void {
+  if(r.wai) return instructionWAI();
+  if(r.stp) return instructionSTP();
+
   if(status.interruptPending) {
     status.interruptPending = false;
     if(status.nmiPending) {
@@ -42,8 +45,8 @@ auto CPU::main() -> void {
     } else if(status.powerPending) {
       status.powerPending = false;
       step(186);
-      r.pc.l = bus.read(0xfffc, r.mdr);
-      r.pc.h = bus.read(0xfffd, r.mdr);
+      r.pc.byte(0) = bus.read(0xfffc, r.mdr);
+      r.pc.byte(1) = bus.read(0xfffd, r.mdr);
     }
   }
 
@@ -51,46 +54,14 @@ auto CPU::main() -> void {
 }
 
 auto CPU::load(Markup::Node node) -> bool {
-  version = max(1, min(2, node["cpu/version"].natural()));
+  version = node["cpu/version"].natural();
+  if(version < 1) version = 1;
+  if(version > 2) version = 2;
   return true;
 }
 
 auto CPU::power() -> void {
-  for(auto& byte : wram) byte = random(0x55);
-
-  //CPU
-  r.a = 0x0000;
-  r.x = 0x0000;
-  r.y = 0x0000;
-  r.s = 0x01ff;
-
-  //DMA
-  for(auto& channel : this->channel) {
-    channel.direction = 1;
-    channel.indirect = true;
-    channel.unused = true;
-    channel.reverseTransfer = true;
-    channel.fixedTransfer = true;
-    channel.transferMode = 7;
-
-    channel.targetAddress = 0xff;
-
-    channel.sourceAddress = 0xffff;
-    channel.sourceBank = 0xff;
-
-    channel.transferSize = 0xffff;
-    channel.indirectBank = 0xff;
-
-    channel.hdmaAddress = 0xffff;
-    channel.lineCounter = 0xff;
-    channel.unknown = 0xff;
-  }
-
-  status.powerPending = true;
-  status.interruptPending = true;
-}
-
-auto CPU::reset() -> void {
+  WDC65816::power();
   create(Enter, system.colorburst() * 6.0);
   coprocessors.reset();
   PPUcounter::reset();
@@ -115,18 +86,35 @@ auto CPU::reset() -> void {
   bus.map(reader, writer, "00-3f,80-bf:0000-1fff", 0x2000);
   bus.map(reader, writer, "7e-7f:0000-ffff", 0x20000);
 
-  //CPU
-  r.pc     = 0x000000;
-  r.x.h    = 0x00;
-  r.y.h    = 0x00;
-  r.s.h    = 0x01;
-  r.d      = 0x0000;
-  r.db     = 0x00;
-  r.p      = 0x34;
-  r.e      = 1;
-  r.mdr    = 0x00;
-  r.wai    = false;
-  r.vector = 0xfffc;  //reset vector address
+  for(auto& byte : wram) byte = random(0x55);
+
+  //DMA
+  for(auto& channel : this->channel) {
+    channel.dmaEnabled = false;
+    channel.hdmaEnabled = false;
+
+    channel.direction = 1;
+    channel.indirect = true;
+    channel.unused = true;
+    channel.reverseTransfer = true;
+    channel.fixedTransfer = true;
+    channel.transferMode = 7;
+
+    channel.targetAddress = 0xff;
+
+    channel.sourceAddress = 0xffff;
+    channel.sourceBank = 0xff;
+
+    channel.transferSize = 0xffff;
+    channel.indirectBank = 0xff;
+
+    channel.hdmaAddress = 0xffff;
+    channel.lineCounter = 0xff;
+    channel.unknown = 0xff;
+
+    channel.hdmaCompleted = false;
+    channel.hdmaDoTransfer = false;
+  }
 
   //$2140-217f
   for(auto& port : io.port) port = 0x00;
@@ -176,20 +164,14 @@ auto CPU::reset() -> void {
   alu.divctr = 0;
   alu.shift = 0;
 
-  //DMA
-  for(auto& channel : this->channel) {
-    channel.dmaEnabled = false;
-    channel.hdmaEnabled = false;
-
-    channel.hdmaCompleted = false;
-    channel.hdmaDoTransfer = false;
-  }
-
+  //Pipe
   pipe.valid = false;
   pipe.addr = 0;
   pipe.data = 0;
 
   //Timing
+  clockCounter = 0;
+
   status.clockCount = 0;
   status.lineClocks = lineclocks();
 
@@ -215,11 +197,11 @@ auto CPU::reset() -> void {
   status.irqPending    = false;
   status.irqHold       = false;
 
-  status.resetPending = !status.powerPending;
+  status.powerPending = true;
+  status.resetPending = false;
   status.interruptPending = true;
 
   status.dmaActive   = false;
-  status.dmaCounter  = 0;
   status.dmaClocks   = 0;
   status.dmaPending  = false;
   status.hdmaPending = false;
@@ -228,7 +210,6 @@ auto CPU::reset() -> void {
   status.autoJoypadActive  = false;
   status.autoJoypadLatch   = false;
   status.autoJoypadCounter = 0;
-  status.autoJoypadClock   = 0;
 }
 
 }

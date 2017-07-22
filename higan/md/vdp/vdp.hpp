@@ -7,7 +7,6 @@ struct VDP : Thread {
   auto refresh() -> void;
 
   auto power() -> void;
-  auto reset() -> void;
 
   //io.cpp
   auto read(uint24 addr) -> uint16;
@@ -19,21 +18,38 @@ struct VDP : Thread {
   auto readControlPort() -> uint16;
   auto writeControlPort(uint16 data) -> void;
 
-  //dma.cpp
-  auto dmaRun() -> void;
-  auto dmaLoad() -> void;
-  auto dmaFill() -> void;
-  auto dmaCopy() -> void;
+  struct DMA {
+    //dma.cpp
+    auto run() -> void;
+    auto load() -> void;
+    auto fill() -> void;
+    auto copy() -> void;
+
+    auto power() -> void;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
+
+    struct IO {
+      uint2  mode;
+      uint22 source;
+      uint16 length;
+      uint8  fill;
+      uint1  enable;
+      uint1  wait;
+    } io;
+  } dma;
 
   //render.cpp
+  auto frame() -> void;
   auto scanline() -> void;
   auto run() -> void;
   auto outputPixel(uint9 color) -> void;
 
-  //background.cpp
   struct Background {
     enum class ID : uint { PlaneA, Window, PlaneB } id;
 
+    //background.cpp
     auto isWindowed(uint x, uint y) -> bool;
 
     auto updateHorizontalScroll(uint y) -> void;
@@ -47,7 +63,9 @@ struct VDP : Thread {
     auto run(uint x, uint y) -> void;
 
     auto power() -> void;
-    auto reset() -> void;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
 
     struct IO {
       uint15 nametableAddress;
@@ -73,21 +91,23 @@ struct VDP : Thread {
 
     struct Output {
       uint6 color;
-      boolean priority;
+      uint1 priority;
     } output;
   };
   Background planeA{Background::ID::PlaneA};
   Background window{Background::ID::Window};
   Background planeB{Background::ID::PlaneB};
 
-  //sprite.cpp
   struct Sprite {
+    //sprite.cpp
     auto write(uint9 addr, uint16 data) -> void;
     auto scanline(uint y) -> void;
     auto run(uint x, uint y) -> void;
 
     auto power() -> void;
-    auto reset() -> void;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
 
     struct IO {
       uint15 attributeAddress;
@@ -108,8 +128,8 @@ struct VDP : Thread {
     };
 
     struct Output {
-      uint6   color;
-      boolean priority;
+      uint6 color;
+      uint1 priority;
     } output;
 
     array<Object, 80> oam;
@@ -117,24 +137,62 @@ struct VDP : Thread {
   };
   Sprite sprite;
 
-private:
-  auto screenWidth() const -> uint { return io.tileWidth ? 320 : 256; }
-  auto screenHeight() const -> uint { return io.overscan ? 240 : 224; }
+  //serialization.cpp
+  auto serialize(serializer&) -> void;
 
-  uint16 vram[32768];
-  uint16 vramExpansion[32768];  //not present in stock Mega Drive hardware
-  uint9 cram[64];
-  uint10 vsram[40];
+private:
+  auto pixelWidth() const -> uint { return latch.displayWidth ? 4 : 5; }
+  auto screenWidth() const -> uint { return latch.displayWidth ? 320 : 256; }
+  auto screenHeight() const -> uint { return latch.overscan ? 240 : 224; }
+  auto frameHeight() const -> uint { return Region::PAL() ? 312 : 262; }
+
+  //video RAM
+  struct VRAM {
+    //memory.cpp
+    auto read(uint15 address) const -> uint16;
+    auto write(uint15 address, uint16 data) -> void;
+
+    auto readByte(uint16 address) const -> uint8;
+    auto writeByte(uint16 address, uint8 data) -> void;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
+
+  private:
+    uint16 memory[32768];
+  } vram;
+
+  //vertical scroll RAM
+  struct VSRAM {
+    //memory.cpp
+    auto read(uint6 address) const -> uint10;
+    auto write(uint6 address, uint10 data) -> void;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
+
+  private:
+    uint10 memory[40];
+  } vsram;
+
+  //color RAM
+  struct CRAM {
+    //memory.cpp
+    auto read(uint6 address) const -> uint9;
+    auto write(uint6 address, uint9 data) -> void;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
+
+  private:
+    uint9 memory[64];
+  } cram;
 
   struct IO {
-    //internal state
-    boolean dmaFillWait;
-    uint8 dmaFillByte;
-
     //command
-    uint6 command;
+    uint6  command;
     uint16 address;
-    boolean commandPending;
+    uint1  commandPending;
 
     //$00  mode register 1
     uint1 displayOverlayEnable;
@@ -145,7 +203,6 @@ private:
     //$01  mode register 2
     uint1 videoMode;  //0 = Master System; 1 = Mega Drive
     uint1 overscan;   //0 = 224 lines; 1 = 240 lines
-    uint1 dmaEnable;
     uint1 verticalBlankInterruptEnable;
     uint1 displayEnable;
     uint1 externalVRAM;
@@ -160,7 +217,7 @@ private:
     uint1 externalInterruptEnable;
 
     //$0c  mode register 4
-    uint2 tileWidth;
+    uint2 displayWidth;
     uint2 interlaceMode;
     uint1 shadowHighlightEnable;
     uint1 externalColorEnable;
@@ -173,19 +230,22 @@ private:
 
     //$0f  data port auto-increment value
     uint8 dataIncrement;
-
-    //$13-$14  DMA length
-    uint16 dmaLength;
-
-    //$15-$17  DMA source
-    uint22 dmaSource;
-    uint2 dmaMode;
   } io;
+
+  struct Latch {
+    //per-frame
+    uint1 overscan;
+    uint8 horizontalInterruptCounter;
+
+    //per-scanline
+    uint2 displayWidth;
+  } latch;
 
   struct State {
     uint32* output = nullptr;
-    uint x;
-    uint y;
+    uint hdot;
+    uint hcounter;
+    uint vcounter;
   } state;
 
   uint32 buffer[1280 * 480];

@@ -1,6 +1,9 @@
 struct System {
+  enum class Region : uint { NTSC, PAL };
+
   auto loaded() const -> bool { return information.loaded; }
-  auto colorburst() const -> double { return information.colorburst; }
+  auto region() const -> Region { return information.region; }
+  auto frequency() const -> double { return information.frequency; }
 
   auto run() -> void;
   auto runToSave() -> void;
@@ -9,7 +12,6 @@ struct System {
   auto save() -> void;
   auto unload() -> void;
   auto power() -> void;
-  auto reset() -> void;
 
   auto init() -> void;
   auto term() -> void;
@@ -31,7 +33,8 @@ private:
 
   struct Information {
     bool loaded = false;
-    double colorburst = 0.0;
+    Region region = Region::NTSC;
+    double frequency = Emulator::Constants::Colorburst::NTSC * 6.0;
     string manifest;
   } information;
 
@@ -49,3 +52,6 @@ struct Peripherals {
 
 extern System system;
 extern Peripherals peripherals;
+
+auto Region::NTSC() -> bool { return system.region() == System::Region::NTSC; }
+auto Region::PAL() -> bool { return system.region() == System::Region::PAL; }
