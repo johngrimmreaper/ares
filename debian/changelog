@@ -1,9 +1,10 @@
-higan (103-1) UNRELEASED; urgency=medium
+higan (103-1) unstable; urgency=medium
 
   * New upstream release.
+  * Upload to unstable.
   * Bump Standards-Version to 4.0.0.
 
- -- Tobias Hansen <thansen@debian.org>  Sat, 22 Jul 2017 12:23:01 +0100
+ -- Tobias Hansen <thansen@debian.org>  Sat, 22 Jul 2017 13:36:18 +0100
 
 higan (102-1) experimental; urgency=medium
 
