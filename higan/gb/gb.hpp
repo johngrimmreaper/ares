@@ -12,7 +12,7 @@
 
 namespace GameBoy {
   #define platform Emulator::platform
-  using File = Emulator::File;
+  namespace File = Emulator::File;
   using Scheduler = Emulator::Scheduler;
   using Cheat = Emulator::Cheat;
   extern Scheduler scheduler;
@@ -27,6 +27,12 @@ namespace GameBoy {
     inline auto synchronize(Thread& thread) -> void {
       if(clock() >= thread.clock()) scheduler.resume(thread);
     }
+  };
+
+  struct Model {
+    inline static auto GameBoy() -> bool;
+    inline static auto GameBoyColor() -> bool;
+    inline static auto SuperGameBoy() -> bool;
   };
 
   #include <gb/memory/memory.hpp>

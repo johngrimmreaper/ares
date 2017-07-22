@@ -8,10 +8,11 @@ Interface::Interface() {
   information.manufacturer = "Sega";
   information.name         = "Mega Drive";
   information.overscan     = true;
-  information.resettable   = true;
 
-  information.capability.states = false;
-  information.capability.cheats = false;
+  regions.append({"Autodetect"});
+  regions.append({"NTSC-J"});
+  regions.append({"NTSC-U"});
+  regions.append({"PAL"});
 
   media.append({ID::MegaDrive, "Mega Drive", "md"});
 
@@ -54,7 +55,7 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoSize() -> VideoSize {
+auto Interface::videoResolution() -> VideoSize {
   return {1280, 480};
 }
 
@@ -63,10 +64,6 @@ auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
   uint h = 240;
   uint m = min(width / w, height / h);
   return {w * m, h * m};
-}
-
-auto Interface::videoFrequency() -> double {
-  return 60.0;
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -85,10 +82,6 @@ auto Interface::videoColor(uint32 color) -> uint64 {
   return r << 32 | g << 16 | b << 0;
 }
 
-auto Interface::audioFrequency() -> double {
-  return 52'000.0;
-}
-
 auto Interface::loaded() -> bool {
   return system.loaded();
 }
@@ -102,6 +95,7 @@ auto Interface::save() -> void {
 }
 
 auto Interface::unload() -> void {
+  save();
   system.unload();
 }
 
@@ -113,20 +107,21 @@ auto Interface::power() -> void {
   system.power();
 }
 
-auto Interface::reset() -> void {
-  system.reset();
-}
-
 auto Interface::run() -> void {
   system.run();
 }
 
 auto Interface::serialize() -> serializer {
-  return {};
+  system.runToSave();
+  return system.serialize();
 }
 
 auto Interface::unserialize(serializer& s) -> bool {
-  return false;
+  return system.unserialize(s);
+}
+
+auto Interface::cheatSet(const string_vector& list) -> void {
+  cheat.assign(list);
 }
 
 auto Interface::cap(const string& name) -> bool {

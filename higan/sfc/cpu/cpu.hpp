@@ -1,7 +1,8 @@
-struct CPU : Processor::R65816, Thread, PPUcounter {
+struct CPU : Processor::WDC65816, Thread, PPUcounter {
   auto interruptPending() const -> bool override;
   auto pio() const -> uint8;
   auto joylatch() const -> bool;
+  auto synchronizing() const -> bool override;
 
   CPU();
 
@@ -12,7 +13,6 @@ struct CPU : Processor::R65816, Thread, PPUcounter {
   auto main() -> void;
   auto load(Markup::Node) -> bool;
   auto power() -> void;
-  auto reset() -> void;
 
   //dma.cpp
   auto dmaStep(uint clocks) -> void;
@@ -55,7 +55,8 @@ struct CPU : Processor::R65816, Thread, PPUcounter {
   auto writeDMA(uint24 addr, uint8 data) -> void;
 
   //timing.cpp
-  auto dmaCounter() const -> uint;
+  inline auto dmaCounter() const -> uint;
+  inline auto joypadCounter() const -> uint;
 
   auto step(uint clocks) -> void;
   auto scanline() -> void;
@@ -74,7 +75,7 @@ struct CPU : Processor::R65816, Thread, PPUcounter {
   alwaysinline auto irqTest() -> bool;
 
   //joypad.cpp
-  auto stepAutoJoypadPoll() -> void;
+  auto joypadEdge() -> void;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
@@ -85,6 +86,7 @@ struct CPU : Processor::R65816, Thread, PPUcounter {
 
 private:
   uint version = 2;  //allowed: 1, 2
+  uint clockCounter;
 
   struct Status {
     bool interruptPending;
@@ -121,7 +123,6 @@ private:
 
     //DMA
     bool dmaActive;
-    uint dmaCounter;
     uint dmaClocks;
     bool dmaPending;
     bool hdmaPending;
@@ -131,7 +132,6 @@ private:
     bool autoJoypadActive;
     bool autoJoypadLatch;
     uint autoJoypadCounter;
-    uint autoJoypadClock;
   } status;
 
   struct IO {

@@ -6,13 +6,28 @@ namespace Processor {
 
 struct Z80 {
   struct Bus {
+    virtual auto requested() -> bool { return _requested; }
+    virtual auto granted() -> bool { return _granted; }
+
+    virtual auto request(bool value) -> void { _requested = value; }
+    virtual auto grant(bool value) -> void { _granted = value; }
+
     virtual auto read(uint16 addr) -> uint8 = 0;
     virtual auto write(uint16 addr, uint8 data) -> void = 0;
+
     virtual auto in(uint8 addr) -> uint8 = 0;
     virtual auto out(uint8 addr, uint8 data) -> void = 0;
+
+    //serialization.cpp
+    virtual auto serialize(serializer&) -> void;
+
+  private:
+    bool _requested;
+    bool _granted;
   };
 
   virtual auto step(uint clocks) -> void = 0;
+  virtual auto synchronizing() const -> bool = 0;
 
   //z80.cpp
   auto power() -> void;
@@ -21,6 +36,7 @@ struct Z80 {
   auto parity(uint8) const -> bool;
 
   //memory.cpp
+  auto yield() -> void;
   auto wait(uint clocks = 1) -> void;
   auto opcode() -> uint8;
   auto operand() -> uint8;
@@ -40,7 +56,7 @@ struct Z80 {
   auto instructionCBd(uint16 addr, uint8 code) -> void;
   auto instructionED(uint8 code) -> void;
 
-  //instructions.cpp
+  //algorithms.cpp
   auto ADD(uint8, uint8, bool = false) -> uint8;
   auto AND(uint8, uint8) -> uint8;
   auto BIT(uint3, uint8) -> uint8;
@@ -60,6 +76,7 @@ struct Z80 {
   auto SUB(uint8, uint8, bool = false) -> uint8;
   auto XOR(uint8, uint8) -> uint8;
 
+  //instructions.cpp
   auto instructionADC_a_irr(uint16&) -> void;
   auto instructionADC_a_n() -> void;
   auto instructionADC_a_r(uint8&) -> void;
@@ -193,6 +210,9 @@ struct Z80 {
   auto instructionXOR_a_n() -> void;
   auto instructionXOR_a_r(uint8&) -> void;
 
+  //serialization.cpp
+  auto serialize(serializer&) -> void;
+
   //disassembler.cpp
   auto disassemble(uint16 pc) -> string;
   auto disassemble(uint16 pc, uint8 prefix, uint8 code) -> string;
@@ -217,11 +237,11 @@ struct Z80 {
     uint16 sp;
     uint16 pc;
 
-    boolean ei;    //EI instruction executed
-    boolean halt;  //HALT instruction executed
-    boolean iff1;  //interrupt flip-flop 1
-    boolean iff2;  //interrupt flip-flop 2
-    uint2 im;      //interrupt mode (0-2)
+    bool ei;    //EI instruction executed
+    bool halt;  //HALT instruction executed
+    bool iff1;  //interrupt flip-flop 1
+    bool iff2;  //interrupt flip-flop 2
+    uint2 im;   //interrupt mode (0-2)
 
     Pair* hlp = nullptr;
   } r;

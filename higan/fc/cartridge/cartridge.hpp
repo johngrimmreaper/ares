@@ -2,10 +2,14 @@
 #include "board/board.hpp"
 
 struct Cartridge : Thread {
+  inline auto rate() const -> uint { return Region::NTSC() ? 12 : 16; }
+
+  //cartridge.cpp
   static auto Enter() -> void;
   auto main() -> void;
 
   auto pathID() const -> uint { return information.pathID; }
+  auto region() const -> string { return information.region; }
   auto sha256() const -> string { return information.sha256; }
   auto manifest() const -> string { return information.manifest; }
   auto title() const -> string { return information.title; }
@@ -15,12 +19,13 @@ struct Cartridge : Thread {
   auto unload() -> void;
 
   auto power() -> void;
-  auto reset() -> void;
 
+  //serialization.cpp
   auto serialize(serializer&) -> void;
 
   struct Information {
     uint pathID = 0;
+    string region;
     string sha256;
     string manifest;
     string title;

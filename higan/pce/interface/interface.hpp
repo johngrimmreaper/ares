@@ -4,6 +4,7 @@ struct ID {
   enum : uint {
     System,
     PCEngine,
+    SuperGrafx,
   };
 
   struct Port { enum : uint {
@@ -17,23 +18,18 @@ struct ID {
 };
 
 struct Interface : Emulator::Interface {
-  using Emulator::Interface::load;
-
   Interface();
 
   auto manifest() -> string override;
   auto title() -> string override;
 
-  auto videoSize() -> VideoSize override;
+  auto videoResolution() -> VideoSize override;
   auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
-  auto videoFrequency() -> double override;
   auto videoColors() -> uint32 override;
   auto videoColor(uint32 color) -> uint64 override;
 
-  auto audioFrequency() -> double override;
-
   auto loaded() -> bool override;
-  auto load(uint id) -> bool override;
+  auto sha256() -> string override;
   auto save() -> void override;
   auto unload() -> void override;
 
@@ -44,9 +40,23 @@ struct Interface : Emulator::Interface {
   auto serialize() -> serializer override;
   auto unserialize(serializer&) -> bool override;
 
+  auto cheatSet(const string_vector&) -> void override;
+
   auto cap(const string& name) -> bool override;
   auto get(const string& name) -> any override;
   auto set(const string& name, const any& value) -> bool override;
+};
+
+struct PCEngineInterface : Interface {
+  PCEngineInterface();
+
+  auto load(uint id) -> bool override;
+};
+
+struct SuperGrafxInterface : Interface {
+  SuperGrafxInterface();
+
+  auto load(uint id) -> bool override;
 };
 
 struct Settings {

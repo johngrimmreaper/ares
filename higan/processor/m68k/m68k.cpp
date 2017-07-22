@@ -12,13 +12,9 @@ enum : bool { Reverse = 1 };
 #include "instructions.cpp"
 #include "disassembler.cpp"
 #include "instruction.cpp"
+#include "serialization.cpp"
 
 auto M68K::power() -> void {
-}
-
-auto M68K::reset() -> void {
-  instructionsExecuted = 0;
-
   for(auto& dr : r.d) dr = 0;
   for(auto& ar : r.a) ar = 0;
   r.sp = 0;
@@ -49,6 +45,7 @@ auto M68K::exception(uint exception, uint vector, uint priority) -> void {
   auto pc = r.pc;
   auto sr = readSR();
 
+  if(!r.s) swap(r.a[7], r.sp);
   r.i = priority;
   r.s = 1;
   r.t = 0;

@@ -8,10 +8,6 @@ Interface::Interface() {
   information.manufacturer = "Nintendo";
   information.name         = "Game Boy Advance";
   information.overscan     = false;
-  information.resettable   = false;
-
-  information.capability.states = true;
-  information.capability.cheats = false;
 
   media.append({ID::GameBoyAdvance, "Game Boy Advance", "gba"});
 
@@ -43,19 +39,19 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoSize() -> VideoSize {
-  return {240, 160};
+auto Interface::videoResolution() -> VideoSize {
+  if(!settings.rotateLeft) {
+    return {240, 160};
+  } else {
+    return {160, 240};
+  }
 }
 
 auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  uint w = 240;
-  uint h = 160;
+  uint w = videoResolution().width;
+  uint h = videoResolution().height;
   uint m = min(width / w, height / h);
   return {w * m, h * m};
-}
-
-auto Interface::videoFrequency() -> double {
-  return 16777216.0 / (228.0 * 1232.0);
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -84,10 +80,6 @@ auto Interface::videoColor(uint32 color) -> uint64 {
   return r << 32 | g << 16 | b << 0;
 }
 
-auto Interface::audioFrequency() -> double {
-  return 16777216.0 / 512.0;
-}
-
 auto Interface::loaded() -> bool {
   return system.loaded();
 }
@@ -109,10 +101,6 @@ auto Interface::power() -> void {
   system.power();
 }
 
-auto Interface::reset() -> void {
-  system.power();
-}
-
 auto Interface::run() -> void {
   system.run();
 }
@@ -129,12 +117,14 @@ auto Interface::unserialize(serializer& s) -> bool {
 auto Interface::cap(const string& name) -> bool {
   if(name == "Blur Emulation") return true;
   if(name == "Color Emulation") return true;
+  if(name == "Rotate Display") return true;
   return false;
 }
 
 auto Interface::get(const string& name) -> any {
   if(name == "Blur Emulation") return settings.blurEmulation;
   if(name == "Color Emulation") return settings.colorEmulation;
+  if(name == "Rotate Display") return settings.rotateLeft;
   return {};
 }
 
@@ -148,6 +138,12 @@ auto Interface::set(const string& name, const any& value) -> bool {
   if(name == "Color Emulation" && value.is<bool>()) {
     settings.colorEmulation = value.get<bool>();
     system.configureVideoPalette();
+    return true;
+  }
+
+  if(name == "Rotate Display" && value.is<bool>()) {
+    settings.rotateLeft = value.get<bool>();
+    system.configureVideoEffects();
     return true;
   }
 

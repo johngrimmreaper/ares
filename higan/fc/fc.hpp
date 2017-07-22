@@ -8,11 +8,11 @@
 #include <emulator/scheduler.hpp>
 #include <emulator/cheat.hpp>
 
-#include <processor/r6502/r6502.hpp>
+#include <processor/mos6502/mos6502.hpp>
 
 namespace Famicom {
   #define platform Emulator::platform
-  using File = Emulator::File;
+  namespace File = Emulator::File;
   using Scheduler = Emulator::Scheduler;
   using Cheat = Emulator::Cheat;
   extern Scheduler scheduler;
@@ -27,6 +27,11 @@ namespace Famicom {
     inline auto synchronize(Thread& thread) -> void {
       if(clock() >= thread.clock()) scheduler.resume(thread);
     }
+  };
+
+  struct Region {
+    static inline auto NTSC() -> bool;
+    static inline auto PAL() -> bool;
   };
 
   #include <fc/controller/controller.hpp>

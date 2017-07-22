@@ -706,7 +706,7 @@ auto M68K::instructionMOVE_FROM_SR(EffectiveAddress ea) -> void {
 }
 
 auto M68K::instructionMOVE_TO_CCR(EffectiveAddress ea) -> void {
-  auto data = read<Byte>(ea);
+  auto data = read<Word>(ea);
   writeCCR(data);
 }
 
@@ -1121,8 +1121,12 @@ auto M68K::instructionSWAP(DataRegister with) -> void {
 }
 
 auto M68K::instructionTAS(EffectiveAddress with) -> void {
-  auto data = read<Byte, Hold>(with);
-  write<Byte>(with, data | 0x80);
+//auto data = read<Byte, Hold>(with);
+//write<Byte>(with, data | 0x80);
+
+  //Mega Drive models 1&2 have a bug that prevents TAS write cycle from completing
+  //this bugged behavior is required for certain software to function correctly
+  auto data = read<Byte>(with);
 
   r.c = 0;
   r.v = 0;
@@ -1131,7 +1135,7 @@ auto M68K::instructionTAS(EffectiveAddress with) -> void {
 }
 
 auto M68K::instructionTRAP(uint4 vector) -> void {
-  exception(Exception::Trap, vector);
+  exception(Exception::Trap, 32 + vector, r.i);
 }
 
 auto M68K::instructionTRAPV() -> void {

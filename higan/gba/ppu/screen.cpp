@@ -1,88 +1,59 @@
-auto PPU::renderForceBlank() -> void {
-  uint32* line = output + regs.vcounter * 240;
-  for(auto x : range(240)) line[x] = 0x7fff;
-}
+auto PPU::Screen::run(uint x, uint y) -> uint15 {
+  if(ppu.blank()) return 0x7fff;
 
-auto PPU::renderScreen() -> void {
-  uint32* line = output + regs.vcounter * 240;
+  //determine active window
+  uint1 active[6] = {true, true, true, true, true, true};  //enable all layers if no windows are enabled
+  if(ppu.window0.io.enable || ppu.window1.io.enable || ppu.window2.io.enable) {
+    memory::copy(&active, &ppu.window3.io.active, sizeof(active));
+    if(ppu.window2.io.enable && ppu.window2.output) memory::copy(&active, &ppu.window2.io.active, sizeof(active));
+    if(ppu.window1.io.enable && ppu.window1.output) memory::copy(&active, &ppu.window1.io.active, sizeof(active));
+    if(ppu.window0.io.enable && ppu.window0.output) memory::copy(&active, &ppu.window0.io.active, sizeof(active));
+  }
 
-  if(regs.bg[0].control.mosaic) renderMosaicBackground(BG0);
-  if(regs.bg[1].control.mosaic) renderMosaicBackground(BG1);
-  if(regs.bg[2].control.mosaic) renderMosaicBackground(BG2);
-  if(regs.bg[3].control.mosaic) renderMosaicBackground(BG3);
-  renderMosaicObject();
+  //priority sorting: find topmost two pixels
+  Pixel layers[6] = {
+    ppu.objects.mosaic,
+    ppu.bg0.mosaic,
+    ppu.bg1.mosaic,
+    ppu.bg2.mosaic,
+    ppu.bg3.mosaic,
+    {true, 3, ppu.pram[0]},
+  };
 
-  for(auto x : range(240)) {
-    Registers::WindowFlags flags;
-    flags.enable[BG0] = true;  //enable all layers if no windows are enabled
-    flags.enable[BG1] = true;
-    flags.enable[BG2] = true;
-    flags.enable[BG3] = true;
-    flags.enable[OBJ] = true;
-    flags.enable[SFX] = true;
-
-    //determine active window
-    if(regs.control.enablewindow[In0] || regs.control.enablewindow[In1] || regs.control.enablewindow[Obj]) {
-      flags = regs.windowflags[Out];
-      if(regs.control.enablewindow[Obj] && windowmask[Obj][x]) flags = regs.windowflags[Obj];
-      if(regs.control.enablewindow[In1] && windowmask[In1][x]) flags = regs.windowflags[In1];
-      if(regs.control.enablewindow[In0] && windowmask[In0][x]) flags = regs.windowflags[In0];
-    }
-
-    //priority sorting: find topmost two pixels
-    uint a = 5, b = 5;
-    for(int p = 3; p >= 0; p--) {
-      for(int l = 5; l >= 0; l--) {
-        if(layer[l][x].enable && layer[l][x].priority == p && flags.enable[l]) {
-          b = a;
-          a = l;
-        }
+  uint aboveLayer = 5, belowLayer = 5;
+  for(int priority = 3; priority >= 0; priority--) {
+    for(int layer = 5; layer >= 0; layer--) {
+      if(layers[layer].enable && layers[layer].priority == priority && active[layer]) {
+        belowLayer = aboveLayer;
+        aboveLayer = layer;
       }
     }
-
-    auto& above = layer[a];
-    auto& below = layer[b];
-    bool blendabove = regs.blend.control.above[a];
-    bool blendbelow = regs.blend.control.below[b];
-    uint color = above[x].color;
-    auto eva = min(16u, (uint)regs.blend.eva);
-    auto evb = min(16u, (uint)regs.blend.evb);
-    auto evy = min(16u, (uint)regs.blend.evy);
-
-    //perform blending, if needed
-    if(flags.enable[SFX] == false) {
-    } else if(above[x].translucent && blendbelow) {
-      color = blend(above[x].color, eva, below[x].color, evb);
-    } else if(regs.blend.control.mode == 1 && blendabove && blendbelow) {
-      color = blend(above[x].color, eva, below[x].color, evb);
-    } else if(regs.blend.control.mode == 2 && blendabove) {
-      color = blend(above[x].color, 16 - evy, 0x7fff, evy);
-    } else if(regs.blend.control.mode == 3 && blendabove) {
-      color = blend(above[x].color, 16 - evy, 0x0000, evy);
-    }
-
-    //output pixel
-    line[x] = color;
   }
-}
 
-auto PPU::renderWindow(uint w) -> void {
-  uint y = regs.vcounter;
+  auto above = layers[aboveLayer];
+  auto below = layers[belowLayer];
+  auto eva = min(16u, (uint)io.blendEVA);
+  auto evb = min(16u, (uint)io.blendEVB);
+  auto evy = min(16u, (uint)io.blendEVY);
+  uint15 color = above.color;
 
-  uint y1 = regs.window[w].y1, y2 = regs.window[w].y2;
-  uint x1 = regs.window[w].x1, x2 = regs.window[w].x2;
-
-  if(y2 < y1 || y2 > 160) y2 = 160;
-  if(x2 < x1 || x2 > 240) x2 = 240;
-
-  if(y >= y1 && y < y2) {
-    for(uint x = x1; x < x2; x++) {
-      windowmask[w][x] = true;
+  //color blending
+  if(active[SFX]) {
+    if(above.translucent && io.blendBelow[belowLayer]) {
+      color = blend(above.color, eva, below.color, evb);
+    } else if(io.blendMode == 1 && io.blendAbove[aboveLayer] && io.blendBelow[belowLayer]) {
+      color = blend(above.color, eva, below.color, evb);
+    } else if(io.blendMode == 2 && io.blendAbove[aboveLayer]) {
+      color = blend(above.color, 16 - evy, 0x7fff, evy);
+    } else if(io.blendMode == 3 && io.blendAbove[aboveLayer]) {
+      color = blend(above.color, 16 - evy, 0x0000, evy);
     }
   }
+
+  return color;
 }
 
-auto PPU::blend(uint above, uint eva, uint below, uint evb) -> uint {
+auto PPU::Screen::blend(uint15 above, uint eva, uint15 below, uint evb) -> uint15 {
   uint5 ar = above >> 0, ag = above >> 5, ab = above >> 10;
   uint5 br = below >> 0, bg = below >> 5, bb = below >> 10;
 
@@ -90,5 +61,9 @@ auto PPU::blend(uint above, uint eva, uint below, uint evb) -> uint {
   uint g = (ag * eva + bg * evb) >> 4;
   uint b = (ab * eva + bb * evb) >> 4;
 
-  return min(31, r) << 0 | min(31, g) << 5 | min(31, b) << 10;
+  return min(31u, r) << 0 | min(31u, g) << 5 | min(31u, b) << 10;
+}
+
+auto PPU::Screen::power() -> void {
+  memory::fill(&io, sizeof(IO));
 }

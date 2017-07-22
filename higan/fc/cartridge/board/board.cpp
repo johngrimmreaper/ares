@@ -109,12 +109,12 @@ auto Board::mirror(uint addr, uint size) -> uint {
 }
 
 auto Board::main() -> void {
-  cartridge.step(12 * 4095);
+  cartridge.step(cartridge.rate() * 4095);
   tick();
 }
 
 auto Board::tick() -> void {
-  cartridge.step(12);
+  cartridge.step(cartridge.rate());
   cartridge.synchronize(cpu);
 }
 
@@ -129,9 +129,6 @@ auto Board::writeCHR(uint addr, uint8 data) -> void {
 }
 
 auto Board::power() -> void {
-}
-
-auto Board::reset() -> void {
 }
 
 auto Board::serialize(serializer& s) -> void {

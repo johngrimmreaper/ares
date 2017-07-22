@@ -24,7 +24,7 @@ struct Pair {
   auto operator!() const -> bool { return !(hi || lo); }
 
   auto operator++() -> Pair& { lo++; hi += lo == 0; return *this; }
-  auto operator--() -> Pair& { hi -= lo == 0; lo--; }
+  auto operator--() -> Pair& { hi -= lo == 0; lo--; return *this; }
 
   auto operator++(int) -> Pair { Pair r = *this; lo++; hi += lo == 0; return r; }
   auto operator--(int) -> Pair { Pair r = *this; hi -= lo == 0; lo--; return r; }
@@ -319,7 +319,7 @@ template<> struct stringify<Pair> {
     do {
       Pair quotient, remainder;
       div(source, 10, quotient, remainder);
-      *p++ = '0' + remainder;
+      *p++ = remainder + '0';
       source = quotient;
     } while(source);
     _size = p - _output;
@@ -342,6 +342,19 @@ inline auto to_vector(Pair value) -> vector<uint8_t> {
   }
   return result;
 }
+
+/*
+inline auto hex(const Pair& value, long precision = 0, char padchar = '0') -> string {
+  string text;
+  if(!upper(value)) {
+    text.append(hex(lower(value)));
+  } else {
+    text.append(hex(upper(value)));
+    text.append(hex(lower(value), TypeBits / 4, '0'));
+  }
+  return pad(text, precision, padchar);
+}
+*/
 
 }
 

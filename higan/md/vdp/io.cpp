@@ -13,7 +13,7 @@ auto VDP::read(uint24 addr) -> uint16 {
 
   //counter
   case 0xc00008: case 0xc0000a: case 0xc0000c: case 0xc0000e: {
-    return state.y << 8 | (state.x >> 1) << 0;
+    return state.vcounter << 8 | (state.hdot >> 1) << 0;
   }
 
   }
@@ -45,7 +45,7 @@ auto VDP::readDataPort() -> uint16 {
   //VRAM read
   if(io.command.bits(0,3) == 0) {
     auto address = io.address.bits(1,15);
-    auto data = vram[address];
+    auto data = vram.read(address);
     io.address += io.dataIncrement;
     return data;
   }
@@ -53,8 +53,7 @@ auto VDP::readDataPort() -> uint16 {
   //VSRAM read
   if(io.command.bits(0,3) == 4) {
     auto address = io.address.bits(1,6);
-    if(address >= 40) return 0x0000;
-    auto data = vsram[address];
+    auto data = vsram.read(address);
     io.address += io.dataIncrement;
     return data;
   }
@@ -62,7 +61,7 @@ auto VDP::readDataPort() -> uint16 {
   //CRAM read
   if(io.command.bits(0,3) == 8) {
     auto address = io.address.bits(1,6);
-    auto data = cram[address];
+    auto data = cram.read(address);
     io.address += io.dataIncrement;
     return data.bits(0,2) << 1 | data.bits(3,5) << 2 | data.bits(6,8) << 3;
   }
@@ -74,18 +73,18 @@ auto VDP::writeDataPort(uint16 data) -> void {
   io.commandPending = false;
 
   //DMA VRAM fill
-  if(io.dmaFillWait.lower()) {
-    io.dmaFillByte = data >> 8;
+  if(dma.io.wait) {
+    dma.io.wait = false;
+    dma.io.fill = data >> 8;
+    //falls through to memory write
+    //causes extra transfer to occur on VRAM fill operations
   }
 
   //VRAM write
   if(io.command.bits(0,3) == 1) {
     auto address = io.address.bits(1,15);
     if(io.address.bit(0)) data = data >> 8 | data << 8;
-    vram[address] = data;
-    if(address >= sprite.io.attributeAddress && address < sprite.io.attributeAddress + 320) {
-      sprite.write(address, data);
-    }
+    vram.write(address, data);
     io.address += io.dataIncrement;
     return;
   }
@@ -93,9 +92,8 @@ auto VDP::writeDataPort(uint16 data) -> void {
   //VSRAM write
   if(io.command.bits(0,3) == 5) {
     auto address = io.address.bits(1,6);
-    if(address >= 40) return;
     //data format: ---- --yy yyyy yyyy
-    vsram[address] = data.bits(0,9);
+    vsram.write(address, data.bits(0,9));
     io.address += io.dataIncrement;
     return;
   }
@@ -104,7 +102,7 @@ auto VDP::writeDataPort(uint16 data) -> void {
   if(io.command.bits(0,3) == 3) {
     auto address = io.address.bits(1,6);
     //data format: ---- bbb- ggg- rrr-
-    cram[address] = data.bits(1,3) << 0 | data.bits(5,7) << 3 | data.bits(9,11) << 6;
+    cram.write(address, data.bits(1,3) << 0 | data.bits(5,7) << 3 | data.bits(9,11) << 6);
     io.address += io.dataIncrement;
     return;
   }
@@ -117,8 +115,8 @@ auto VDP::readControlPort() -> uint16 {
 
   uint16 result = 0b0011'0100'0000'0000;
   result |= 1 << 9;  //FIFO empty
-  result |= (state.y >= 240) << 3;  //vertical blank
-  result |= (state.y >= 240 || state.x >= 320) << 2;  //horizontal blank
+  result |= (state.vcounter >= screenHeight()) << 3;  //vertical blank
+  result |= (state.vcounter >= screenHeight() || state.hcounter >= 1280) << 2;  //horizontal blank
   result |= io.command.bit(5) << 1;  //DMA active
   return result;
 }
@@ -132,7 +130,8 @@ auto VDP::writeControlPort(uint16 data) -> void {
 
     io.command.bits(2,5) = data.bits(4,7);
     io.address.bits(14,15) = data.bits(0,1);
-    io.dmaFillWait = io.dmaMode == 2 && io.command.bits(4,5) == 2;
+    if(!dma.io.enable) io.command.bit(5) = 0;
+    if(dma.io.mode == 3) dma.io.wait = false;
     return;
   }
 
@@ -162,12 +161,12 @@ auto VDP::writeControlPort(uint16 data) -> void {
   case 0x01: {
     io.videoMode = data.bit(2);
     io.overscan = data.bit(3);
-    io.dmaEnable = data.bit(4);
+    dma.io.enable = data.bit(4);
     io.verticalBlankInterruptEnable = data.bit(5);
     io.displayEnable = data.bit(6);
     io.externalVRAM = data.bit(7);
 
-    if(!io.dmaEnable) io.command.bit(5) = 0;
+    if(!dma.io.enable) io.command.bit(5) = 0;
 
     return;
   }
@@ -226,7 +225,7 @@ auto VDP::writeControlPort(uint16 data) -> void {
 
   //mode register 4
   case 0x0c: {
-    io.tileWidth = data.bit(0) | data.bit(7) << 1;
+    io.displayWidth = data.bit(0) | data.bit(7) << 1;
     io.interlaceMode = data.bits(1,2);
     io.shadowHighlightEnable = data.bit(3);
     io.externalColorEnable = data.bit(4);
@@ -280,32 +279,33 @@ auto VDP::writeControlPort(uint16 data) -> void {
 
   //DMA length
   case 0x13: {
-    io.dmaLength.bits(0,7) = data.bits(0,7);
+    dma.io.length.bits(0,7) = data.bits(0,7);
     return;
   }
 
   //DMA length
   case 0x14: {
-    io.dmaLength.bits(8,15) = data.bits(0,7);
+    dma.io.length.bits(8,15) = data.bits(0,7);
     return;
   }
 
   //DMA source
   case 0x15: {
-    io.dmaSource.bits(0,7) = data.bits(0,7);
+    dma.io.source.bits(0,7) = data.bits(0,7);
     return;
   }
 
   //DMA source
   case 0x16: {
-    io.dmaSource.bits(8,15) = data.bits(0,7);
+    dma.io.source.bits(8,15) = data.bits(0,7);
     return;
   }
 
   //DMA source
   case 0x17: {
-    io.dmaSource.bits(16,21) = data.bits(0,5);
-    io.dmaMode = data.bits(6,7);
+    dma.io.source.bits(16,21) = data.bits(0,5);
+    dma.io.mode = data.bits(6,7);
+    dma.io.wait = dma.io.mode.bit(1);
     return;
   }
 

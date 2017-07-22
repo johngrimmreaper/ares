@@ -1,4 +1,4 @@
-struct SA1 : Processor::R65816, Thread {
+struct SA1 : Processor::WDC65816, Thread {
   //sa1.cpp
   static auto Enter() -> void;
   auto main() -> void;
@@ -8,12 +8,12 @@ struct SA1 : Processor::R65816, Thread {
   alwaysinline auto triggerIRQ() -> void;
   alwaysinline auto lastCycle() -> void override;
   alwaysinline auto interruptPending() const -> bool override;
+  auto synchronizing() const -> bool override;
 
   auto init() -> void;
   auto load() -> void;
   auto unload() -> void;
   auto power() -> void;
-  auto reset() -> void;
 
   //bus.cpp
   struct CPUIRAM : Memory {

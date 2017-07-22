@@ -8,8 +8,7 @@ struct ID {
   };
 
   struct Port { enum : uint {
-    HardwareHorizontal,
-    HardwareVertical,
+    Hardware,
   };};
 
   struct Device { enum : uint {
@@ -18,24 +17,16 @@ struct ID {
 };
 
 struct Interface : Emulator::Interface {
-  using Emulator::Interface::load;
-
   Interface();
 
   auto manifest() -> string override;
   auto title() -> string override;
 
-  auto videoSize() -> VideoSize override;
+  auto videoResolution() -> VideoSize override;
   auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
-  auto videoFrequency() -> double override;
-  auto videoColors() -> uint32;
-  auto videoColor(uint32 color) -> uint64;
-
-  auto audioFrequency() -> double override;
 
   auto loaded() -> bool override;
   auto sha256() -> string override;
-  auto load(uint id) -> bool override;
   auto save() -> void override;
   auto unload() -> void override;
 
@@ -52,9 +43,32 @@ struct Interface : Emulator::Interface {
   auto set(const string& name, const any& value) -> bool override;
 };
 
+struct WonderSwanInterface : Interface {
+  using Emulator::Interface::load;
+
+  WonderSwanInterface();
+
+  auto videoColors() -> uint32 override;
+  auto videoColor(uint32 color) -> uint64 override;
+
+  auto load(uint id) -> bool override;
+};
+
+struct WonderSwanColorInterface : Interface {
+  using Emulator::Interface::load;
+
+  WonderSwanColorInterface();
+
+  auto videoColors() -> uint32 override;
+  auto videoColor(uint32 color) -> uint64 override;
+
+  auto load(uint id) -> bool override;
+};
+
 struct Settings {
   bool blurEmulation = true;
   bool colorEmulation = true;
+  bool rotateLeft = false;
 };
 
 extern Settings settings;

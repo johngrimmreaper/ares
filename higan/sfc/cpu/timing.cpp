@@ -1,27 +1,25 @@
-auto CPU::dmaCounter() const -> uint {
-  return (status.dmaCounter + hcounter()) & 7;
-}
+auto CPU::dmaCounter() const -> uint { return clockCounter & 7; }
+auto CPU::joypadCounter() const -> uint { return clockCounter & 255; }
 
 auto CPU::step(uint clocks) -> void {
   status.irqLock = false;
   uint ticks = clocks >> 1;
   while(ticks--) {
+    clockCounter += 2;
     tick();
     if(hcounter() & 2) pollInterrupts();
+    if(joypadCounter() == 0) joypadEdge();
   }
 
   Thread::step(clocks);
   for(auto peripheral : peripherals) synchronize(*peripheral);
 
-  status.autoJoypadClock += clocks;
-  if(status.autoJoypadClock >= 256) {
-    status.autoJoypadClock -= 256;
-    stepAutoJoypadPoll();
-  }
-
   if(!status.dramRefreshed && hcounter() >= status.dramRefreshPosition) {
     status.dramRefreshed = true;
-    step(40);
+    for(auto _ : range(5)) {
+      step(8);
+      aluEdge();
+    }
   }
 
   #if defined(DEBUGGER)
@@ -33,7 +31,6 @@ auto CPU::step(uint clocks) -> void {
 
 //called by ppu.tick() when Hcounter=0
 auto CPU::scanline() -> void {
-  status.dmaCounter = (status.dmaCounter + status.lineClocks) & 7;
   status.lineClocks = lineclocks();
 
   //forcefully sync S-CPU to other processors, in case chips are not communicating
@@ -136,6 +133,34 @@ auto CPU::dmaEdge() -> void {
       status.dmaClocks = 0;
       status.dmaActive = true;
     }
+  }
+}
+
+//called every 256 clocks; see CPU::step()
+auto CPU::joypadEdge() -> void {
+  if(vcounter() >= ppu.vdisp()) {
+    //cache enable state at first iteration
+    if(status.autoJoypadCounter == 0) status.autoJoypadLatch = io.autoJoypadPoll;
+    status.autoJoypadActive = status.autoJoypadCounter <= 15;
+
+    if(status.autoJoypadActive && status.autoJoypadLatch) {
+      if(status.autoJoypadCounter == 0) {
+        SuperFamicom::peripherals.controllerPort1->latch(1);
+        SuperFamicom::peripherals.controllerPort2->latch(1);
+        SuperFamicom::peripherals.controllerPort1->latch(0);
+        SuperFamicom::peripherals.controllerPort2->latch(0);
+      }
+
+      uint2 port0 = SuperFamicom::peripherals.controllerPort1->data();
+      uint2 port1 = SuperFamicom::peripherals.controllerPort2->data();
+
+      io.joy1 = io.joy1 << 1 | port0.bit(0);
+      io.joy2 = io.joy2 << 1 | port1.bit(0);
+      io.joy3 = io.joy3 << 1 | port0.bit(1);
+      io.joy4 = io.joy4 << 1 | port1.bit(1);
+    }
+
+    status.autoJoypadCounter++;
   }
 }
 

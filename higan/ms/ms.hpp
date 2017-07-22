@@ -6,20 +6,17 @@
 #include <emulator/emulator.hpp>
 #include <emulator/thread.hpp>
 #include <emulator/scheduler.hpp>
+#include <emulator/cheat.hpp>
 
 #include <processor/z80/z80.hpp>
 
 namespace MasterSystem {
   #define platform Emulator::platform
-  using File = Emulator::File;
+  namespace File = Emulator::File;
   using Scheduler = Emulator::Scheduler;
+  using Cheat = Emulator::Cheat;
   extern Scheduler scheduler;
-  struct Interface;
-
-  enum class Model : uint {
-    MasterSystem,
-    GameGear,
-  };
+  extern Cheat cheat;
 
   struct Thread : Emulator::Thread {
     auto create(auto (*entrypoint)() -> void, double frequency) -> void {
@@ -30,6 +27,16 @@ namespace MasterSystem {
     inline auto synchronize(Thread& thread) -> void {
       if(clock() >= thread.clock()) scheduler.resume(thread);
     }
+  };
+
+  struct Model {
+    inline static auto MasterSystem() -> bool;
+    inline static auto GameGear() -> bool;
+  };
+
+  struct Region {
+    inline static auto NTSC() -> bool;
+    inline static auto PAL() -> bool;
   };
 
   #include <ms/controller/controller.hpp>

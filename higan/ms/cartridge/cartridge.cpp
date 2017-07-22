@@ -4,21 +4,22 @@ namespace MasterSystem {
 
 Cartridge cartridge;
 #include "mapper.cpp"
+#include "serialization.cpp"
 
 auto Cartridge::load() -> bool {
   information = {};
 
-  switch(system.model()) {
-  case Model::MasterSystem:
-    if(auto pathID = platform->load(ID::MasterSystem, "Master System", "ms")) {
-      information.pathID = pathID();
+  if(Model::MasterSystem()) {
+    if(auto loaded = platform->load(ID::MasterSystem, "Master System", "ms", {"NTSC", "PAL"})) {
+      information.pathID = loaded.pathID();
+      information.region = loaded.option();
     } else return false;
-    break;
-  case Model::GameGear:
-    if(auto pathID = platform->load(ID::GameGear, "Game Gear", "gg")) {
-      information.pathID = pathID();
+  }
+
+  if(Model::GameGear()) {
+    if(auto loaded = platform->load(ID::GameGear, "Game Gear", "gg")) {
+      information.pathID = loaded.pathID();
     } else return false;
-    break;
   }
 
   if(auto fp = platform->open(pathID(), "manifest.bml", File::Read, File::Required)) {

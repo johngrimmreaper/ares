@@ -3,21 +3,11 @@
 namespace WonderSwan {
 
 Settings settings;
+#include "wonderswan.cpp"
+#include "wonderswan-color.cpp"
 
 Interface::Interface() {
-  information.manufacturer = "Bandai";
-  information.name         = "WonderSwan";
-  information.overscan     = false;
-  information.resettable   = false;
-
-  information.capability.states = true;
-  information.capability.cheats = true;
-
-  media.append({ID::WonderSwan,      "WonderSwan",       "ws" });
-  media.append({ID::WonderSwanColor, "WonderSwan Color", "wsc"});
-
-  Port hardwareHorizontalPort{ID::Port::HardwareHorizontal, "Hardware - Horizontal"};
-  Port hardwareVerticalPort{ID::Port::HardwareVertical, "Hardware - Vertical"};
+  Port hardwarePort{ID::Port::Hardware, "Hardware"};
 
   { Device device{ID::Device::Controls, "Controls"};
     device.inputs.append({0, "Y1"});
@@ -31,13 +21,10 @@ Interface::Interface() {
     device.inputs.append({0, "B"});
     device.inputs.append({0, "A"});
     device.inputs.append({0, "Start"});
-    device.inputs.append({0, "Rotate"});
-    hardwareHorizontalPort.devices.append(device);
-    hardwareVerticalPort.devices.append(device);
+    hardwarePort.devices.append(device);
   }
 
-  ports.append(move(hardwareHorizontalPort));
-  ports.append(move(hardwareVerticalPort));
+  ports.append(move(hardwarePort));
 }
 
 auto Interface::manifest() -> string {
@@ -48,48 +35,19 @@ auto Interface::title() -> string {
   return cartridge.information.title;
 }
 
-auto Interface::videoSize() -> VideoSize {
-  return {224, 224};
+auto Interface::videoResolution() -> VideoSize {
+  if(!settings.rotateLeft) {
+    return {224, 144};
+  } else {
+    return {144, 224};
+  }
 }
 
 auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  uint w = 224;
-  uint h = 224;
+  uint w = videoResolution().width;
+  uint h = videoResolution().height;
   uint m = min(width / w, height / h);
   return {w * m, h * m};
-}
-
-auto Interface::videoFrequency() -> double {
-  return 3072000.0 / (159.0 * 256.0);  //~75.47hz
-}
-
-auto Interface::videoColors() -> uint32 {
-  return 1 << 12;
-}
-
-auto Interface::videoColor(uint32 color) -> uint64 {
-  uint b = color.bits(0, 3);
-  uint g = color.bits(4, 7);
-  uint r = color.bits(8,11);
-
-  uint64_t R = image::normalize(r, 4, 16);
-  uint64_t G = image::normalize(g, 4, 16);
-  uint64_t B = image::normalize(b, 4, 16);
-
-  if(settings.colorEmulation) {
-    R = (r * 26 + g *  4 + b *  2);
-    G = (         g * 24 + b *  8);
-    B = (r *  6 + g *  4 + b * 22);
-    R = image::normalize(min(480, R), 9, 16);
-    G = image::normalize(min(480, G), 9, 16);
-    B = image::normalize(min(480, B), 9, 16);
-  }
-
-  return R << 32 | G << 16 | B << 0;
-}
-
-auto Interface::audioFrequency() -> double {
-  return 3072000.0;
 }
 
 auto Interface::loaded() -> bool {
@@ -98,12 +56,6 @@ auto Interface::loaded() -> bool {
 
 auto Interface::sha256() -> string {
   return cartridge.information.sha256;
-}
-
-auto Interface::load(uint id) -> bool {
-  if(id == ID::WonderSwan) return system.load(this, Model::WonderSwan);
-  if(id == ID::WonderSwanColor) return system.load(this, Model::WonderSwanColor);
-  return false;
 }
 
 auto Interface::save() -> void {
@@ -139,12 +91,14 @@ auto Interface::cheatSet(const string_vector& list) -> void {
 auto Interface::cap(const string& name) -> bool {
   if(name == "Blur Emulation") return true;
   if(name == "Color Emulation") return true;
+  if(name == "Rotate Display") return true;
   return false;
 }
 
 auto Interface::get(const string& name) -> any {
   if(name == "Blur Emulation") return settings.blurEmulation;
   if(name == "Color Emulation") return settings.colorEmulation;
+  if(name == "Rotate Display") return settings.rotateLeft;
   return {};
 }
 
@@ -158,6 +112,12 @@ auto Interface::set(const string& name, const any& value) -> bool {
   if(name == "Color Emulation" && value.is<bool>()) {
     settings.colorEmulation = value.get<bool>();
     system.configureVideoPalette();
+    return true;
+  }
+
+  if(name == "Rotate Display" && value.is<bool>()) {
+    settings.rotateLeft = value.get<bool>();
+    system.configureVideoEffects();
     return true;
   }
 

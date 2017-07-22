@@ -7,11 +7,15 @@ namespace Processor {
 #include "registers.cpp"
 #include "memory.cpp"
 #include "instruction.cpp"
+#include "algorithms.cpp"
 #include "instructions.cpp"
+#include "serialization.cpp"
 
 auto Z80::power() -> void {
   memory::fill(&r, sizeof(Registers));
   r.hlp = &r.hl;
+  bus->request(false);
+  bus->grant(true);
 }
 
 auto Z80::irq(bool maskable, uint16 pc, uint8 extbus) -> bool {

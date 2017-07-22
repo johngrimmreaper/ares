@@ -3,6 +3,7 @@
 namespace MasterSystem {
 
 CPU cpu;
+#include "serialization.cpp"
 
 auto CPU::Enter() -> void {
   while(true) scheduler.synchronize(), cpu.main();
@@ -29,9 +30,13 @@ auto CPU::step(uint clocks) -> void {
   for(auto peripheral : peripherals) synchronize(*peripheral);
 }
 
+auto CPU::synchronizing() const -> bool {
+  return scheduler.synchronizing();
+}
+
 //called once per frame
 auto CPU::pollPause() -> void {
-  if(system.model() == Model::MasterSystem) {
+  if(Model::MasterSystem()) {
     static bool pause = 0;
     bool state = platform->inputPoll(ID::Port::Hardware, ID::Device::MasterSystemControls, 1);
     if(!pause && state) setNMI(1);
@@ -48,13 +53,16 @@ auto CPU::setINT(bool value) -> void {
 }
 
 auto CPU::power() -> void {
-  Z80::bus = &MasterSystem::bus;
   Z80::power();
   create(CPU::Enter, system.colorburst());
 
   r.pc = 0x0000;  //reset vector address
 
   memory::fill(&state, sizeof(State));
+}
+
+CPU::CPU() {
+  Z80::bus = &MasterSystem::bus;
 }
 
 }

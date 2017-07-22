@@ -14,6 +14,9 @@ auto SA1::Enter() -> void {
 }
 
 auto SA1::main() -> void {
+  if(r.wai) return instructionWAI();
+  if(r.stp) return instructionSTP();
+
   if(mmio.sa1_rdyb || mmio.sa1_resb) {
     //SA-1 co-processor is asleep
     tick();
@@ -32,16 +35,15 @@ auto SA1::main() -> void {
 
 //override R65816::interrupt() to support SA-1 vector location IO registers
 auto SA1::interrupt() -> void {
-  read(r.pc.d);
+  read(r.pc);
   idle();
-  if(!r.e) writeSP(r.pc.b);
-  writeSP(r.pc.h);
-  writeSP(r.pc.l);
-  writeSP(r.e ? (r.p & ~0x10) : r.p);
-  r.pc.w = r.vector;
-  r.pc.b = 0x00;
+  if(!r.e) push(r.pc >> 16);
+  push(r.pc >> 8);
+  push(r.pc >> 0);
+  push(r.e ? r.p & ~0x10 : r.p);
   r.p.i = 1;
   r.p.d = 0;
+  r.pc = r.vector;  //PC bank set to 0x00
 }
 
 auto SA1::lastCycle() -> void {
@@ -73,6 +75,10 @@ auto SA1::lastCycle() -> void {
 
 auto SA1::interruptPending() const -> bool {
   return status.interruptPending;
+}
+
+auto SA1::synchronizing() const -> bool {
+  return scheduler.synchronizing();
 }
 
 auto SA1::tick() -> void {
@@ -124,31 +130,13 @@ auto SA1::unload() -> void {
 }
 
 auto SA1::power() -> void {
-  r.a = 0x0000;
-  r.x = 0x0000;
-  r.y = 0x0000;
-  r.s = 0x01ff;
-}
-
-auto SA1::reset() -> void {
+  WDC65816::power();
   create(SA1::Enter, system.colorburst() * 6.0);
 
   cpubwram.dma = false;
   for(auto addr : range(iram.size())) {
     iram.write(addr, 0x00);
   }
-
-  r.pc.d   = 0x000000;
-  r.x.h    = 0x00;
-  r.y.h    = 0x00;
-  r.s.h    = 0x01;
-  r.d      = 0x0000;
-  r.db     = 0x00;
-  r.p      = 0x34;
-  r.e      = 1;
-  r.mdr    = 0x00;
-  r.wai    = false;
-  r.vector = 0x0000;
 
   status.counter = 0;
 

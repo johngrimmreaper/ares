@@ -1,11 +1,12 @@
 auto CPU::serialize(serializer& s) -> void {
-  R65816::serialize(s);
+  WDC65816::serialize(s);
   Thread::serialize(s);
   PPUcounter::serialize(s);
 
   s.array(wram);
 
   s.integer(version);
+  s.integer(clockCounter);
 
   s.integer(status.interruptPending);
 
@@ -39,7 +40,6 @@ auto CPU::serialize(serializer& s) -> void {
   s.integer(status.resetPending);
 
   s.integer(status.dmaActive);
-  s.integer(status.dmaCounter);
   s.integer(status.dmaClocks);
   s.integer(status.dmaPending);
   s.integer(status.hdmaPending);
@@ -48,7 +48,6 @@ auto CPU::serialize(serializer& s) -> void {
   s.integer(status.autoJoypadActive);
   s.integer(status.autoJoypadLatch);
   s.integer(status.autoJoypadCounter);
-  s.integer(status.autoJoypadClock);
 
   s.array(io.port);
 
@@ -86,25 +85,25 @@ auto CPU::serialize(serializer& s) -> void {
   s.integer(alu.divctr);
   s.integer(alu.shift);
 
-  for(uint n : range(8)) {
-    s.integer(channel[n].dmaEnabled);
-    s.integer(channel[n].hdmaEnabled);
-    s.integer(channel[n].direction);
-    s.integer(channel[n].indirect);
-    s.integer(channel[n].unused);
-    s.integer(channel[n].reverseTransfer);
-    s.integer(channel[n].fixedTransfer);
-    s.integer(channel[n].transferMode);
-    s.integer(channel[n].targetAddress);
-    s.integer(channel[n].sourceAddress);
-    s.integer(channel[n].sourceBank);
-    s.integer(channel[n].transferSize);
-    s.integer(channel[n].indirectBank);
-    s.integer(channel[n].hdmaAddress);
-    s.integer(channel[n].lineCounter);
-    s.integer(channel[n].unknown);
-    s.integer(channel[n].hdmaCompleted);
-    s.integer(channel[n].hdmaDoTransfer);
+  for(auto& channel : this->channel) {
+    s.integer(channel.dmaEnabled);
+    s.integer(channel.hdmaEnabled);
+    s.integer(channel.direction);
+    s.integer(channel.indirect);
+    s.integer(channel.unused);
+    s.integer(channel.reverseTransfer);
+    s.integer(channel.fixedTransfer);
+    s.integer(channel.transferMode);
+    s.integer(channel.targetAddress);
+    s.integer(channel.sourceAddress);
+    s.integer(channel.sourceBank);
+    s.integer(channel.transferSize);
+    s.integer(channel.indirectBank);
+    s.integer(channel.hdmaAddress);
+    s.integer(channel.lineCounter);
+    s.integer(channel.unknown);
+    s.integer(channel.hdmaCompleted);
+    s.integer(channel.hdmaDoTransfer);
   }
 
   s.integer(pipe.valid);

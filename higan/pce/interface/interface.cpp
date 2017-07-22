@@ -2,18 +2,13 @@
 
 namespace PCEngine {
 
+Model model;
 Settings settings;
+#include "pc-engine.cpp"
+#include "supergrafx.cpp"
 
 Interface::Interface() {
-  information.manufacturer = "NEC";
-  information.name         = "PC Engine";
-  information.overscan     = true;
-  information.resettable   = false;
-
-  information.capability.states = false;
-  information.capability.cheats = false;
-
-  media.append({ID::PCEngine, "PC Engine", "pce"});
+  information.overscan = true;
 
   Port controllerPort{ID::Port::Controller, "Controller Port"};
 
@@ -44,20 +39,16 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoSize() -> VideoSize {
-  return {256, 240};
+auto Interface::videoResolution() -> VideoSize {
+  return {1140, 240};
 }
 
 auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
   auto a = arc ? 8.0 / 7.0 : 1.0;
-  uint w = 256;
+  uint w = 285;
   uint h = 240;
   uint m = min(width / (w * a), height / h);
   return {uint(w * a * m), uint(h * m)};
-}
-
-auto Interface::videoFrequency() -> double {
-  return 60.0;
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -76,17 +67,12 @@ auto Interface::videoColor(uint32 color) -> uint64 {
   return r << 32 | g << 16 | b << 0;
 }
 
-auto Interface::audioFrequency() -> double {
-  return 44'100.0;  //todo: not accurate
-}
-
 auto Interface::loaded() -> bool {
   return system.loaded();
 }
 
-auto Interface::load(uint id) -> bool {
-  if(id == ID::PCEngine) return system.load(this);
-  return false;
+auto Interface::sha256() -> string {
+  return cartridge.sha256();
 }
 
 auto Interface::save() -> void {
@@ -94,6 +80,7 @@ auto Interface::save() -> void {
 }
 
 auto Interface::unload() -> void {
+  save();
   system.unload();
 }
 
@@ -110,11 +97,16 @@ auto Interface::run() -> void {
 }
 
 auto Interface::serialize() -> serializer {
-  return {};
+  system.runToSave();
+  return system.serialize();
 }
 
 auto Interface::unserialize(serializer& s) -> bool {
-  return false;
+  return system.unserialize(s);
+}
+
+auto Interface::cheatSet(const string_vector& list) -> void {
+  cheat.assign(list);
 }
 
 auto Interface::cap(const string& name) -> bool {

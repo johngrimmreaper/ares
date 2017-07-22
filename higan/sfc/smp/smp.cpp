@@ -8,11 +8,17 @@ SMP smp;
 #include "timing.cpp"
 #include "serialization.cpp"
 
+auto SMP::synchronizing() const -> bool {
+  return scheduler.synchronizing();
+}
+
 auto SMP::Enter() -> void {
   while(true) scheduler.synchronize(), smp.main();
 }
 
 auto SMP::main() -> void {
+  if(r.wai) return instructionWAI();
+  if(r.stp) return instructionSTP();
   instruction();
 }
 
@@ -27,22 +33,11 @@ auto SMP::load(Markup::Node node) -> bool {
 }
 
 auto SMP::power() -> void {
-  //targets not initialized/changed upon reset
-  timer0.target = 0;
-  timer1.target = 0;
-  timer2.target = 0;
-}
-
-auto SMP::reset() -> void {
+  SPC700::power();
   create(Enter, 32040.0 * 768.0);
 
-  regs.pc.l = iplrom[62];
-  regs.pc.h = iplrom[63];
-  regs.a = 0x00;
-  regs.x = 0x00;
-  regs.y = 0x00;
-  regs.s = 0xef;
-  regs.p = 0x02;
+  r.pc.byte.l = iplrom[62];
+  r.pc.byte.h = iplrom[63];
 
   for(auto& byte : apuram) byte = random(0x00);
   apuram[0x00f4] = 0x00;
@@ -95,6 +90,10 @@ auto SMP::reset() -> void {
   timer0.enable = false;
   timer1.enable = false;
   timer2.enable = false;
+
+  timer0.target = 0;
+  timer1.target = 0;
+  timer2.target = 0;
 }
 
 }
