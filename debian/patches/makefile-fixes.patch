@@ -11,7 +11,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/GNUmakefile
 +++ b/higan/GNUmakefile
-@@ -30,10 +30,10 @@
+@@ -19,10 +19,10 @@
  else ifeq ($(platform),macosx)
    flags += -march=native
  else ifneq ($(filter $(platform),linux bsd),)

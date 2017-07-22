@@ -5,7 +5,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/target-tomoko/GNUmakefile
 +++ b/higan/target-tomoko/GNUmakefile
-@@ -81,9 +81,7 @@
+@@ -84,9 +84,7 @@
  endif
  
  install:
@@ -16,11 +16,3 @@ Author: Tobias Hansen <thansen@debian.org>
  else ifeq ($(platform),macosx)
  	mkdir -p ~/Library/Application\ Support/$(name)/
  	mkdir -p ~/Emulation/System/
-@@ -92,6 +90,7 @@
- 	cp -R systems/* ~/Library/Application\ Support/$(name)/
- else ifneq ($(filter $(platform),linux bsd),)
- 	mkdir -p $(prefix)/bin/
-+	mkdir -p $(prefix)/share/applications/
- 	mkdir -p $(prefix)/share/icons/
- 	mkdir -p $(prefix)/share/$(name)/
- 	cp out/$(name) $(prefix)/bin/$(name)

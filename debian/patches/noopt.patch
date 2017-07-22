@@ -4,15 +4,14 @@ Description: Support DEB_BUILD_OPTIONS='noopt'
 Author: Michael Gold <michael@bitplane.org>
 Bug-Debian: http://bugs.debian.org/737364
 
---- a/higan/GNUmakefile
-+++ b/higan/GNUmakefile
-@@ -3,7 +3,8 @@
- target := tomoko
- # console := true
+--- a/nall/GNUmakefile
++++ b/nall/GNUmakefile
+@@ -61,7 +61,7 @@
  
--flags += -I. -I.. -O3
-+flags += -I. -I..
-+flags += $(if $(filter noopt,$(DEB_BUILD_OPTIONS)),-O0,-O3)
- objects := libco emulator audio video resource
- 
- # profile-guided optimization mode
+ # build settings
+ ifeq ($(build),release)
+-  flags += -O3
++  flags += $(if $(filter noopt,$(DEB_BUILD_OPTIONS)),-O0,-O3)
+ else ifeq ($(build),stable)
+   flags += -O1
+ else ifeq ($(build),debug)
