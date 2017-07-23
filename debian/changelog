@@ -1,3 +1,10 @@
+higan (103-2) unstable; urgency=medium
+
+  * Apply sjlj-ftbfs.patch from Adrian Bunk (Closes: 869385)
+    (Include settings.h for thread_local.)
+
+ -- Tobias Hansen <thansen@debian.org>  Sun, 23 Jul 2017 21:46:27 +0100
+
 higan (103-1) unstable; urgency=medium
 
   * New upstream release.

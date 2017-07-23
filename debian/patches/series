@@ -11,3 +11,4 @@ create_config.patch
 include_cmath.patch
 disable-alsa-and-udev-on-non-linux.patch
 tomoko-makefile-fixes.patch
+sjlj-ftbfs.patch
