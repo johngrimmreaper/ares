@@ -4,6 +4,7 @@ higan (104-1) UNRELEASED; urgency=medium
   * Remove sjlj-ftbfs.patch (applied upstream).
   * Remove old user guide since there is now an official user guide
     provided online and linked from the Help menu.
+  * Bump Standards-Version to 4.1.0.
 
  -- Tobias Hansen <thansen@debian.org>  Sat, 02 Sep 2017 18:46:23 +0100
 
