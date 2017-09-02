@@ -35,19 +35,12 @@ auto Interface::title() -> string {
   return cartridge.information.title;
 }
 
-auto Interface::videoResolution() -> VideoSize {
+auto Interface::videoResolution() -> VideoResolution {
   if(!settings.rotateLeft) {
-    return {224, 144};
+    return {224, 144, 224, 144, 1.0};
   } else {
-    return {144, 224};
+    return {144, 224, 144, 224, 1.0};
   }
-}
-
-auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  uint w = videoResolution().width;
-  uint h = videoResolution().height;
-  uint m = min(width / w, height / h);
-  return {w * m, h * m};
 }
 
 auto Interface::loaded() -> bool {

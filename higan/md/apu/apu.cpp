@@ -3,6 +3,7 @@
 namespace MegaDrive {
 
 APU apu;
+#include "bus.cpp"
 #include "serialization.cpp"
 
 auto APU::Enter() -> void {
@@ -52,16 +53,18 @@ auto APU::enable(bool value) -> void {
 }
 
 auto APU::power() -> void {
-  Z80::bus = &busAPU;
+  Z80::bus = this;
   Z80::power();
-  create(APU::Enter, system.colorburst());
-  memory::fill(&state, sizeof(State));
+  bus->grant(false);
+  create(APU::Enter, system.frequency() / 15.0);
+  state = {};
 }
 
 auto APU::reset() -> void {
-  create(APU::Enter, system.colorburst());
-  memory::fill(&r, sizeof(Registers));
-  memory::fill(&state, sizeof(State));
+  Z80::power();
+  bus->grant(false);
+  create(APU::Enter, system.frequency() / 15.0);
+  state = {};
 }
 
 }

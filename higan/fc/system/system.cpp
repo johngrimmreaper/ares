@@ -2,7 +2,6 @@
 
 namespace Famicom {
 
-#include "peripherals.cpp"
 #include "video.cpp"
 #include "serialization.cpp"
 System system;
@@ -32,8 +31,12 @@ auto System::load(Emulator::Interface* interface) -> bool {
   auto document = BML::unserialize(information.manifest);
   if(!cartridge.load()) return false;
 
-  if(cartridge.region() == "NTSC") {
-    information.region = Region::NTSC;
+  if(cartridge.region() == "NTSC-J") {
+    information.region = Region::NTSCJ;
+    information.frequency = Emulator::Constants::Colorburst::NTSC * 6.0;
+  }
+  if(cartridge.region() == "NTSC-U") {
+    information.region = Region::NTSCU;
     information.frequency = Emulator::Constants::Colorburst::NTSC * 6.0;
   }
   if(cartridge.region() == "PAL") {
@@ -52,7 +55,9 @@ auto System::save() -> void {
 
 auto System::unload() -> void {
   if(!loaded()) return;
-  peripherals.unload();
+  cpu.peripherals.reset();
+  controllerPort1.unload();
+  controllerPort2.unload();
   cartridge.unload();
   information.loaded = false;
 }
@@ -72,7 +77,12 @@ auto System::power() -> void {
   apu.power();
   ppu.power();
   scheduler.primary(cpu);
-  peripherals.reset();
+
+  controllerPort1.power(ID::Port::Controller1);
+  controllerPort2.power(ID::Port::Controller2);
+
+  controllerPort1.connect(settings.controllerPort1);
+  controllerPort2.connect(settings.controllerPort2);
 }
 
 auto System::init() -> void {

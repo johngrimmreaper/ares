@@ -5,15 +5,9 @@ MasterSystemInterface::MasterSystemInterface() {
 
   media.append({ID::MasterSystem, "Master System", "ms"});
 
-  Port hardware{ID::Port::Hardware, "Hardware"};
   Port controllerPort1{ID::Port::Controller1, "Controller Port 1"};
   Port controllerPort2{ID::Port::Controller2, "Controller Port 2"};
-
-  { Device device{ID::Device::MasterSystemControls, "Controls"};
-    device.inputs.append({0, "Reset"});
-    device.inputs.append({0, "Pause"});
-    hardware.devices.append(device);
-  }
+  Port hardware{ID::Port::Hardware, "Hardware"};
 
   { Device device{ID::Device::None, "None"};
     controllerPort1.devices.append(device);
@@ -31,21 +25,19 @@ MasterSystemInterface::MasterSystemInterface() {
     controllerPort2.devices.append(device);
   }
 
-  ports.append(move(hardware));
+  { Device device{ID::Device::MasterSystemControls, "Controls"};
+    device.inputs.append({0, "Reset"});
+    device.inputs.append({0, "Pause"});
+    hardware.devices.append(device);
+  }
+
   ports.append(move(controllerPort1));
   ports.append(move(controllerPort2));
+  ports.append(move(hardware));
 }
 
-auto MasterSystemInterface::videoResolution() -> VideoSize {
-  return {256, 240};
-}
-
-auto MasterSystemInterface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  auto a = arc ? 8.0 / 7.0 : 1.0;
-  uint w = 256;
-  uint h = 240;
-  uint m = min(width / (w * a), height / h);
-  return {uint(w * a * m), uint(h * m)};
+auto MasterSystemInterface::videoResolution() -> VideoResolution {
+  return {256, 240, 256, 240, 8.0 / 7.0};
 }
 
 auto MasterSystemInterface::videoColors() -> uint32 {
@@ -67,4 +59,9 @@ auto MasterSystemInterface::videoColor(uint32 color) -> uint64 {
 auto MasterSystemInterface::load(uint id) -> bool {
   if(id == ID::MasterSystem) return system.load(this, System::Model::MasterSystem);
   return false;
+}
+
+auto MasterSystemInterface::connect(uint port, uint device) -> void {
+  if(port == ID::Port::Controller1) controllerPort1.connect(settings.controllerPort1 = device);
+  if(port == ID::Port::Controller2) controllerPort2.connect(settings.controllerPort2 = device);
 }

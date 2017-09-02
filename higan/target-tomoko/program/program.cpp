@@ -15,7 +15,6 @@ unique_pointer<Program> program;
 
 Program::Program(string_vector args) {
   program = this;
-  Application::onMain({&Program::main, this});
 
   Emulator::platform = this;
   emulators.append(new Famicom::Interface);
@@ -34,32 +33,43 @@ Program::Program(string_vector args) {
   new Presentation;
   presentation->setVisible();
 
-  video = Video::create(settings["Video/Driver"].text());
-  video->set(Video::Handle, presentation->viewport.handle());
-  video->set(Video::Synchronize, settings["Video/Synchronize"].boolean());
-  if(!video->init()) video = Video::create("None");
+  if(settings["Crashed"].boolean()) {
+    MessageDialog().setText("Driver crash detected. Video/Audio/Input drivers have been disabled.").information();
+    settings["Video/Driver"].setValue("None");
+    settings["Audio/Driver"].setValue("None");
+    settings["Input/Driver"].setValue("None");
+  }
 
+  settings["Crashed"].setValue(true);
+  settings.save();
+
+  video = Video::create(settings["Video/Driver"].text());
+  video->setContext(presentation->viewport.handle());
+  video->setBlocking(settings["Video/Synchronize"].boolean());
+  if(!video->ready()) MessageDialog().setText("Failed to initialize video driver").warning();
   presentation->clearViewport();
 
   audio = Audio::create(settings["Audio/Driver"].text());
-  audio->set(Audio::Device, settings["Audio/Device"].text());
-  audio->set(Audio::Handle, presentation->viewport.handle());
-  audio->set(Audio::Synchronize, settings["Audio/Synchronize"].boolean());
-  audio->set(Audio::Latency, 80u);
-  if(!audio->init()) audio = Audio::create("None");
+  audio->setExclusive(settings["Audio/Exclusive"].boolean());
+  audio->setContext(presentation->viewport.handle());
+  audio->setDevice(settings["Audio/Device"].text());
+  audio->setBlocking(settings["Audio/Synchronize"].boolean());
+  audio->setChannels(2);
+  if(!audio->ready()) MessageDialog().setText("Failed to initialize audio driver").warning();
 
   input = Input::create(settings["Input/Driver"].text());
-  input->set(Input::Handle, presentation->viewport.handle());
+  input->setContext(presentation->viewport.handle());
   input->onChange({&InputManager::onChange, &inputManager()});
-  if(!input->init()) input = Input::create("None");
+  if(!input->ready()) MessageDialog().setText("Failed to initialize input driver").warning();
+
+  settings["Crashed"].setValue(false);
+  settings.save();
 
   new InputManager;
   new SettingsManager;
   new CheatDatabase;
   new ToolsManager;
   new AboutWindow;
-
-  presentation->setFocused();
 
   updateVideoShader();
   updateAudioDriver();
@@ -79,6 +89,8 @@ Program::Program(string_vector args) {
     }
   }
   loadMedium();
+
+  Application::onMain({&Program::main, this});
 }
 
 auto Program::main() -> void {
@@ -86,7 +98,7 @@ auto Program::main() -> void {
   inputManager->poll();
   inputManager->pollHotkeys();
 
-  if(!emulator || !emulator->loaded() || pause || (!presentation->focused() && settings["Input/FocusLoss/Pause"].boolean())) {
+  if(!emulator || !emulator->loaded() || pause || (!focused() && settings["Input/FocusLoss/Pause"].boolean())) {
     audio->clear();
     usleep(20 * 1000);
     return;
@@ -98,7 +110,10 @@ auto Program::main() -> void {
 auto Program::quit() -> void {
   hasQuit = true;
   unloadMedium();
-  settings.quit();
+  settings.save();
   inputManager->quit();
+  video.reset();
+  audio.reset();
+  input.reset();
   Application::quit();
 }

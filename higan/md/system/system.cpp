@@ -5,7 +5,6 @@ namespace MegaDrive {
 System system;
 Scheduler scheduler;
 Cheat cheat;
-#include "peripherals.cpp"
 #include "serialization.cpp"
 
 auto System::run() -> void {
@@ -28,19 +27,21 @@ auto System::load(Emulator::Interface* interface, maybe<Region> region) -> bool 
   } else return false;
 
   auto document = BML::unserialize(information.manifest);
+  auto system = document["system"];
+  if(!cpu.load(system)) return false;
   if(!cartridge.load()) return false;
 
   if(cartridge.region() == "NTSC-J") {
     information.region = Region::NTSCJ;
-    information.colorburst = Emulator::Constants::Colorburst::NTSC;
+    information.frequency = Emulator::Constants::Colorburst::NTSC * 15.0;
   }
   if(cartridge.region() == "NTSC-U") {
     information.region = Region::NTSCU;
-    information.colorburst = Emulator::Constants::Colorburst::NTSC;
+    information.frequency = Emulator::Constants::Colorburst::NTSC * 15.0;
   }
   if(cartridge.region() == "PAL") {
     information.region = Region::PAL;
-    information.colorburst = Emulator::Constants::Colorburst::PAL * 4.0 / 5.0;
+    information.frequency = Emulator::Constants::Colorburst::PAL * 12.0;
   }
 
   serializeInit();
@@ -53,7 +54,10 @@ auto System::save() -> void {
 }
 
 auto System::unload() -> void {
-  peripherals.unload();
+  cpu.peripherals.reset();
+  controllerPort1.unload();
+  controllerPort2.unload();
+  extensionPort.unload();
   cartridge.unload();
 }
 
@@ -74,7 +78,13 @@ auto System::power() -> void {
   ym2612.power();
   scheduler.primary(cpu);
 
-  peripherals.reset();
+  controllerPort1.power(ID::Port::Controller1);
+  controllerPort2.power(ID::Port::Controller2);
+  extensionPort.power(ID::Port::Extension);
+
+  controllerPort1.connect(settings.controllerPort1);
+  controllerPort2.connect(settings.controllerPort2);
+  extensionPort.connect(settings.extensionPort);
 }
 
 }

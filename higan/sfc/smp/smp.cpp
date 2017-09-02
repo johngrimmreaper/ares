@@ -17,8 +17,8 @@ auto SMP::Enter() -> void {
 }
 
 auto SMP::main() -> void {
-  if(r.wai) return instructionWAI();
-  if(r.stp) return instructionSTP();
+  if(r.wait) return instructionWait();
+  if(r.stop) return instructionStop();
   instruction();
 }
 
@@ -34,28 +34,28 @@ auto SMP::load(Markup::Node node) -> bool {
 
 auto SMP::power() -> void {
   SPC700::power();
-  create(Enter, 32040.0 * 768.0);
+  create(Enter, system.apuFrequency() / 12.0);
 
   r.pc.byte.l = iplrom[62];
   r.pc.byte.h = iplrom[63];
 
-  for(auto& byte : apuram) byte = random(0x00);
-  apuram[0x00f4] = 0x00;
-  apuram[0x00f5] = 0x00;
-  apuram[0x00f6] = 0x00;
-  apuram[0x00f7] = 0x00;
-
+  //timing
   io.clockCounter = 0;
   io.dspCounter = 0;
-  io.timerStep = 3;
+
+  //external
+  io.apu0 = 0x00;
+  io.apu1 = 0x00;
+  io.apu2 = 0x00;
+  io.apu3 = 0x00;
 
   //$00f0
-  io.clockSpeed = 0;
-  io.timerSpeed = 0;
-  io.timersEnable = true;
-  io.ramDisable = false;
-  io.ramWritable = true;
   io.timersDisable = false;
+  io.ramWritable = true;
+  io.ramDisable = false;
+  io.timersEnable = true;
+  io.externalWaitStates = 0;
+  io.internalWaitStates = 0;
 
   //$00f1
   io.iplromEnable = true;
@@ -63,9 +63,15 @@ auto SMP::power() -> void {
   //$00f2
   io.dspAddr = 0x00;
 
-  //$00f8,$00f9
-  io.ram00f8 = 0x00;
-  io.ram00f9 = 0x00;
+  //$00f4-00f7
+  io.cpu0 = 0x00;
+  io.cpu1 = 0x00;
+  io.cpu2 = 0x00;
+  io.cpu3 = 0x00;
+
+  //$00f8-$00f9
+  io.aux4 = 0x00;
+  io.aux5 = 0x00;
 
   timer0.stage0 = 0;
   timer1.stage0 = 0;

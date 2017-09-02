@@ -30,6 +30,7 @@ auto VDP::main() -> void {
     if(io.verticalBlankInterruptEnable) {
       cpu.raise(CPU::Interrupt::VerticalBlank);
     }
+    //todo: should only stay high for ~2573/2 clocks
     apu.setINT(true);
   }
 
@@ -63,11 +64,15 @@ auto VDP::step(uint clocks) -> void {
 }
 
 auto VDP::refresh() -> void {
-  Emulator::video.refresh(buffer, 1280 * sizeof(uint32), 1280, 480);
+  auto data = output;
+  if(!latch.overscan) data -= 16 * 1280;
+  Emulator::video.refresh(data, 1280 * sizeof(uint32), 1280, 480);
 }
 
 auto VDP::power() -> void {
-  create(VDP::Enter, system.colorburst() * 15.0 / 2.0);
+  create(VDP::Enter, system.frequency() / 2.0);
+
+  output = buffer + 16 * 1280;  //overscan offset
 
   memory::fill(&io, sizeof(IO));
   memory::fill(&latch, sizeof(Latch));

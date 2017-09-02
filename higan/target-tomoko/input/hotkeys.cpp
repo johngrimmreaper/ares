@@ -1,4 +1,6 @@
 auto InputManager::appendHotkeys() -> void {
+  static int quickStateSlot = 1;
+
   { auto hotkey = new InputHotkey;
     hotkey->name = "Toggle Fullscreen";
     hotkey->press = [] {
@@ -16,17 +18,35 @@ auto InputManager::appendHotkeys() -> void {
   }
 
   { auto hotkey = new InputHotkey;
-    hotkey->name = "Save State";
+    hotkey->name = "Save Quick State";
     hotkey->press = [] {
-      program->saveState(0);
+      program->saveState(quickStateSlot);
     };
     hotkeys.append(hotkey);
   }
 
   { auto hotkey = new InputHotkey;
-    hotkey->name = "Load State";
-    hotkey->press = [] {
-      program->loadState(0);
+    hotkey->name = "Load Quick State";
+    hotkey->press = [&] {
+      program->loadState(quickStateSlot);
+    };
+    hotkeys.append(hotkey);
+  }
+
+  { auto hotkey = new InputHotkey;
+    hotkey->name = "Decrement Quick State";
+    hotkey->press = [&] {
+      if(--quickStateSlot < 1) quickStateSlot = 5;
+      program->showMessage({"Selected quick state slot ", quickStateSlot});
+    };
+    hotkeys.append(hotkey);
+  }
+
+  { auto hotkey = new InputHotkey;
+    hotkey->name = "Increment Quick State";
+    hotkey->press = [&] {
+      if(++quickStateSlot > 5) quickStateSlot = 1;
+      program->showMessage({"Selected quick state slot ", quickStateSlot});
     };
     hotkeys.append(hotkey);
   }
@@ -42,12 +62,12 @@ auto InputManager::appendHotkeys() -> void {
   { auto hotkey = new InputHotkey;
     hotkey->name = "Fast Forward";
     hotkey->press = [] {
-      video->set(Video::Synchronize, false);
-      audio->set(Audio::Synchronize, false);
+      video->setBlocking(false);
+      audio->setBlocking(false);
     };
     hotkey->release = [] {
-      video->set(Video::Synchronize, settings["Video/Synchronize"].boolean());
-      audio->set(Audio::Synchronize, settings["Audio/Synchronize"].boolean());
+      video->setBlocking(settings["Video/Synchronize"].boolean());
+      audio->setBlocking(settings["Audio/Synchronize"].boolean());
     };
     hotkeys.append(hotkey);
   }
@@ -76,7 +96,7 @@ auto InputManager::appendHotkeys() -> void {
 }
 
 auto InputManager::pollHotkeys() -> void {
-  if(!presentation || !presentation->focused()) return;
+  if(!program->focused()) return;
 
   for(auto& hotkey : hotkeys) {
     int16 state = hotkey->poll();

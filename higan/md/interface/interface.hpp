@@ -14,7 +14,8 @@ struct ID {
 
   struct Device { enum : uint {
     None,
-    Gamepad,
+    ControlPad,
+    FightingPad,
   };};
 };
 
@@ -26,8 +27,7 @@ struct Interface : Emulator::Interface {
   auto manifest() -> string override;
   auto title() -> string override;
 
-  auto videoResolution() -> VideoSize override;
-  auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
+  auto videoResolution() -> VideoResolution override;
   auto videoColors() -> uint32 override;
   auto videoColor(uint32 color) -> uint64 override;
 

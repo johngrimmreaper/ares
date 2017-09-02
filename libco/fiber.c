@@ -1,11 +1,6 @@
-/*
-  libco.win (2008-01-28)
-  authors: Nach, byuu
-  license: public domain
-*/
-
 #define LIBCO_C
 #include "libco.h"
+#include "settings.h"
 
 #define WINVER 0x0400
 #define _WIN32_WINNT 0x0400

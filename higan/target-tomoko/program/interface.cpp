@@ -53,30 +53,28 @@ auto Program::videoRefresh(const uint32* data, uint pitch, uint width, uint heig
   uint32_t* output;
   uint length;
 
+  pitch >>= 2;
+
+  if(emulator->information.overscan) {
+    uint overscanHorizontal = settings["Video/Overscan/Horizontal"].natural();
+    uint overscanVertical = settings["Video/Overscan/Vertical"].natural();
+    auto resolution = emulator->videoResolution();
+    overscanHorizontal *= resolution.internalWidth / resolution.width;
+    overscanVertical *= resolution.internalHeight / resolution.height;
+    data += overscanVertical * pitch + overscanHorizontal;
+    width -= overscanHorizontal * 2;
+    height -= overscanVertical * 2;
+  }
+
   if(video->lock(output, length, width, height)) {
-    pitch >>= 2, length >>= 2;
+    length >>= 2;
 
     for(auto y : range(height)) {
       memory::copy(output + y * length, data + y * pitch, width * sizeof(uint32));
     }
 
-    if(emulator->information.overscan && settings["Video/Overscan/Mask"].boolean()) {
-      auto h = settings["Video/Overscan/Horizontal"].natural();
-      auto v = settings["Video/Overscan/Vertical"].natural();
-
-      if(h) for(auto y : range(height)) {
-        memory::fill(output + y * length, 4 * h);
-        memory::fill(output + y * length + (width - h), 4 * h);
-      }
-
-      if(v) for(auto y : range(v)) {
-        memory::fill(output + y * length, 4 * width);
-        memory::fill(output + (height - 1 - y) * length, 4 * width);
-      }
-    }
-
     video->unlock();
-    video->refresh();
+    video->output();
   }
 
   static uint frameCounter = 0;
@@ -92,24 +90,24 @@ auto Program::videoRefresh(const uint32* data, uint pitch, uint width, uint heig
 }
 
 auto Program::audioSample(const double* samples, uint channels) -> void {
-  int16 left  = sclamp<16>(samples[0] * 32768.0);
-  int16 right = sclamp<16>(samples[1] * 32768.0);
-  audio->sample(left, right);
+  audio->output(samples);
 }
 
 auto Program::inputPoll(uint port, uint device, uint input) -> int16 {
-  if(presentation->focused() || settings["Input/FocusLoss/AllowInput"].boolean()) {
+  if(focused() || settings["Input/FocusLoss/AllowInput"].boolean()) {
     inputManager->poll();
-    auto& mapping = inputManager->emulator->ports[port].devices[device].mappings[input];
-    return mapping.poll();
+    if(auto mapping = inputManager->mapping(port, device, input)) {
+      return mapping->poll();
+    }
   }
   return 0;
 }
 
 auto Program::inputRumble(uint port, uint device, uint input, bool enable) -> void {
-  if(presentation->focused() || settings["Input/FocusLoss/AllowInput"].boolean() || !enable) {
-    auto& mapping = inputManager->emulator->ports[port].devices[device].mappings[input];
-    return mapping.rumble(enable);
+  if(focused() || settings["Input/FocusLoss/AllowInput"].boolean() || !enable) {
+    if(auto mapping = inputManager->mapping(port, device, input)) {
+      return mapping->rumble(enable);
+    }
   }
 }
 

@@ -44,15 +44,8 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoResolution() -> VideoSize {
-  return {256, 240};
-}
-
-auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  uint w = 256 * (arc ? 8.0 / 7.0 : 1.0);
-  uint h = 240;
-  uint m = min(width / w, height / h);
-  return {w * m, h * m};
+auto Interface::videoResolution() -> VideoResolution {
+  return {256, 240, 256, 240, 8.0 / 7.0};
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -132,7 +125,8 @@ auto Interface::unload() -> void {
 }
 
 auto Interface::connect(uint port, uint device) -> void {
-  peripherals.connect(port, device);
+  if(port == ID::Port::Controller1) controllerPort1.connect(settings.controllerPort1 = device);
+  if(port == ID::Port::Controller2) controllerPort2.connect(settings.controllerPort2 = device);
 }
 
 auto Interface::power() -> void {
