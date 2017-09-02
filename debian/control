@@ -24,10 +24,11 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Provides: nes-emulator
 Description: Accurate multi-system emulator
- higan is an emulator for systems from Nintendo (SNES, NES, Gameboy, Gameboy Color,
- Gameboy Advance), Sega (Master System, Game Gear), NEC (PC Engine, SuperGrafx) and
- Bandai (WonderSwan, WonderSwan Color). It was formerly called bsnes and the SNES
- emulation is especially complete and polished.
+ higan is an emulator for systems from Nintendo (SNES, NES, Gameboy,
+ Gameboy Color, Gameboy Advance), Sega (Master System, Game Gear),
+ NEC (PC Engine, SuperGrafx) and Bandai (WonderSwan, WonderSwan Color).
+ It was formerly called bsnes and the SNES emulation is especially
+ complete and polished.
  .
  higan strives to provide the most faithful hardware emulation possible.
  It focuses on accuracy and clean code, rather than speed and special
