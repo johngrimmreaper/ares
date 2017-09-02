@@ -13,5 +13,5 @@ Author: Tobias Hansen <thansen@debian.org>
 -  set("Library/IgnoreManifests", false);
 +  set("Library/IgnoreManifests", true);
  
-   set("Video/Driver", ruby::Video::optimalDriver());
+   set("Video/Driver", ruby::Video::safestDriver());
    set("Video/Synchronize", false);

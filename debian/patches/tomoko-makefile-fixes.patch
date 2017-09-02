@@ -5,7 +5,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/target-tomoko/GNUmakefile
 +++ b/higan/target-tomoko/GNUmakefile
-@@ -84,9 +84,7 @@
+@@ -85,9 +85,7 @@
  endif
  
  install:

@@ -6,10 +6,10 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/target-tomoko/configuration/configuration.cpp
 +++ b/higan/target-tomoko/configuration/configuration.cpp
-@@ -49,5 +49,6 @@
+@@ -60,5 +60,6 @@
  }
  
- auto Settings::quit() -> void {
+ auto Settings::save() -> void {
 -  file::write(locate("settings.bml"), BML::serialize(*this));
 +  directory::create({Path::config(), "higan/"});
 +  file::write({Path::config(), "higan/", "settings.bml"}, BML::serialize(*this));
