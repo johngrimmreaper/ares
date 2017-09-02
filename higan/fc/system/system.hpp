@@ -1,5 +1,5 @@
 struct System {
-  enum class Region : uint { NTSC, PAL };
+  enum class Region : uint { NTSCJ, NTSCU, PAL };
 
   auto loaded() const -> bool { return information.loaded; }
   auto region() const -> Region { return information.region; }
@@ -33,7 +33,7 @@ private:
 
   struct Information {
     bool loaded = false;
-    Region region = Region::NTSC;
+    Region region = Region::NTSCJ;
     double frequency = Emulator::Constants::Colorburst::NTSC * 6.0;
     string manifest;
   } information;
@@ -41,17 +41,8 @@ private:
   uint _serializeSize = 0;
 };
 
-struct Peripherals {
-  auto unload() -> void;
-  auto reset() -> void;
-  auto connect(uint port, uint device) -> void;
-
-  Controller* controllerPort1 = nullptr;
-  Controller* controllerPort2 = nullptr;
-};
-
 extern System system;
-extern Peripherals peripherals;
 
-auto Region::NTSC() -> bool { return system.region() == System::Region::NTSC; }
+auto Region::NTSCJ() -> bool { return system.region() == System::Region::NTSCJ; }
+auto Region::NTSCU() -> bool { return system.region() == System::Region::NTSCU; }
 auto Region::PAL() -> bool { return system.region() == System::Region::PAL; }

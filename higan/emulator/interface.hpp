@@ -9,11 +9,6 @@ struct Interface {
     bool overscan;
   } information;
 
-  struct Region {
-    string name;
-  };
-  vector<Region> regions;
-
   struct Medium {
     uint id;
     string name;
@@ -43,9 +38,14 @@ struct Interface {
   virtual auto title() -> string = 0;
 
   //video information
-  struct VideoSize { uint width, height; };
-  virtual auto videoResolution() -> VideoSize = 0;
-  virtual auto videoSize(uint width, uint height, bool arc) -> VideoSize = 0;
+  struct VideoResolution {
+    uint width;
+    uint height;
+    uint internalWidth;
+    uint internalHeight;
+    double aspectCorrection;
+  };
+  virtual auto videoResolution() -> VideoResolution = 0;
   virtual auto videoColors() -> uint32 = 0;
   virtual auto videoColor(uint32 color) -> uint64 = 0;
 

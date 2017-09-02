@@ -19,6 +19,9 @@ Interface::Interface() {
     device.inputs.append({0, "A"     });
     device.inputs.append({0, "Select"});
     device.inputs.append({0, "Start" });
+    device.inputs.append({1, "X-axis"});
+    device.inputs.append({1, "Y-axis"});
+    device.inputs.append({2, "Rumble"});
     hardwarePort.devices.append(device);
   }
 
@@ -33,15 +36,8 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoResolution() -> VideoSize {
-  return {160, 144};
-}
-
-auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  uint w = 160;
-  uint h = 144;
-  uint m = min(width / w, height / h);
-  return {w * m, h * m};
+auto Interface::videoResolution() -> VideoResolution {
+  return {160, 144, 160, 144, 1.0};
 }
 
 auto Interface::loaded() -> bool {

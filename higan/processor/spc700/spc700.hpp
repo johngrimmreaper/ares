@@ -4,24 +4,24 @@ namespace Processor {
 
 struct SPC700 {
   virtual auto idle() -> void = 0;
-  virtual auto read(uint16 addr) -> uint8 = 0;
-  virtual auto write(uint16 addr, uint8 data) -> void = 0;
+  virtual auto read(uint16 address) -> uint8 = 0;
+  virtual auto write(uint16 addessr, uint8 data) -> void = 0;
   virtual auto synchronizing() const -> bool = 0;
 
-  virtual auto readDisassembler(uint16 addr) -> uint8 { return 0; }
+  virtual auto readDisassembler(uint16 address) -> uint8 { return 0; }
 
   //spc700.cpp
   auto power() -> void;
 
+  //memory.cpp
+  inline auto fetch() -> uint8;
+  inline auto load(uint8 address) -> uint8;
+  inline auto store(uint8 address, uint8 data) -> void;
+  inline auto pull() -> uint8;
+  inline auto push(uint8 data) -> void;
+
   //instruction.cpp
   auto instruction() -> void;
-
-  //memory.cpp
-  auto fetch() -> uint8;
-  auto pull() -> uint8;
-  auto push(uint8 data) -> void;
-  auto load(uint8 addr) -> uint8;
-  auto store(uint8 addr, uint8 data) -> void;
 
   //algorithms.cpp
   auto algorithmADC(uint8, uint8) -> uint8;
@@ -37,7 +37,6 @@ struct SPC700 {
   auto algorithmROL(uint8) -> uint8;
   auto algorithmROR(uint8) -> uint8;
   auto algorithmSBC(uint8, uint8) -> uint8;
-  auto algorithmST (uint8, uint8) -> uint8;
   auto algorithmADW(uint16, uint16) -> uint16;
   auto algorithmCPW(uint16, uint16) -> uint16;
   auto algorithmLDW(uint16, uint16) -> uint16;
@@ -48,76 +47,77 @@ struct SPC700 {
   using fpb = auto (SPC700::*)(uint8, uint8) -> uint8;
   using fpw = auto (SPC700::*)(uint16, uint16) -> uint16;
 
-  auto instructionImpliedModify(fps, uint8&) -> void;
-  auto instructionAbsoluteModify(fps) -> void;
-  auto instructionDirectPageModify(fps) -> void;
-  auto instructionDirectPageModifyWord(int) -> void;
-  auto instructionDirectPageXModify(fps) -> void;
-  auto instructionBranch(bool) -> void;
-  auto instructionPull(uint8&) -> void;
-  auto instructionPush(uint8) -> void;
+  auto instructionAbsoluteBitModify(uint3) -> void;
+  auto instructionAbsoluteBitSet(uint3, bool) -> void;
   auto instructionAbsoluteRead(fpb, uint8&) -> void;
-  auto instructionAbsoluteIndexedRead(fpb, uint8&) -> void;
-  auto instructionImmediateRead(fpb, uint8&) -> void;
-  auto instructionDirectPageRead(fpb, uint8&) -> void;
-  auto instructionDirectPageIndexedRead(fpb, uint8&, uint8&) -> void;
-  auto instructionDirectPageReadWord(fpw) -> void;
-  auto instructionIndirectPageXRead(fpb) -> void;
-  auto instructionIndirectPageYRead(fpb) -> void;
-  auto instructionIndirectXRead(fpb) -> void;
-  auto instructionAbsoluteModifyBit(uint3) -> void;
-  auto instructionFlagClear(bool&) -> void;
-  auto instructionFlagSet(bool&) -> void;
-  auto instructionTransfer(uint8&, uint8&) -> void;
+  auto instructionAbsoluteModify(fps) -> void;
   auto instructionAbsoluteWrite(uint8&) -> void;
+  auto instructionAbsoluteIndexedRead(fpb, uint8&) -> void;
   auto instructionAbsoluteIndexedWrite(uint8&) -> void;
-  auto instructionDirectPageWrite(uint8&) -> void;
-  auto instructionDirectPageIndexedWrite(uint8&, uint8&) -> void;
-  auto instructionDirectPageWriteImmediate(fpb) -> void;
-  auto instructionDirectPageWriteDirectPage(fpb) -> void;
+  auto instructionBranch(bool) -> void;
+  auto instructionBranchBit(uint3, bool) -> void;
+  auto instructionBranchNotDirect() -> void;
+  auto instructionBranchNotDirectDecrement() -> void;
+  auto instructionBranchNotDirectIndexed(uint8&) -> void;
+  auto instructionBranchNotYDecrement() -> void;
+  auto instructionBreak() -> void;
+  auto instructionCallAbsolute() -> void;
+  auto instructionCallPage() -> void;
+  auto instructionCallTable(uint4) -> void;
+  auto instructionComplementCarry() -> void;
+  auto instructionDecimalAdjustAdd() -> void;
+  auto instructionDecimalAdjustSub() -> void;
+  auto instructionDirectRead(fpb, uint8&) -> void;
+  auto instructionDirectModify(fps) -> void;
+  auto instructionDirectWrite(uint8&) -> void;
+  auto instructionDirectDirectCompare(fpb) -> void;
+  auto instructionDirectDirectModify(fpb) -> void;
+  auto instructionDirectDirectWrite() -> void;
+  auto instructionDirectImmediateCompare(fpb) -> void;
+  auto instructionDirectImmediateModify(fpb) -> void;
+  auto instructionDirectImmediateWrite() -> void;
+  auto instructionDirectCompareWord(fpw) -> void;
+  auto instructionDirectReadWord(fpw) -> void;
+  auto instructionDirectModifyWord(int) -> void;
+  auto instructionDirectWriteWord() -> void;
+  auto instructionDirectIndexedRead(fpb, uint8&, uint8&) -> void;
+  auto instructionDirectIndexedModify(fps, uint8&) -> void;
+  auto instructionDirectIndexedWrite(uint8&, uint8&) -> void;
+  auto instructionDivide() -> void;
+  auto instructionExchangeNibble() -> void;
+  auto instructionFlagSet(bool&, bool) -> void;
+  auto instructionImmediateRead(fpb, uint8&) -> void;
+  auto instructionImpliedModify(fps, uint8&) -> void;
+  auto instructionIndexedIndirectRead(fpb, uint8&) -> void;
+  auto instructionIndexedIndirectWrite(uint8&, uint8&) -> void;
+  auto instructionIndirectIndexedRead(fpb, uint8&) -> void;
+  auto instructionIndirectIndexedWrite(uint8&, uint8&) -> void;
+  auto instructionIndirectXRead(fpb) -> void;
+  auto instructionIndirectXWrite(uint8&) -> void;
+  auto instructionIndirectXIncrementRead(uint8&) -> void;
+  auto instructionIndirectXIncrementWrite(uint8&) -> void;
+  auto instructionIndirectXCompareIndirectY(fpb) -> void;
   auto instructionIndirectXWriteIndirectY(fpb) -> void;
-
-  auto instructionBBC(uint3) -> void;
-  auto instructionBBS(uint3) -> void;
-  auto instructionBNEDirectPage() -> void;
-  auto instructionBNEDirectPageDecrement() -> void;
-  auto instructionBNEDirectPageX() -> void;
-  auto instructionBNEYDecrement() -> void;
-  auto instructionBRK() -> void;
-  auto instructionCLR(uint3) -> void;
-  auto instructionCLV() -> void;
-  auto instructionCMC() -> void;
-  auto instructionDAA() -> void;
-  auto instructionDAS() -> void;
-  auto instructionDIV() -> void;
-  auto instructionJMPAbsolute() -> void;
-  auto instructionJMPIndirectAbsoluteX() -> void;
-  auto instructionJSPDirectPage() -> void;
-  auto instructionJSRAbsolute() -> void;
-  auto instructionJST(uint4) -> void;
-  auto instructionLDAIndirectXIncrement() -> void;
-  auto instructionMUL() -> void;
-  auto instructionNOP() -> void;
-  auto instructionPLP() -> void;
-  auto instructionRTI() -> void;
-  auto instructionRTS() -> void;
-  auto instructionSET(uint3) -> void;
-  auto instructionSTAIndirectPageX() -> void;
-  auto instructionSTAIndirectPageY() -> void;
-  auto instructionSTAIndirectX() -> void;
-  auto instructionSTAIndirectXIncrement() -> void;
-  auto instructionSTP() -> void;
-  auto instructionSTWDirectPage() -> void;
-  auto instructionTRBAbsolute() -> void;
-  auto instructionTSBAbsolute() -> void;
-  auto instructionWAI() -> void;
-  auto instructionXCN() -> void;
+  auto instructionJumpAbsolute() -> void;
+  auto instructionJumpIndirectX() -> void;
+  auto instructionMultiply() -> void;
+  auto instructionNoOperation() -> void;
+  auto instructionOverflowClear() -> void;
+  auto instructionPull(uint8&) -> void;
+  auto instructionPullP() -> void;
+  auto instructionPush(uint8) -> void;
+  auto instructionReturnInterrupt() -> void;
+  auto instructionReturnSubroutine() -> void;
+  auto instructionStop() -> void;
+  auto instructionTestSetBitsAbsolute(bool) -> void;
+  auto instructionTransfer(uint8&, uint8&) -> void;
+  auto instructionWait() -> void;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
 
   //disassembler.cpp
-  auto disassemble(uint16 addr, bool p) -> string;
+  auto disassemble(uint16 address, bool p) -> string;
 
   struct Flags {
     bool c;  //carry
@@ -155,8 +155,8 @@ struct SPC700 {
     uint8 x, s;
     Flags p;
 
-    bool wai = false;
-    bool stp = false;
+    bool wait = false;
+    bool stop = false;
   } r;
 };
 

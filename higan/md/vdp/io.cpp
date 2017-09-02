@@ -63,7 +63,7 @@ auto VDP::readDataPort() -> uint16 {
     auto address = io.address.bits(1,6);
     auto data = cram.read(address);
     io.address += io.dataIncrement;
-    return data.bits(0,2) << 1 | data.bits(3,5) << 2 | data.bits(6,8) << 3;
+    return data.bits(0,2) << 1 | data.bits(3,5) << 5 | data.bits(6,8) << 9;
   }
 
   return 0x0000;
@@ -116,8 +116,9 @@ auto VDP::readControlPort() -> uint16 {
   uint16 result = 0b0011'0100'0000'0000;
   result |= 1 << 9;  //FIFO empty
   result |= (state.vcounter >= screenHeight()) << 3;  //vertical blank
-  result |= (state.vcounter >= screenHeight() || state.hcounter >= 1280) << 2;  //horizontal blank
+  result |= (state.hcounter >= 1280) << 2;  //horizontal blank
   result |= io.command.bit(5) << 1;  //DMA active
+  result |= Region::PAL() << 0;
   return result;
 }
 

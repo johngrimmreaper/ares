@@ -31,7 +31,7 @@ struct Interface : Emulator::Interface {
   auto save() -> void override;
   auto unload() -> void override;
 
-  auto connect(uint port, uint device) -> void override;
+  auto connect(uint port, uint device) -> void override {}
   auto power() -> void override;
   auto run() -> void override;
 
@@ -50,12 +50,13 @@ struct MasterSystemInterface : Interface {
 
   MasterSystemInterface();
 
-  auto videoResolution() -> VideoSize override;
-  auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
+  auto videoResolution() -> VideoResolution override;
   auto videoColors() -> uint32 override;
   auto videoColor(uint32 color) -> uint64 override;
 
   auto load(uint id) -> bool override;
+
+  auto connect(uint port, uint device) -> void override;
 };
 
 struct GameGearInterface : Interface {
@@ -63,8 +64,7 @@ struct GameGearInterface : Interface {
 
   GameGearInterface();
 
-  auto videoResolution() -> VideoSize override;
-  auto videoSize(uint width, uint height, bool arc) -> VideoSize override;
+  auto videoResolution() -> VideoResolution override;
   auto videoColors() -> uint32 override;
   auto videoColor(uint32 color) -> uint64 override;
 

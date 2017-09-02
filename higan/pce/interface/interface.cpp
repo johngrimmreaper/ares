@@ -39,16 +39,8 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoResolution() -> VideoSize {
-  return {1140, 240};
-}
-
-auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  auto a = arc ? 8.0 / 7.0 : 1.0;
-  uint w = 285;
-  uint h = 240;
-  uint m = min(width / (w * a), height / h);
-  return {uint(w * a * m), uint(h * m)};
+auto Interface::videoResolution() -> VideoResolution {
+  return {280, 240, 1120, 240, 8.0 / 7.0};
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -85,7 +77,7 @@ auto Interface::unload() -> void {
 }
 
 auto Interface::connect(uint port, uint device) -> void {
-  PCEngine::peripherals.connect(port, device);
+  if(port == ID::Port::Controller) controllerPort.connect(settings.controllerPort = device);
 }
 
 auto Interface::power() -> void {

@@ -12,9 +12,7 @@
 //  7:    gnd
 
 struct Controller : Thread {
-  enum : bool { Port1 = 0, Port2 = 1 };
-
-  Controller(bool port);
+  Controller(uint port);
   virtual ~Controller();
   static auto Enter() -> void;
 
@@ -24,8 +22,22 @@ struct Controller : Thread {
   virtual auto data() -> uint2 { return 0; }
   virtual auto latch(bool data) -> void {}
 
-  const bool port;
+  const uint port;
 };
+
+struct ControllerPort {
+  auto connect(uint deviceID) -> void;
+
+  auto power(uint port) -> void;
+  auto unload() -> void;
+  auto serialize(serializer&) -> void;
+
+  uint port;
+  Controller* device = nullptr;
+};
+
+extern ControllerPort controllerPort1;
+extern ControllerPort controllerPort2;
 
 #include "gamepad/gamepad.hpp"
 #include "mouse/mouse.hpp"

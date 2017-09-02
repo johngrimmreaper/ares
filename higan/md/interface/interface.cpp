@@ -9,11 +9,6 @@ Interface::Interface() {
   information.name         = "Mega Drive";
   information.overscan     = true;
 
-  regions.append({"Autodetect"});
-  regions.append({"NTSC-J"});
-  regions.append({"NTSC-U"});
-  regions.append({"PAL"});
-
   media.append({ID::MegaDrive, "Mega Drive", "md"});
 
   Port controllerPort1{ID::Port::Controller1, "Controller Port 1"};
@@ -26,7 +21,20 @@ Interface::Interface() {
     extensionPort.devices.append(device);
   }
 
-  { Device device{ID::Device::Gamepad, "Gamepad"};
+  { Device device{ID::Device::ControlPad, "Control Pad"};
+    device.inputs.append({0, "Up"   });
+    device.inputs.append({0, "Down" });
+    device.inputs.append({0, "Left" });
+    device.inputs.append({0, "Right"});
+    device.inputs.append({0, "A"    });
+    device.inputs.append({0, "B"    });
+    device.inputs.append({0, "C"    });
+    device.inputs.append({0, "Start"});
+    controllerPort1.devices.append(device);
+    controllerPort2.devices.append(device);
+  }
+
+  { Device device{ID::Device::FightingPad, "Fighting Pad"};
     device.inputs.append({0, "Up"   });
     device.inputs.append({0, "Down" });
     device.inputs.append({0, "Left" });
@@ -37,6 +45,7 @@ Interface::Interface() {
     device.inputs.append({0, "X"    });
     device.inputs.append({0, "Y"    });
     device.inputs.append({0, "Z"    });
+    device.inputs.append({0, "Mode" });
     device.inputs.append({0, "Start"});
     controllerPort1.devices.append(device);
     controllerPort2.devices.append(device);
@@ -55,15 +64,8 @@ auto Interface::title() -> string {
   return cartridge.title();
 }
 
-auto Interface::videoResolution() -> VideoSize {
-  return {1280, 480};
-}
-
-auto Interface::videoSize(uint width, uint height, bool arc) -> VideoSize {
-  uint w = 320;
-  uint h = 240;
-  uint m = min(width / w, height / h);
-  return {w * m, h * m};
+auto Interface::videoResolution() -> VideoResolution {
+  return {320, 240, 1280, 480, 1.0};
 }
 
 auto Interface::videoColors() -> uint32 {
@@ -100,7 +102,9 @@ auto Interface::unload() -> void {
 }
 
 auto Interface::connect(uint port, uint device) -> void {
-  peripherals.connect(port, device);
+  if(port == ID::Port::Controller1) controllerPort1.connect(settings.controllerPort1 = device);
+  if(port == ID::Port::Controller2) controllerPort2.connect(settings.controllerPort2 = device);
+  if(port == ID::Port::Extension) extensionPort.connect(settings.extensionPort = device);
 }
 
 auto Interface::power() -> void {

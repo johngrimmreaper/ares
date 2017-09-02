@@ -4,7 +4,7 @@ auto OpenGLSurface::allocate() -> void {
   glGenBuffers(3, &vbo[0]);
 }
 
-auto OpenGLSurface::size(unsigned w, unsigned h) -> void {
+auto OpenGLSurface::size(uint w, uint h) -> void {
   if(width == w && height == h) return;
   width = w, height = h;
   w = glrSize(w), h = glrSize(h);
@@ -37,7 +37,7 @@ auto OpenGLSurface::release() -> void {
   width = 0, height = 0;
 }
 
-auto OpenGLSurface::render(unsigned sourceWidth, unsigned sourceHeight, unsigned targetWidth, unsigned targetHeight) -> void {
+auto OpenGLSurface::render(uint sourceWidth, uint sourceHeight, uint targetWidth, uint targetHeight) -> void {
   glViewport(0, 0, targetWidth, targetHeight);
 
   float w = (float)sourceWidth / (float)glrSize(sourceWidth);
@@ -70,7 +70,7 @@ auto OpenGLSurface::render(unsigned sourceWidth, unsigned sourceHeight, unsigned
   };
 
   GLfloat positions[4 * 4];
-  for(unsigned n = 0; n < 16; n += 4) {
+  for(uint n = 0; n < 16; n += 4) {
     Matrix::Multiply(&positions[n], &vertices[n], 1, 4, modelViewProjection, 4, 4);
   }
 
@@ -89,19 +89,19 @@ auto OpenGLSurface::render(unsigned sourceWidth, unsigned sourceHeight, unsigned
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
   glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
-  GLuint locationVertex = glGetAttribLocation(program, "vertex");
+  GLint locationVertex = glGetAttribLocation(program, "vertex");
   glEnableVertexAttribArray(locationVertex);
   glVertexAttribPointer(locationVertex, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
   glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(GLfloat), positions, GL_STATIC_DRAW);
-  GLuint locationPosition = glGetAttribLocation(program, "position");
+  GLint locationPosition = glGetAttribLocation(program, "position");
   glEnableVertexAttribArray(locationPosition);
   glVertexAttribPointer(locationPosition, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
   glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), texCoords, GL_STATIC_DRAW);
-  GLuint locationTexCoord = glGetAttribLocation(program, "texCoord");
+  GLint locationTexCoord = glGetAttribLocation(program, "texCoord");
   glEnableVertexAttribArray(locationTexCoord);
   glVertexAttribPointer(locationTexCoord, 2, GL_FLOAT, GL_FALSE, 0, 0);
 

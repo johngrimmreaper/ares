@@ -87,7 +87,7 @@ auto PPU::load(Markup::Node node) -> bool {
 }
 
 auto PPU::power() -> void {
-  create(Enter, system.colorburst() * 6.0);
+  create(Enter, system.cpuFrequency());
   PPUcounter::reset();
   memory::fill(output, 512 * 480 * sizeof(uint32));
 
@@ -103,7 +103,8 @@ auto PPU::power() -> void {
   latch.vram = random(0x0000);
   latch.oam = random(0x00);
   latch.cgram = random(0x00);
-  latch.bgofs = random(0x00);
+  latch.bgofsPPU1 = random(0x00);
+  latch.bgofsPPU2 = random(0x00);
   latch.mode7 = random(0x00);
   latch.counters = false;
   latch.hcounter = 0;

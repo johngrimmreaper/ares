@@ -2,7 +2,7 @@ struct VideoSettings : TabFrameItem {
   VideoSettings(TabFrame*);
 
   VerticalLayout layout{this};
-    Label colorAdjustmentLabel{&layout, Size{~0, 0}};
+    Label colorAdjustmentLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout saturationLayout{&layout, Size{~0, 0}};
       Label saturationLabel{&saturationLayout, Size{80, 0}};
       Label saturationValue{&saturationLayout, Size{50, 0}};
@@ -15,7 +15,7 @@ struct VideoSettings : TabFrameItem {
       Label luminanceLabel{&luminanceLayout, Size{80, 0}};
       Label luminanceValue{&luminanceLayout, Size{50, 0}};
       HorizontalSlider luminanceSlider{&luminanceLayout, Size{~0, 0}};
-    Label overscanMaskLabel{&layout, Size{~0, 0}};
+    Label overscanMaskLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout horizontalMaskLayout{&layout, Size{~0, 0}};
       Label horizontalMaskLabel{&horizontalMaskLayout, Size{80, 0}};
       Label horizontalMaskValue{&horizontalMaskLayout, Size{50, 0}};
@@ -24,25 +24,35 @@ struct VideoSettings : TabFrameItem {
       Label verticalMaskLabel{&verticalMaskLayout, Size{80, 0}};
       Label verticalMaskValue{&verticalMaskLayout, Size{50, 0}};
       HorizontalSlider verticalMaskSlider{&verticalMaskLayout, Size{~0, 0}};
+    Label windowedModeLabel{&layout, Size{~0, 0}, 2};
+    HorizontalLayout windowedModeLayout{&layout, Size{~0, 0}};
+      CheckLabel windowedModeAspectCorrection{&windowedModeLayout, Size{0, 0}};
+      CheckLabel windowedModeIntegralScaling{&windowedModeLayout, Size{0, 0}};
+      CheckLabel windowedModeAdaptive{&windowedModeLayout, Size{0, 0}};
+    Label fullscreenModeLabel{&layout, Size{~0, 0}, 2};
+    HorizontalLayout fullscreenModeLayout{&layout, Size{~0, 0}};
+      CheckLabel fullscreenModeAspectCorrection{&fullscreenModeLayout, Size{0, 0}};
+      CheckLabel fullscreenModeIntegralScaling{&fullscreenModeLayout, Size{0, 0}};
+      CheckLabel fullscreenModeExclusive{&fullscreenModeLayout, Size{0, 0}};
 
-  auto updateColor() -> void;
-  auto updateOverscan() -> void;
+  auto updateColor(bool initializing = false) -> void;
+  auto updateViewport(bool initializing = false) -> void;
 };
 
 struct AudioSettings : TabFrameItem {
   AudioSettings(TabFrame*);
 
   VerticalLayout layout{this};
-    Label driverLabel{&layout, Size{~0, 0}};
+    Label driverLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout controlLayout{&layout, Size{~0, 0}};
-      Label latencyLabel{&controlLayout, Size{0, 0}};
-      ComboButton latencyCombo{&controlLayout, Size{~0, 0}};
+      Label deviceLabel{&controlLayout, Size{0, 0}};
+      ComboButton deviceList{&controlLayout, Size{~0, 0}};
       Label frequencyLabel{&controlLayout, Size{0, 0}};
-      ComboButton frequencyCombo{&controlLayout, Size{~0, 0}};
-      Label resamplerLabel{&controlLayout, Size{0, 0}};
-      ComboButton resamplerCombo{&controlLayout, Size{~0, 0}};
+      ComboButton frequencyList{&controlLayout, Size{~0, 0}};
+      Label latencyLabel{&controlLayout, Size{0, 0}};
+      ComboButton latencyList{&controlLayout, Size{~0, 0}};
     CheckLabel exclusiveMode{&layout, Size{~0, 0}};
-    Label effectsLabel{&layout, Size{~0, 0}};
+    Label effectsLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout volumeLayout{&layout, Size{~0, 0}};
       Label volumeLabel{&volumeLayout, Size{80, 0}};
       Label volumeValue{&volumeLayout, Size{50, 0}};
@@ -53,26 +63,13 @@ struct AudioSettings : TabFrameItem {
       HorizontalSlider balanceSlider{&balanceLayout, Size{~0, 0}};
     CheckLabel reverbEnable{&layout, Size{~0, 0}};
 
-  auto updateDriver() -> void;
-  auto updateEffects() -> void;
+  auto updateDevice() -> void;
+  auto updateDriver(bool initializing = false) -> void;
+  auto updateEffects(bool initializing = false) -> void;
 };
 
 struct InputSettings : TabFrameItem {
   InputSettings(TabFrame*);
-  auto updateControls() -> void;
-  auto activeEmulator() -> InputEmulator&;
-  auto activePort() -> InputPort&;
-  auto activeDevice() -> InputDevice&;
-  auto reloadPorts() -> void;
-  auto reloadDevices() -> void;
-  auto reloadMappings() -> void;
-  auto refreshMappings() -> void;
-  auto assignMapping() -> void;
-  auto assignMouseInput(uint id) -> void;
-  auto inputEvent(shared_pointer<HID::Device> device, uint group, uint input, int16 oldValue, int16 newValue, bool allowMouseInput = false) -> void;
-
-  InputMapping* activeMapping = nullptr;
-  Timer timer;
 
   VerticalLayout layout{this};
     HorizontalLayout focusLayout{&layout, Size{~0, 0}};
@@ -91,17 +88,25 @@ struct InputSettings : TabFrameItem {
       Widget spacer{&controlLayout, Size{~0, 0}};
       Button resetButton{&controlLayout, Size{80, 0}};
       Button eraseButton{&controlLayout, Size{80, 0}};
+
+  auto updateControls() -> void;
+  auto activeEmulator() -> InputEmulator&;
+  auto activePort() -> InputPort&;
+  auto activeDevice() -> InputDevice&;
+  auto reloadPorts() -> void;
+  auto reloadDevices() -> void;
+  auto reloadMappings() -> void;
+  auto refreshMappings() -> void;
+  auto assignMapping() -> void;
+  auto assignMouseInput(uint id) -> void;
+  auto inputEvent(shared_pointer<HID::Device> device, uint group, uint input, int16 oldValue, int16 newValue, bool allowMouseInput = false) -> void;
+
+  InputMapping* activeMapping = nullptr;
+  Timer timer;
 };
 
 struct HotkeySettings : TabFrameItem {
   HotkeySettings(TabFrame*);
-  auto reloadMappings() -> void;
-  auto refreshMappings() -> void;
-  auto assignMapping() -> void;
-  auto inputEvent(shared_pointer<HID::Device> device, uint group, uint input, int16 oldValue, int16 newValue) -> void;
-
-  InputMapping* activeMapping = nullptr;
-  Timer timer;
 
   VerticalLayout layout{this};
     TableView mappingList{&layout, Size{~0, ~0}};
@@ -109,6 +114,14 @@ struct HotkeySettings : TabFrameItem {
       Widget spacer{&controlLayout, Size{~0, 0}};
       Button resetButton{&controlLayout, Size{80, 0}};
       Button eraseButton{&controlLayout, Size{80, 0}};
+
+  auto reloadMappings() -> void;
+  auto refreshMappings() -> void;
+  auto assignMapping() -> void;
+  auto inputEvent(shared_pointer<HID::Device> device, uint group, uint input, int16 oldValue, int16 newValue) -> void;
+
+  InputMapping* activeMapping = nullptr;
+  Timer timer;
 };
 
 struct AdvancedSettings : TabFrameItem {
@@ -133,8 +146,6 @@ struct AdvancedSettings : TabFrameItem {
 
 struct SettingsManager : Window {
   SettingsManager();
-  auto setVisible(bool visible = true) -> SettingsManager&;
-  auto show(uint setting) -> void;
 
   VerticalLayout layout{this};
     TabFrame panel{&layout, Size{~0, ~0}};
@@ -143,8 +154,10 @@ struct SettingsManager : Window {
       InputSettings input{&panel};
       HotkeySettings hotkeys{&panel};
       AdvancedSettings advanced{&panel};
-
   StatusBar statusBar{this};
+
+  auto setVisible(bool visible = true) -> SettingsManager&;
+  auto show(uint setting) -> void;
 };
 
 extern unique_pointer<SettingsManager> settingsManager;

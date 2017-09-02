@@ -3,15 +3,32 @@ struct Controller : Thread {
   virtual ~Controller();
 
   static auto Enter() -> void;
-  auto main() -> void;
+  virtual auto main() -> void;
 
   virtual auto readData() -> uint8 { return 0xff; }
   virtual auto writeData(uint8 data) -> void {}
 
-  virtual auto readControl() -> uint8 { return 0x00; }
-  virtual auto writeControl(uint8 data) -> void {}
-
   const uint port;
 };
 
-#include "gamepad/gamepad.hpp"
+struct ControllerPort {
+  auto connect(uint deviceID) -> void;
+
+  auto readControl() -> uint8;
+  auto writeControl(uint8 data) -> void;
+
+  auto power(uint port) -> void;
+  auto unload() -> void;
+  auto serialize(serializer&) -> void;
+
+  uint port;
+  uint8 control;
+  Controller* device = nullptr;
+};
+
+extern ControllerPort controllerPort1;
+extern ControllerPort controllerPort2;
+extern ControllerPort extensionPort;
+
+#include "control-pad/control-pad.hpp"
+#include "fighting-pad/fighting-pad.hpp"

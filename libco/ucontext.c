@@ -1,10 +1,4 @@
 /*
-  libco.ucontext (2008-01-28)
-  author: Nach
-  license: public domain
-*/
-
-/*
   WARNING: the overhead of POSIX ucontext is very high,
   assembly versions of libco or libco_sjlj should be much faster
 
@@ -18,8 +12,10 @@
 
 #define LIBCO_C
 #include "libco.h"
+#include "settings.h"
 
 #define _BSD_SOURCE
+#define _XOPEN_SOURCE 500
 #include <stdlib.h>
 #include <ucontext.h>
 

@@ -55,14 +55,15 @@ auto System::unserialize(serializer& s) -> bool {
 
 auto System::serializeAll(serializer& s) -> void {
   system.serialize(s);
-  busCPU.serialize(s);
-  busAPU.serialize(s);
   cartridge.serialize(s);
   cpu.serialize(s);
   apu.serialize(s);
   vdp.serialize(s);
   psg.serialize(s);
   ym2612.serialize(s);
+  controllerPort1.serialize(s);
+  controllerPort2.serialize(s);
+  extensionPort.serialize(s);
 }
 
 auto System::serialize(serializer& s) -> void {
