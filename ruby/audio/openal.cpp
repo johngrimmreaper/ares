@@ -1,4 +1,4 @@
-#if defined(PLATFORM_MACOSX)
+#if defined(PLATFORM_MACOS)
   #include <OpenAL/al.h>
   #include <OpenAL/alc.h>
 #else
@@ -10,17 +10,25 @@ struct AudioOpenAL : Audio {
   AudioOpenAL() { initialize(); }
   ~AudioOpenAL() { terminate(); }
 
-  auto ready() -> bool { return _ready; }
-
-  auto information() -> Information {
-    Information information;
-    for(auto& device : queryDevices()) information.devices.append(device);
-    information.channels = {2};
-    information.frequencies = {44100.0, 48000.0, 96000.0};
-    information.latencies = {20, 40, 60, 80, 100};
-    return information;
+  auto availableDevices() -> string_vector {
+    string_vector devices;
+    for(auto& device : queryDevices()) devices.append(device);
+    return devices;
   }
 
+  auto availableFrequencies() -> vector<double> {
+    return {44100.0, 48000.0, 96000.0};
+  }
+
+  auto availableLatencies() -> vector<uint> {
+    return {20, 40, 60, 80, 100};
+  }
+
+  auto availableChannels() -> vector<uint> {
+    return {2};
+  }
+
+  auto ready() -> bool { return _ready; }
   auto device() -> string { return _device; }
   auto blocking() -> bool { return _blocking; }
   auto channels() -> uint { return _channels; }
@@ -53,8 +61,8 @@ struct AudioOpenAL : Audio {
   }
 
   auto output(const double samples[]) -> void {
-    _buffer[_bufferLength]  = int16_t(samples[0] * 32768.0) <<  0;
-    _buffer[_bufferLength] |= int16_t(samples[1] * 32768.0) << 16;
+    _buffer[_bufferLength]  = (uint16_t)sclamp<16>(samples[0] * 32767.0) <<  0;
+    _buffer[_bufferLength] |= (uint16_t)sclamp<16>(samples[1] * 32767.0) << 16;
     if(++_bufferLength < _bufferSize) return;
 
     ALuint alBuffer = 0;

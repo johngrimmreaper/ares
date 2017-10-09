@@ -79,13 +79,13 @@ auto M68K::instructionABCD(EffectiveAddress with, EffectiveAddress from) -> void
   r.x = r.c;
 }
 
-template<uint Size, bool Extend> auto M68K::ADD(uint32 source, uint32 target) -> uint32 {
+template<uint Size, bool extend> auto M68K::ADD(uint32 source, uint32 target) -> uint32 {
   auto result = (uint64)source + target;
-  if(Extend) result += r.x;
+  if(extend) result += r.x;
 
   r.c = sign<Size>(result >> 1) < 0;
   r.v = sign<Size>(~(target ^ source) & (target ^ result)) < 0;
-  r.z = clip<Size>(result) ? 0 : (Extend ? r.z : 1);
+  r.z = clip<Size>(result) ? 0 : (extend ? r.z : 1);
   r.n = sign<Size>(result) < 0;
   r.x = r.c;
 
@@ -521,10 +521,10 @@ template<> auto M68K::instructionEXT<Long>(DataRegister with) -> void {
   r.n = sign<Long>(result) < 0;
 }
 
-auto M68K::instructionILLEGAL() -> void {
+auto M68K::instructionILLEGAL(uint16 code) -> void {
   r.pc -= 2;
-  if(opcode >> 12 == 0xa) return exception(Exception::Illegal, Vector::IllegalLineA);
-  if(opcode >> 12 == 0xf) return exception(Exception::Illegal, Vector::IllegalLineF);
+  if(code.bits(12,15) == 0xa) return exception(Exception::Illegal, Vector::IllegalLineA);
+  if(code.bits(12,15) == 0xf) return exception(Exception::Illegal, Vector::IllegalLineF);
   return exception(Exception::Illegal, Vector::Illegal);
 }
 
@@ -1059,13 +1059,13 @@ auto M68K::instructionSTOP() -> void {
   r.stop = true;
 }
 
-template<uint Size, bool Extend> auto M68K::SUB(uint32 source, uint32 target) -> uint32 {
+template<uint Size, bool extend> auto M68K::SUB(uint32 source, uint32 target) -> uint32 {
   auto result = (uint64)target - source;
-  if(Extend) result -= r.x;
+  if(extend) result -= r.x;
 
   r.c = sign<Size>(result >> 1) < 0;
   r.v = sign<Size>((target ^ source) & (target ^ result)) < 0;
-  r.z = clip<Size>(result) ? 0 : (Extend ? r.z : 1);
+  r.z = clip<Size>(result) ? 0 : (extend ? r.z : 1);
   r.n = sign<Size>(result) < 0;
   r.x = r.c;
 

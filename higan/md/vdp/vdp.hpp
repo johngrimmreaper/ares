@@ -41,10 +41,17 @@ struct VDP : Thread {
   } dma;
 
   //render.cpp
-  auto frame() -> void;
   auto scanline() -> void;
   auto run() -> void;
-  auto outputPixel(uint9 color) -> void;
+  auto outputPixel(uint32 color) -> void;
+
+  struct Pixel {
+    inline auto above() const -> bool { return priority == 1 && color; }
+    inline auto below() const -> bool { return priority == 0 && color; }
+
+    uint6 color;
+    uint1 priority;
+  };
 
   struct Background {
     enum class ID : uint { PlaneA, Window, PlaneB } id;
@@ -53,7 +60,7 @@ struct VDP : Thread {
     auto isWindowed(uint x, uint y) -> bool;
 
     auto updateHorizontalScroll(uint y) -> void;
-    auto updateVerticalScroll(uint x, uint y) -> void;
+    auto updateVerticalScroll(uint x) -> void;
 
     auto nametableAddress() -> uint15;
     auto nametableWidth() -> uint;
@@ -89,14 +96,31 @@ struct VDP : Thread {
       uint10 verticalScroll;
     } state;
 
-    struct Output {
-      uint6 color;
-      uint1 priority;
-    } output;
+    Pixel output;
   };
   Background planeA{Background::ID::PlaneA};
   Background window{Background::ID::Window};
   Background planeB{Background::ID::PlaneB};
+
+  struct Object {
+    //sprite.cpp
+    inline auto width() const -> uint;
+    inline auto height() const -> uint;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
+
+    uint9  x;
+    uint10 y;
+    uint2  tileWidth;
+    uint2  tileHeight;
+    uint1  horizontalFlip;
+    uint1  verticalFlip;
+    uint2  palette;
+    uint1  priority;
+    uint11 address;
+    uint7  link;
+  };
 
   struct Sprite {
     //sprite.cpp
@@ -114,23 +138,7 @@ struct VDP : Thread {
       uint1  nametableAddressBase;
     } io;
 
-    struct Object {
-      uint9  x;
-      uint9  y;
-      uint   width;
-      uint   height;
-      bool   horizontalFlip;
-      bool   verticalFlip;
-      uint2  palette;
-      uint1  priority;
-      uint15 address;
-      uint7  link;
-    };
-
-    struct Output {
-      uint6 color;
-      uint1 priority;
-    } output;
+    Pixel output;
 
     array<Object, 80> oam;
     array<Object, 20> objects;
@@ -189,6 +197,9 @@ private:
   } cram;
 
   struct IO {
+    //status
+    uint1 vblankIRQ;  //true after VIRQ triggers; cleared at start of next frame
+
     //command
     uint6  command;
     uint16 address;
@@ -243,13 +254,16 @@ private:
 
   struct State {
     uint32* output = nullptr;
-    uint hdot;
-    uint hcounter;
-    uint vcounter;
+    uint16 hdot;
+    uint16 hcounter;
+    uint16 vcounter;
+    uint1 field;
   } state;
 
   uint32 buffer[1280 * 512];
   uint32* output = nullptr;
+
+  friend class Interface;
 };
 
 extern VDP vdp;

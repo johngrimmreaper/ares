@@ -232,7 +232,7 @@ auto DSP::power() -> void {
   create(Enter, system.apuFrequency());
   stream = Emulator::audio.createStream(2, frequency() / 768.0);
 
-  for(auto& byte : apuram) byte = random(0x00);
+  random.array(apuram, sizeof(apuram));
 
   memory::fill(&state, sizeof(State));
   state.noise = 0x4000;

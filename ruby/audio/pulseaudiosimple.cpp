@@ -5,17 +5,23 @@ struct AudioPulseAudioSimple : Audio {
   AudioPulseAudioSimple() { initialize(); }
   ~AudioPulseAudioSimple() { terminate(); }
 
-  auto ready() -> bool { return _ready; }
-
-  auto information() -> Information {
-    Information information;
-    information.devices = {"Default"};
-    information.frequencies = {44100.0, 48000.0, 96000.0};
-    information.latencies = {40};
-    information.channels = {2};
-    return information;
+  auto availableDevices() -> string_vector {
+    return {"Default"};
   }
 
+  auto availableFrequencies() -> vector<double> {
+    return {44100.0, 48000.0, 96000.0};
+  }
+
+  auto availableLatencies() -> vector<uint> {
+    return {40};
+  }
+
+  auto availableChannels() -> vector<uint> {
+    return {2};
+  }
+
+  auto ready() -> bool { return _ready; }
   auto blocking() -> bool { return true; }
   auto channels() -> uint { return 2; }
   auto frequency() -> double { return _frequency; }
@@ -30,8 +36,9 @@ struct AudioPulseAudioSimple : Audio {
   auto output(const double samples[]) -> void {
     if(!ready()) return;
 
-    _buffer[_offset++] = uint16_t(samples[0] * 32768.0) << 0 | uint16_t(samples[1] * 32768.0) << 16;
-    if(_offset >= 64) {
+    _buffer[_offset]  = (uint16_t)sclamp<16>(samples[0] * 32767.0) <<  0;
+    _buffer[_offset] |= (uint16_t)sclamp<16>(samples[1] * 32767.0) << 16;
+    if(++_offset >= 64) {
       int error;
       pa_simple_write(_interface, (const void*)_buffer, _offset * sizeof(uint32_t), &error);
       _offset = 0;

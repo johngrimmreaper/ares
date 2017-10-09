@@ -4,17 +4,23 @@ struct AudioAO : Audio {
   AudioAO() { initialize(); }
   ~AudioAO() { terminate(); }
 
-  auto ready() -> bool { return _ready; }
-
-  auto information() -> Information {
-    Information information;
-    information.devices = {_device};
-    information.frequencies = {44100.0, 48000.0, 96000.0};
-    information.latencies = {100};
-    information.channels = {2};
-    return information;
+  auto availableDevices() -> string_vector {
+    return {"Default"};
   }
 
+  auto availableFrequencies() -> vector<double> {
+    return {44100.0, 48000.0, 96000.0};
+  }
+
+  auto availableLatencies() -> vector<uint> {
+    return {100};
+  }
+
+  auto availableChannels() -> vector<uint> {
+    return {2};
+  }
+
+  auto ready() -> bool { return _ready; }
   auto blocking() -> bool { return true; }
   auto channels() -> uint { return 2; }
   auto frequency() -> double { return _frequency; }
@@ -27,7 +33,9 @@ struct AudioAO : Audio {
   }
 
   auto output(const double samples[]) -> void {
-    uint32_t sample = uint16_t(samples[0] * 32768.0) << 0 | uint16_t(samples[1] * 32768.0) << 16;
+    uint32_t sample = 0;
+    sample |= (uint16_t)sclamp<16>(samples[0] * 32767.0) <<  0;
+    sample |= (uint16_t)sclamp<16>(samples[1] * 32767.0) << 16;
     ao_play(_interface, (char*)&sample, 4);
   }
 

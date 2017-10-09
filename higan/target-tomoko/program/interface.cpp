@@ -28,6 +28,7 @@ auto Program::load(uint id, string name, string type, string_vector options) -> 
   if(mediumQueue) {
     auto entry = mediumQueue.takeLeft().split("|", 1L);
     location = entry.right();
+    if(entry.size() == 1) option = options(0);
     if(entry.size() == 2) option = entry.left();
   } else {
     BrowserDialog dialog;
@@ -58,9 +59,9 @@ auto Program::videoRefresh(const uint32* data, uint pitch, uint width, uint heig
   if(emulator->information.overscan) {
     uint overscanHorizontal = settings["Video/Overscan/Horizontal"].natural();
     uint overscanVertical = settings["Video/Overscan/Vertical"].natural();
-    auto resolution = emulator->videoResolution();
-    overscanHorizontal *= resolution.internalWidth / resolution.width;
-    overscanVertical *= resolution.internalHeight / resolution.height;
+    auto information = emulator->videoInformation();
+    overscanHorizontal *= information.internalWidth / information.width;
+    overscanVertical *= information.internalHeight / information.height;
     data += overscanVertical * pitch + overscanHorizontal;
     width -= overscanHorizontal * 2;
     height -= overscanVertical * 2;

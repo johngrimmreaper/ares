@@ -10,17 +10,23 @@ struct AudioWASAPI : Audio {
   AudioWASAPI() { initialize(); }
   ~AudioWASAPI() { terminate(); }
 
-  auto ready() -> bool { return _ready; }
-
-  auto information() -> Information {
-    Information information;
-    for(auto& device : _devices) information.devices.append(device);
-    information.channels = {2};
-    information.frequencies = {(double)_frequency};
-    information.latencies = {0, 20, 40, 60, 80, 100};
-    return information;
+  auto availableDevices() -> string_vector {
+    return _devices;
   }
 
+  auto availableFrequencies() -> vector<double> {
+    return {(double)_frequency};
+  }
+
+  auto availableLatencies() -> vector<uint> {
+    return {0, 20, 40, 60, 80, 100};
+  }
+
+  auto availableChannels() -> vector<uint> {
+    return {2};
+  }
+
+  auto ready() -> bool { return _ready; }
   auto exclusive() -> bool { return _exclusive; }
   auto device() -> string { return _device; }
   auto blocking() -> bool { return _blocking; }
@@ -199,16 +205,16 @@ private:
         }
 
         if(_mode == 1 && _precision == 16) {
-          auto output = (int16_t*)buffer;
-          for(uint n : range(_channels)) *output++ = int16_t(samples[n] * 32768.0);
+          auto output = (uint16_t*)buffer;
+          for(uint n : range(_channels)) *output++ = (uint16_t)sclamp<16>(samples[n] * (32768.0 - 1.0));
           buffer = (uint8_t*)output;
         } else if(_mode == 1 && _precision == 32) {
-          auto output = (int32_t*)buffer;
-          for(uint n : range(_channels)) *output++ = int32_t(samples[n] * 65536.0 * 32768.0);
+          auto output = (uint32_t*)buffer;
+          for(uint n : range(_channels)) *output++ = (uint32_t)sclamp<32>(samples[n] * (65536.0 * 32768.0 - 1.0));
           buffer = (uint8_t*)output;
         } else if(_mode == 3 && _precision == 32) {
           auto output = (float*)buffer;
-          for(uint n : range(_channels)) *output++ = float(samples[n]);
+          for(uint n : range(_channels)) *output++ = float(max(-1.0, min(+1.0, samples[n])));
           buffer = (uint8_t*)output;
         } else {
           //output silence for unsupported sample formats
@@ -239,7 +245,7 @@ private:
   } _queue;
 
   IMMDeviceEnumerator* _enumerator = nullptr;
-  vector<string> _devices;
+  string_vector _devices;
   IMMDevice* _audioDevice = nullptr;
   IAudioClient* _audioClient = nullptr;
   IAudioRenderClient* _renderClient = nullptr;
