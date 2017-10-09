@@ -26,20 +26,23 @@ auto uPD96050::power() -> void {
   regs.rp = 0x0000;
   regs.dp = 0x0000;
   regs.sp = 0x0;
+  regs.si = 0x0000;
+  regs.so = 0x0000;
   regs.k = 0x0000;
   regs.l = 0x0000;
   regs.m = 0x0000;
   regs.n = 0x0000;
   regs.a = 0x0000;
   regs.b = 0x0000;
-  regs.flaga = 0x00;
-  regs.flagb = 0x00;
   regs.tr = 0x0000;
   regs.trb = 0x0000;
-  regs.sr = 0x0000;
   regs.dr = 0x0000;
-  regs.si = 0x0000;
-  regs.so = 0x0000;
+  regs.sr = 0x0000;
+  regs.sr.siack = 0;
+  regs.sr.soack = 0;
+
+  flags.a = 0x0000;
+  flags.b = 0x0000;
 }
 
 }

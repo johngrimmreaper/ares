@@ -5,22 +5,32 @@ struct AudioASIO : Audio {
   AudioASIO() { self = this; initialize(); }
   ~AudioASIO() { terminate(); }
 
-  auto ready() -> bool { return _ready; }
-
-  auto information() -> Information {
-    Information information;
-    for(auto& device : _devices) information.devices.append(device.name);
-    information.frequencies = {_frequency};
-    uint latencies[] = {64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 6144};  //factors of 6144
-    for(auto& latency : latencies) {
-      if(latency < _active.minimumBufferSize) continue;
-      if(latency > _active.maximumBufferSize) continue;
-      information.latencies.append(latency);
-    }
-    information.channels = {1, 2};
-    return information;
+  auto availableDevices() -> string_vector {
+    string_vector devices;
+    for(auto& device : _devices) devices.append(device.name);
+    return devices;
   }
 
+  auto availableFrequencies() -> vector<double> {
+    return {_frequency};
+  }
+
+  auto availableLatencies() -> vector<uint> {
+    vector<uint> latencies;
+    uint latencyList[] = {64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 6144};  //factors of 6144
+    for(auto& latency : latencyList) {
+      if(latency < _active.minimumBufferSize) continue;
+      if(latency > _active.maximumBufferSize) continue;
+      latencies.append(latency);
+    }
+    return latencies;
+  }
+
+  auto availableChannels() -> vector<uint> {
+    return {1, 2};
+  }
+
+  auto ready() -> bool { return _ready; }
   auto context() -> uintptr { return _context; }
   auto device() -> string { return _device; }
   auto blocking() -> bool { return _blocking; }
@@ -198,30 +208,30 @@ private:
 
         switch(_sampleFormat) {
         case ASIOSTInt16LSB: {
-          *(int16_t*)buffer = samples[n] * double(1 << 15);
+          *(uint16_t*)buffer = (uint16_t)sclamp<16>(samples[n] * (32768.0 - 1.0));
           break;
         }
 
         case ASIOSTInt24LSB: {
-          int value = samples[n] * double(1 << 23);
-          buffer[0] = value >> 0;
-          buffer[1] = value >> 8;
+          auto value = (uint32_t)sclamp<24>(samples[n] * (256.0 * 32768.0 - 1.0));
+          buffer[0] = value >>  0;
+          buffer[1] = value >>  8;
           buffer[2] = value >> 16;
           break;
         }
 
         case ASIOSTInt32LSB: {
-          *(int32_t*)buffer = samples[n] * double(1 << 31);
+          *(uint32_t*)buffer = (uint32_t)sclamp<32>(samples[n] * (65536.0 * 32768.0 - 1.0));
           break;
         }
 
         case ASIOSTFloat32LSB: {
-          *(float*)buffer = samples[n];
+          *(float*)buffer = max(-1.0, min(+1.0, samples[n]));
           break;
         }
 
         case ASIOSTFloat64LSB: {
-          *(double*)buffer = samples[n];
+          *(double*)buffer = max(-1.0, min(+1.0, samples[n]));
           break;
         }
         }

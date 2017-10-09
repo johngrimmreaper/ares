@@ -136,7 +136,10 @@ Presentation::Presentation() {
 
   helpMenu.setText("Help");
   documentation.setText("Documentation ...").onActivate([&] {
-    invoke("http://doc.byuu.org/higan/");
+    invoke("https://doc.byuu.org/higan/");
+  });
+  credits.setText("Credits ...").onActivate([&] {
+    invoke("https://doc.byuu.org/higan/credits/");
   });
   about.setText("About ...").onActivate([&] {
     aboutWindow->setVisible().setFocused();
@@ -168,7 +171,7 @@ Presentation::Presentation() {
   Application::Windows::onModalChange([](bool modal) { if(modal && audio) audio->clear(); });
   #endif
 
-  #if defined(PLATFORM_MACOSX)
+  #if defined(PLATFORM_MACOS)
   about.setVisible(false);
   Application::Cocoa::onAbout([&] { about.doActivate(); });
   Application::Cocoa::onActivate([&] { setFocused(); });
@@ -245,10 +248,10 @@ auto Presentation::resizeViewport(bool resizeWindow) -> void {
   double emulatorHeight = 240;
   double aspectCorrection = 1.0;
   if(emulator) {
-    auto resolution = emulator->videoResolution();
-    emulatorWidth = resolution.width;
-    emulatorHeight = resolution.height;
-    aspectCorrection = resolution.aspectCorrection;
+    auto information = emulator->videoInformation();
+    emulatorWidth = information.width;
+    emulatorHeight = information.height;
+    aspectCorrection = information.aspectCorrection;
     if(emulator->information.overscan) {
       uint overscanHorizontal = settings["Video/Overscan/Horizontal"].natural();
       uint overscanVertical = settings["Video/Overscan/Vertical"].natural();

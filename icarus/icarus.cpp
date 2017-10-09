@@ -47,8 +47,10 @@ Settings settings;
 #include "core/wonderswan-color.cpp"
 #include "core/bs-memory.cpp"
 #include "core/sufami-turbo.cpp"
-Icarus icarus;
 
+#if !defined(ICARUS_LIBRARY)
+
+Icarus icarus;
 #include "ui/ui.hpp"
 #include "ui/scan-dialog.cpp"
 #include "ui/settings-dialog.cpp"
@@ -57,6 +59,8 @@ Icarus icarus;
 
 #include <nall/main.hpp>
 auto nall::main(string_vector args) -> void {
+  Application::setName("icarus");
+
   if(args.size() == 2 && args[1] == "--name") {
     return print("icarus");
   }
@@ -105,13 +109,13 @@ auto nall::main(string_vector args) -> void {
   new SettingsDialog;
   new ImportDialog;
   new ErrorDialog;
-  #if defined(PLATFORM_MACOSX)
+  #if defined(PLATFORM_MACOS)
   Application::Cocoa::onAbout([&] {
     MessageDialog().setTitle("About icarus").setText({
       "icarus\n\n"
       "Author: byuu\n"
       "License: GPLv3\n"
-      "Website: http://byuu.org/\n"
+      "Website: https://byuu.org/\n"
     }).information();
   });
   Application::Cocoa::onPreferences([&] {
@@ -123,4 +127,7 @@ auto nall::main(string_vector args) -> void {
   #endif
   scanDialog->show();
   Application::run();
+  settings.save();
 }
+
+#endif
