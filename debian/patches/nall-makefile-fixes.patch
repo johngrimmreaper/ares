@@ -32,7 +32,7 @@ Author: Tobias Hansen <thansen@debian.org>
  # compiler detection
  ifeq ($(compiler),)
 @@ -51,7 +51,7 @@
-   else ifeq ($(platform),macosx)
+   else ifeq ($(platform),macos)
      compiler := clang++
    else ifeq ($(platform),linux)
 -    compiler := g++-4.9

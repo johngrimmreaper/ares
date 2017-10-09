@@ -5,7 +5,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/target-tomoko/GNUmakefile
 +++ b/higan/target-tomoko/GNUmakefile
-@@ -85,9 +85,7 @@
+@@ -84,9 +84,7 @@
  endif
  
  install:
@@ -13,6 +13,6 @@ Author: Tobias Hansen <thansen@debian.org>
 -	$(error "make install should not be run as root")
 -else ifeq ($(platform),windows)
 +ifeq ($(platform),windows)
- else ifeq ($(platform),macosx)
+ else ifeq ($(platform),macos)
  	mkdir -p ~/Library/Application\ Support/$(name)/
  	mkdir -p ~/Emulation/System/

@@ -4,12 +4,12 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/GNUmakefile
 +++ b/higan/GNUmakefile
-@@ -19,7 +19,7 @@
- else ifeq ($(platform),macosx)
-   flags += -march=native
+@@ -23,7 +23,7 @@
+     link += -dynamiclib
+   endif
  else ifneq ($(filter $(platform),linux bsd),)
 -  flags += -fopenmp
 +  flags += -fopenmp $(shell pkg-config gtk+-2.0 --cflags)
    link += -fopenmp
-   link += -Wl,-export-dynamic
-   link += -lX11 -lXext -ldl
+   ifeq ($(binary),application)
+     link += -Wl,-export-dynamic

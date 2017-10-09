@@ -7,7 +7,7 @@ Bug-Debian: http://bugs.debian.org/738270
 --- a/nall/path.hpp
 +++ b/nall/path.hpp
 @@ -80,7 +80,13 @@
-   #elif defined(PLATFORM_MACOSX)
+   #elif defined(PLATFORM_MACOS)
    string result = {Path::user(), "Library/Application Support/"};
    #else
 -  string result = {Path::user(), ".config/"};

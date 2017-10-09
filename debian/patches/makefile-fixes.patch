@@ -11,16 +11,14 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/higan/GNUmakefile
 +++ b/higan/GNUmakefile
-@@ -19,10 +19,10 @@
- else ifeq ($(platform),macosx)
-   flags += -march=native
- else ifneq ($(filter $(platform),linux bsd),)
--  flags += -march=native -fopenmp
-+  flags += -fopenmp
+@@ -26,9 +26,8 @@
+   flags += -fopenmp
    link += -fopenmp
-   link += -Wl,-export-dynamic
--  link += -lX11 -lXext
-+  link += -lX11 -lXext -ldl
- else
-   $(error "unsupported platform")
- endif
+   ifeq ($(binary),application)
+-    flags += -march=native
+     link += -Wl,-export-dynamic
+-    link += -lX11 -lXext
++    link += -lX11 -lXext -ldl
+   else ifeq ($(binary),library)
+     flags += -fPIC
+     link += -shared

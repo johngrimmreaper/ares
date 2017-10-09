@@ -6,6 +6,12 @@ ifeq (,$(findstring $(DEB_BUILD_ARCH_CPU),"amd64 i386 powerpc"))
 	export DEB_BUILD_MAINT_OPTIONS=hardening=-fortify
 endif
 
+ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
+    BUILDOPT=build=optimize
+else
+    BUILDOPT=build=debug
+endif
+
 %:
 	dh $@ --sourcedirectory=higan
 
@@ -15,9 +21,9 @@ override_dh_auto_clean:
 
 override_dh_auto_build:
 	mkdir -p icarus/obj icarus/out
-	$(MAKE) --directory=icarus
+	$(MAKE) --directory=icarus $(BUILDOPT)
 	mkdir -p higan/obj higan/out
-	dh_auto_build
+	dh_auto_build -- $(BUILDOPT)
 
 override_dh_auto_install:
 	dh_auto_install -- prefix=../debian/tmp/usr

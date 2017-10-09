@@ -2,7 +2,6 @@ nall-makefile-fixes.patch
 makefile-fixes.patch
 desktop-file.patch
 sjlj-declare-xopen-source.patch
-noopt.patch
 use-XDG_CONFIG_HOME.patch
 find_cairo.patch
 use_sharedpath.patch
