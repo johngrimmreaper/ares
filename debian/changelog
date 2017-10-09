@@ -1,3 +1,9 @@
+higan (105-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Tobias Hansen <thansen@debian.org>  Mon, 09 Oct 2017 21:52:49 +0100
+
 higan (104-1) unstable; urgency=medium
 
   * New upstream release.
