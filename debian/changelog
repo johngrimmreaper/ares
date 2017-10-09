@@ -1,10 +1,10 @@
-higan (105-1) UNRELEASED; urgency=medium
+higan (105-1) unstable; urgency=medium
 
-  * New upstream release.
+  * New upstream release (Closes: #791636).
   * Remove noopt.patch, makefile now allows build without optimization
     by setting build=debug.
 
- -- Tobias Hansen <thansen@debian.org>  Mon, 09 Oct 2017 21:52:49 +0100
+ -- Tobias Hansen <thansen@debian.org>  Mon, 09 Oct 2017 23:28:22 +0100
 
 higan (104-1) unstable; urgency=medium
 
