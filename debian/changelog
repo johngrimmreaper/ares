@@ -1,3 +1,10 @@
+higan (106-2) unstable; urgency=medium
+
+  * Build hiro without SourceEdit to avoid dependence on
+    libgtksourceview2.0-dev. (Closes: #885687)
+
+ -- Tobias Hansen <thansen@debian.org>  Sat, 30 Dec 2017 16:09:44 +0100
+
 higan (106-1) unstable; urgency=medium
 
   * New upstream release.
