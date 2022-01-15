@@ -1,33 +1,28 @@
 Description: nall/Makefile fixes
 
+* Use linux platform settings also on kfreebsd.
 * Use the flags from CFLAGS, CPPFLAGS and LDFLAGS. They are set in the rules file.
-* Use g++ instead of g++-4.9.
 
 Author: Tobias Hansen <thansen@debian.org>
 
 --- a/nall/GNUmakefile
 +++ b/nall/GNUmakefile
-@@ -29,19 +29,19 @@
+@@ -30,7 +30,7 @@
+   else ifneq ($(findstring Linux,$(uname)),)
      platform := linux
-     delete = rm -f $1
    else ifneq ($(findstring BSD,$(uname)),)
 -    platform := bsd
 +    platform := linux
-     delete = rm -f $1
    else
      $(error unknown platform, please specify manually.)
    endif
+@@ -158,7 +158,8 @@
+ 
+ # linux settings
+ ifeq ($(platform),linux)
+-  options += -ldl
++  flags += $(CFLAGS) $(CPPFLAGS)
++  options += -ldl $(LDFLAGS)
  endif
  
--cflags := -x c -std=c11
-+cflags := -x c -std=c11 $(CFLAGS) $(CPPFLAGS)
- objcflags := -x objective-c -std=c11
--cppflags := -x c++ -std=c++14
-+cppflags := -x c++ -std=c++14 $(CFLAGS) $(CPPFLAGS)
- objcppflags := -x objective-c++ -std=c++14
- flags :=
--link :=
-+link := $(LDFLAGS)
- 
- # compiler detection
- ifeq ($(compiler),)
+ # bsd settings

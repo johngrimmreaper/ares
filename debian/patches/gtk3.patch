@@ -1,0 +1,14 @@
+Description: Use GTK 3 instead of GTK 2.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/hiro/GNUmakefile
++++ b/hiro/GNUmakefile
+@@ -32,7 +32,7 @@
+ 
+ ifneq ($(filter $(platform),linux bsd),)
+   ifeq ($(hiro),)
+-    hiro := gtk2
++    hiro := gtk3
+   endif
+ 
+   ifeq ($(hiro),gtk2)

@@ -1,0 +1,14 @@
+Description: Allow installation of files under fakeroot.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/desktop-ui/GNUmakefile
++++ b/desktop-ui/GNUmakefile
+@@ -96,8 +96,6 @@
+ install: all
+ ifeq ($(platform),windows)
+ 	mkdir -p $(prefix)/$(name)/
+-else ifeq ($(shell id -un),root)
+-	$(error "make install should not be run as root")
+ else ifeq ($(platform),macos)
+ 	mkdir -p ~/Library/Application\ Support/$(name)/
+ 	cp -R $(output.path)/$(name).app /Applications/$(name).app

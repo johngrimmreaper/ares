@@ -2,14 +2,13 @@ Description: Find cairo.h
   Find cairo.h by adding cflags from pkg-config.
 Author: Tobias Hansen <thansen@debian.org>
 
---- a/higan/GNUmakefile
-+++ b/higan/GNUmakefile
-@@ -23,7 +23,7 @@
-     link += -dynamiclib
-   endif
+--- a/ares/GNUmakefile
++++ b/ares/GNUmakefile
+@@ -4,6 +4,7 @@
+   options += -Wl,-enable-runtime-pseudo-reloc
+ else ifeq ($(platform),macos)
  else ifneq ($(filter $(platform),linux bsd),)
--  flags += -fopenmp
-+  flags += -fopenmp $(shell pkg-config gtk+-2.0 --cflags)
-   link += -fopenmp
-   ifeq ($(binary),application)
-     link += -Wl,-export-dynamic
++  flags += $(shell pkg-config gtk+-2.0 --cflags)
+   options += -Wl,-export-dynamic
+   options += -lX11 -lXext
+ else

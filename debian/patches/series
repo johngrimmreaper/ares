@@ -1,13 +1,6 @@
 nall-makefile-fixes.patch
-makefile-fixes.patch
 desktop-file.patch
 sjlj-declare-xopen-source.patch
-use-XDG_CONFIG_HOME.patch
 find_cairo.patch
-use_sharedpath.patch
-ignore_manifests_by_default.patch
-create_config.patch
-include_cmath.patch
-disable-alsa-and-udev-on-non-linux.patch
-tomoko-makefile-fixes.patch
-no_gtksourceview.patch
+gtk3.patch
+allow-fakeroot.patch
