@@ -1,0 +1,15 @@
+Description: Set menu bar background color to grey
+ Previously the background was black with dark grey text.
+Author: Tobias Hansen <thansen@debian.org>
+Bug: https://github.com/ares-emulator/ares/issues/229
+
+--- a/hiro/gtk/application.cpp
++++ b/hiro/gtk/application.cpp
+@@ -191,6 +191,7 @@
+   gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(provider), R"(
+     * { font-size: 8pt; padding-top: 0px; padding-bottom: 0px; }
+     menu { border-width: 0px; }
++    menubar { background-color: gray; }
+     menuitem { padding: 3px 5px; }
+     entry { min-height: 0px; }
+   )", -1, nullptr);
