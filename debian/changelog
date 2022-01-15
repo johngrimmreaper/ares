@@ -1,3 +1,11 @@
+ares (126-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+  * Provide ares instead of higan because it is more user friendly
+    and actively maintained.
+
+ -- Tobias Hansen <thansen@debian.org>  Sat, 15 Jan 2022 09:40:26 +0000
+
 higan (106-2) unstable; urgency=medium
 
   * Build hiro without SourceEdit to avoid dependence on
