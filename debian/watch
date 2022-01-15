@@ -1,2 +1,2 @@
 version=4
-https://github.com/higan-emu/higan/releases .*/v?@ANY_VERSION@@ARCHIVE_EXT@
+https://github.com/ares-emulator/ares/releases .*/v?@ANY_VERSION@@ARCHIVE_EXT@
