@@ -6,19 +6,19 @@ Files: *
 Copyright: Copyright (c) 2004-2021 ares team, Near et al
 License: ISC
 
-Files: ares/n64/vulkan/parallel-rdp
+Files: ares/n64/vulkan/parallel-rdp/*
 Copyright: Copyright (c) 2020 Themaister
 License: MIT
 
-Files: ares/n64/vulkan/parallel-rdp/util
+Files: ares/n64/vulkan/parallel-rdp/util/*
 Copyright: Copyright (c) 2017-2020 Hans-Kristian Arntzen
 License: MIT
 
-Files: ares/n64/vulkan/parallel-rdp/volk
+Files: ares/n64/vulkan/parallel-rdp/volk/*
 Copyright: Copyright (C) 2018-2019, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
 License: MIT
 
-Files: ares/n64/vulkan/parallel-rdp/vulkan-headers/include/vulkan
+Files: ares/n64/vulkan/parallel-rdp/vulkan-headers/include/vulkan/*
 Copyright: Copyright (c) 2015-2021 The Khronos Group Inc.
  Copyright (c) 2015-2017 Valve Corporation
  Copyright (c) 2015-2017 LunarG, Inc.
