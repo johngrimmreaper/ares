@@ -1,7 +1,6 @@
 nall-makefile-fixes.patch
 desktop-file.patch
 sjlj-declare-xopen-source.patch
-find_cairo.patch
 gtk3.patch
 allow-fakeroot.patch
 menu-color.patch
