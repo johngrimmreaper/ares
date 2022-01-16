@@ -28,7 +28,7 @@ Files: debian/*
 Copyright: 2011-2022 Tobias Hansen <thansen@debian.org>
 License: GPL-3
 
-Licence: ISC
+License: ISC
  Permission to use, copy, modify, and/or distribute this software for any
  purpose with or without fee is hereby granted, provided that the above
  copyright notice and this permission notice appear in all copies.
@@ -41,7 +41,7 @@ Licence: ISC
  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Licence: MIT
+License: MIT
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
  "Software"), to deal in the Software without restriction, including

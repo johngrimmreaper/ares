@@ -1,10 +1,10 @@
-ares (126-1) UNRELEASED; urgency=medium
+ares (126-1) unstable; urgency=medium
 
   * New upstream release.
   * Provide ares instead of higan because it is more user friendly
     and actively maintained. (Closes: #1003848)
 
- -- Tobias Hansen <thansen@debian.org>  Sat, 15 Jan 2022 09:40:26 +0000
+ -- Tobias Hansen <thansen@debian.org>  Sun, 16 Jan 2022 20:47:16 +0000
 
 higan (106-2) unstable; urgency=medium
 
