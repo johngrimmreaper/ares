@@ -1,3 +1,10 @@
+ares (126-2) unstable; urgency=medium
+
+  * Add no-optional-extensions.patch, removing flag -march-native
+    and the n64 core which relies on SSE 4.2.
+
+ -- Tobias Hansen <thansen@debian.org>  Wed, 09 Feb 2022 22:59:39 +0000
+
 ares (126-1) unstable; urgency=medium
 
   * New upstream release.

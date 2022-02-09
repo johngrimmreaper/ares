@@ -1,0 +1,36 @@
+Description: Remove flags that enable optional cpu features
+ To conform to Debian architecture baselines.
+ Since we cannot use SSE 4.2 we have to disable the n64 core.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/desktop-ui/GNUmakefile
++++ b/desktop-ui/GNUmakefile
+@@ -3,7 +3,7 @@
+ threaded := true
+ openmp := false
+ vulkan := false
+-local := true
++local := false
+ flags += -I. -I.. -I../ares -DMIA_LIBRARY
+ 
+ nall.path := ../nall
+@@ -32,7 +32,7 @@
+ include $(hiro.path)/GNUmakefile
+ 
+ profile := performance
+-cores := fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp
++cores := fc sfc sg ms md ps1 pce ng msx cv gb gba ws ngp
+ #cores += saturn
+ 
+ ares.path := ../ares
+--- a/mia/GNUmakefile
++++ b/mia/GNUmakefile
+@@ -1,7 +1,7 @@
+ name := mia
+ build := optimized
+ threaded := true
+-local := true
++local := false
+ flags += -I. -I.. -I../ares
+ 
+ ifeq ($(local),true)

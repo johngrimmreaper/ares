@@ -4,3 +4,4 @@ sjlj-declare-xopen-source.patch
 gtk3.patch
 allow-fakeroot.patch
 menu-color.patch
+no-optional-extensions.patch
