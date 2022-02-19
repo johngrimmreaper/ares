@@ -1,0 +1,25 @@
+Description: Allow all architectures
+ Do not refuse building on architectures not
+ considered in intrinsics.hpp.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/nall/intrinsics.hpp
++++ b/nall/intrinsics.hpp
+@@ -229,7 +229,16 @@
+     static constexpr bool ppc32 = 1;
+   };
+ #else
+-  #error "unable to detect architecture"
++  #warning "unable to detect architecture"
++  #define ARCHITECTURE_UNKNOWN
++  struct Architecture {
++    static constexpr bool x86   = 0;
++    static constexpr bool amd64 = 0;
++    static constexpr bool arm64 = 0;
++    static constexpr bool arm32 = 0;
++    static constexpr bool ppc64 = 0;
++    static constexpr bool ppc32 = 0;
++  };
+ #endif
+ 
+ /* Endian detection */
