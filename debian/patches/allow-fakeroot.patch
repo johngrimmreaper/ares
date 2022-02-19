@@ -3,7 +3,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/desktop-ui/GNUmakefile
 +++ b/desktop-ui/GNUmakefile
-@@ -96,8 +96,6 @@
+@@ -99,8 +99,6 @@
  install: all
  ifeq ($(platform),windows)
  	mkdir -p $(prefix)/$(name)/

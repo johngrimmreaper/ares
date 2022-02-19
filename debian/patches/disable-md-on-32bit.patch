@@ -1,0 +1,20 @@
+Description: Disable Sega Mega Drive core on 32 bit architectures
+ The core uses 128 bit integers which are only available on
+ 64 bit architectures.
+Author: Tobias Hansen <thansen@debian.org>
+
+--- a/desktop-ui/GNUmakefile
++++ b/desktop-ui/GNUmakefile
+@@ -32,8 +32,11 @@
+ include $(hiro.path)/GNUmakefile
+ 
+ profile := performance
+-cores := fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp
++cores := fc sfc n64 sg ms ps1 pce ng msx cv gb gba ws ngp
+ #cores += saturn
++ifneq ($(shell $(compiler) -E -dM - < /dev/null | grep INT128),)
++	cores += md
++endif
+ 
+ ares.path := ../ares
+ include $(ares.path)/GNUmakefile

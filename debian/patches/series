@@ -1,3 +1,4 @@
+disable-md-on-32bit.patch
 nall-makefile-fixes.patch
 desktop-file.patch
 sjlj-declare-xopen-source.patch

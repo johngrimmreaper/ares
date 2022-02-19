@@ -18,11 +18,11 @@ Author: Tobias Hansen <thansen@debian.org>
  include $(hiro.path)/GNUmakefile
  
  profile := performance
--cores := fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp
-+cores := fc sfc sg ms md ps1 pce ng msx cv gb gba ws ngp
+-cores := fc sfc n64 sg ms ps1 pce ng msx cv gb gba ws ngp
++cores := fc sfc sg ms ps1 pce ng msx cv gb gba ws ngp
  #cores += saturn
- 
- ares.path := ../ares
+ ifneq ($(shell $(compiler) -E -dM - < /dev/null | grep INT128),)
+ 	cores += md
 --- a/mia/GNUmakefile
 +++ b/mia/GNUmakefile
 @@ -1,7 +1,7 @@
