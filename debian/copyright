@@ -1,6 +1,6 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ares
-Source: https://ares-emulator.github.io
+Source: https://ares-emu.net
 
 Files: *
 Copyright: Copyright (c) 2004-2021 ares team, Near et al

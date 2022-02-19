@@ -2,6 +2,7 @@ ares (126-3) UNRELEASED; urgency=medium
 
   * Add disable-md-on-32bit.patch, disabling Sega Mega Drive core
     on 32 bit architectures.
+  * Update upstream homepage.
 
  -- Tobias Hansen <thansen@debian.org>  Sat, 19 Feb 2022 16:34:37 +0000
 
