@@ -1,3 +1,14 @@
+ares (126-4) UNRELEASED; urgency=medium
+
+  * Trim trailing whitespace.
+  * Use secure copyright file specification URI.
+  * Refer to common license file for Apache-2.0.
+  * Bump debhelper from old 12 to 13.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+ -- Debian Janitor <janitor@jelmer.uk>  Sat, 19 Feb 2022 22:22:50 -0000
+
 ares (126-3) unstable; urgency=medium
 
   * Add disable-md-on-32bit.patch, disabling Sega Mega Drive core
@@ -316,12 +327,12 @@ bsnes (0.088-1) unstable; urgency=low
     - Don't use the install targets of the makefiles anymore.
     - Check DEB_BUILD_OPTIONS for 'testbuild', build only
       bsnes-compatibility when found to allow for fast test builds.
-  * Install new system folders to /usr/share/games/bsnes and 
+  * Install new system folders to /usr/share/games/bsnes and
     /usr/share/games/laevateinn.
     - Copy folders and symlink to files in debian/startscript/bsnes.
     - Rename laevateinn binary to laevateinn-bin, create wrapper script
       laevateinn to copy folders and symlink to files also for laevateinn.
-    - Create man page for laevateinn-bin. 
+    - Create man page for laevateinn-bin.
   * debian/bsnes.6:
     - Mention Game Boy Advance support.
     - Mention system folders and bios image required for GBA emulation.
@@ -366,7 +377,7 @@ bsnes (0.087-1) unstable; urgency=low
     - Added. Makefiles have to be modified to support CFLAGS.
   * debian/patches/reduce-optimization.patch:
     - Removed. With dpkg-buildflags, the optimization flags
-      can now be set in debian/rules. 
+      can now be set in debian/rules.
   * debian/patches/misc-makefile-changes.patch:
     - Changed. Use OpenAL for laevateinns audio on non-Linux archs.
     - Address upstream changes.
@@ -408,7 +419,7 @@ bsnes (0.083-1) unstable; urgency=low
 
   * New upstream release.
   * Create symlinks instead of copying files in startscript. (Closes: #642348)
-  * Fix FTBFS on kfreebsd due to enabled ALSA and missing check for 
+  * Fix FTBFS on kfreebsd due to enabled ALSA and missing check for
     __FreeBSD_kernel__. (Closes: #640912)
   * Add Build-Depends: gcc (>= 4.6), because building with gcc 4.5 causes a bug.
   * Mention update-alternatives in package description.
