@@ -16,7 +16,7 @@ Author: Tobias Hansen <thansen@debian.org>
    else
      $(error unknown platform, please specify manually.)
    endif
-@@ -158,7 +158,8 @@
+@@ -223,7 +223,8 @@
  
  # linux settings
  ifeq ($(platform),linux)

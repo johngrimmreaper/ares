@@ -5,15 +5,15 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/desktop-ui/GNUmakefile
 +++ b/desktop-ui/GNUmakefile
-@@ -32,8 +32,11 @@
+@@ -36,8 +36,11 @@
  include $(hiro.path)/GNUmakefile
  
  profile := performance
--cores := fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp
-+cores := fc sfc n64 sg ms ps1 pce ng msx cv gb gba ws ngp
+-cores := a26 fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp
++cores := a26 fc sfc n64 sg ms ps1 pce ng msx cv gb gba ws ngp
  #cores += saturn
 +ifneq ($(shell $(compiler) -E -dM - < /dev/null | grep INT128),)
-+	cores += md
++   cores += md
 +endif
  
  ares.path := ../ares
