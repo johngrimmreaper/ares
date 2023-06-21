@@ -25,7 +25,7 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Provides: nes-emulator
 Description: Accurate multi-system emulator
- ares is an emulator for systems from Nintendo, Sega, Sony, NEC, SNK,
+ ares is an emulator for systems from Atari, Nintendo, Sega, Sony, NEC, SNK,
  Microsoft, Coleco, Bandai and Benesse. It is a descendent of higan and bsnes
  and focuses on accuracy and preservation. The SNES emulation is especially
  complete and polished.

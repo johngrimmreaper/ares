@@ -5,24 +5,24 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/desktop-ui/GNUmakefile
 +++ b/desktop-ui/GNUmakefile
-@@ -3,7 +3,7 @@
- threaded := true
+@@ -4,7 +4,7 @@
  openmp := false
- vulkan := false
+ vulkan := true
+ mame.rdp := true
 -local := true
 +local := false
- flags += -I. -I.. -I../ares -DMIA_LIBRARY
+ lto := true
+ flags += -I. -I.. -I../ares -I../thirdparty -DMIA_LIBRARY
  
- nall.path := ../nall
-@@ -32,7 +32,7 @@
+@@ -36,7 +36,7 @@
  include $(hiro.path)/GNUmakefile
  
  profile := performance
--cores := fc sfc n64 sg ms ps1 pce ng msx cv gb gba ws ngp
-+cores := fc sfc sg ms ps1 pce ng msx cv gb gba ws ngp
+-cores := a26 fc sfc n64 sg ms ps1 pce ng msx cv gb gba ws ngp
++cores := a26 fc sfc sg ms ps1 pce ng msx cv gb gba ws ngp
  #cores += saturn
  ifneq ($(shell $(compiler) -E -dM - < /dev/null | grep INT128),)
- 	cores += md
+   cores += md
 --- a/mia/GNUmakefile
 +++ b/mia/GNUmakefile
 @@ -1,7 +1,7 @@
@@ -31,6 +31,6 @@ Author: Tobias Hansen <thansen@debian.org>
  threaded := true
 -local := true
 +local := false
- flags += -I. -I.. -I../ares
+ flags += -I. -I.. -I../ares -I../thirdparty
  
- ifeq ($(local),true)
+ nall.path := ../nall

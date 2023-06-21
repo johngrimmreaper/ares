@@ -3,10 +3,10 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/desktop-ui/GNUmakefile
 +++ b/desktop-ui/GNUmakefile
-@@ -99,8 +99,6 @@
+@@ -115,8 +115,6 @@
  install: all
  ifeq ($(platform),windows)
- 	mkdir -p $(prefix)/$(name)/
+ 	$(call mkdir,$(prefix)/$(name)/)
 -else ifeq ($(shell id -un),root)
 -	$(error "make install should not be run as root")
  else ifeq ($(platform),macos)

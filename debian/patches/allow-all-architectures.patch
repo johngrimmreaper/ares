@@ -5,7 +5,7 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/nall/intrinsics.hpp
 +++ b/nall/intrinsics.hpp
-@@ -229,7 +229,16 @@
+@@ -239,7 +239,16 @@
      static constexpr bool ppc32 = 1;
    };
  #else
@@ -22,4 +22,4 @@ Author: Tobias Hansen <thansen@debian.org>
 +  };
  #endif
  
- /* Endian detection */
+ #if !defined(ARCHITECTURE_SUPPORTS_SSE4_1)
