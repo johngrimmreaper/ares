@@ -22,7 +22,7 @@ Author: Tobias Hansen <thansen@debian.org>
 +cores := a26 fc sfc sg ms ps1 pce ng msx cv gb gba ws ngp spec
  #cores += saturn
  ifneq ($(shell $(compiler) -E -dM - < /dev/null | grep INT128),)
-   cores += md
+    cores += md
 --- a/mia/GNUmakefile
 +++ b/mia/GNUmakefile
 @@ -1,7 +1,7 @@
