@@ -1,0 +1,11 @@
+Description: Fkix FTBF with GCC-13 (#1037580)
+Author: Alexandre Detiste
+
+--- a/nall/arithmetic/natural.hpp
++++ b/nall/arithmetic/natural.hpp
+@@ -1,3 +1,5 @@
++#include <stdexcept>
++
+ #define ConcatenateType(Size) u##Size
+ #define DeclareType(Size) ConcatenateType(Size)
+ 

@@ -7,3 +7,4 @@ gtk3.patch
 allow-fakeroot.patch
 menu-color.patch
 no-optional-extensions.patch
+ftbfs-gcc-13.patch
