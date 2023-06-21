@@ -553,7 +553,7 @@ auto SH2::internalWriteByte(u32 address, n8 data) -> void {
     sci.scr.te   = data.bit(5);
     sci.scr.rie  = data.bit(6);
     sci.scr.tie  = data.bit(7);
-    if(!te && sci.scr.te) sci.run();
+    if(te && !sci.scr.te) sci.ssr.tdre = 1;
     return;
   }
 
@@ -563,7 +563,8 @@ auto SH2::internalWriteByte(u32 address, n8 data) -> void {
     return;
 
   //SSR: serial status register
-  case 0xffff'fe04:
+  case 0xffff'fe04: {
+    bool tdre = sci.ssr.tdre;
     sci.ssr.mpbt  = data.bit(0);
   //sci.ssr.mpb   = data.bit(1) = readonly;
   //sci.ssr.tend  = data.bit(2) = readonly;
@@ -572,8 +573,9 @@ auto SH2::internalWriteByte(u32 address, n8 data) -> void {
     sci.ssr.orer &= data.bit(5);
     sci.ssr.rdrf &= data.bit(6);
     sci.ssr.tdre &= data.bit(7);
-    if(sci.scr.te) sci.run();
+    if(tdre && !sci.ssr.tdre) sci.run();
     return;
+  }
 
   //RDR: receive data register
   case 0xffff'fe05:
@@ -675,17 +677,26 @@ auto SH2::internalWriteByte(u32 address, n8 data) -> void {
     dmac.drcr[1] = data.bit(0,1);
     return;
 
-  //WTCSR: watchdog timer control/status register
+  //WTCSR/WTCNT select
   case 0xffff'fe80:
-    wdt.wtcsr.cks  = data.bit(0,2);
-    wdt.wtcsr.tme  = data.bit(5);
-    wdt.wtcsr.wtit = data.bit(6);
-    wdt.wtcsr.ovf &= data.bit(7);
+    wdt.select = data.bit(0,7);
     return;
 
-  //WTCNT: watchdog timer counter
+  //WTCSR/WTCNT data
   case 0xffff'fe81:
-    wdt.wtcnt = data.bit(0,7);
+    //WTCSR: watchdog timer control/status register
+    if(wdt.select == 0xa5) {
+       wdt.wtcsr.cks  = data.bit(0,2);
+       wdt.wtcsr.tme  = data.bit(5);
+       wdt.wtcsr.wtit = data.bit(6);
+       wdt.wtcsr.ovf &= data.bit(7);
+       if(!wdt.wtcsr.tme) wdt.wtcnt = 0;
+    }
+
+    //WTCNT: watchdog timer counter
+    if(wdt.select == 0x5a) {
+      wdt.wtcnt = data.bit(0,7);
+    }
     return;
 
   //RSTCSR: reset control/status register

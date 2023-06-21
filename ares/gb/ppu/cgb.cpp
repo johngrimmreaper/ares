@@ -13,6 +13,8 @@
 //0x07: palette#
 
 auto PPU::readTileCGB(bool select, u32 x, u32 y, n16& tiledata, n8& attributes) -> void {
+  if(!cpu.status.cgbMode) return readTileDMG(select, x, y, tiledata);
+
   n14 tilemapAddress = 0x1800 + (select << 10);
   tilemapAddress += (((y >> 3) << 5) + (x >> 3)) & 0x03ff;
 
@@ -34,6 +36,20 @@ auto PPU::readTileCGB(bool select, u32 x, u32 y, n16& tiledata, n8& attributes) 
   if(attributes.bit(5)) tiledata = hflip(tiledata);
 }
 
+auto PPU::readObjectCGB(i16 y, n8 tile, n8 attributes, n16& tiledata) -> void {
+    if(!cpu.status.cgbMode) return readObjectDMG(y, tile, attributes, tiledata);
+
+    const s32 Height = (status.obSize == 0 ? 8 : 16);
+    tile &= ~status.obSize;
+    y = status.ly - y;
+
+    if(attributes.bit(6)) y ^= Height - 1;
+    n14 tiledataAddress = (attributes.bit(3) ? 0x2000 : 0x0000) + (tile << 4) + (y << 1);
+    tiledata.byte(0) = vram[tiledataAddress + 0];
+    tiledata.byte(1) = vram[tiledataAddress + 1];
+    if(attributes.bit(5)) tiledata = hflip(tiledata);
+}
+
 auto PPU::scanlineCGB() -> void {
   px = 0;
 
@@ -45,21 +61,17 @@ auto PPU::scanlineCGB() -> void {
     Sprite& s = sprite[sprites];
     s.y = oam[n + 0] - 16;
     s.x = oam[n + 1] -  8;
-    s.tile = oam[n + 2] & ~status.obSize;
+    s.tile = oam[n + 2];
     s.attributes = oam[n + 3];
 
     if(s32(status.ly) <  s.y) continue;
     if(s32(status.ly) >= s.y + Height) continue;
-    s.y = status.ly - s.y;
-
-    if(s.attributes.bit(6)) s.y ^= Height - 1;
-    n14 tiledataAddress = (s.attributes.bit(3) ? 0x2000 : 0x0000) + (s.tile << 4) + (s.y << 1);
-    s.tiledata.byte(0) = vram[tiledataAddress + 0];
-    s.tiledata.byte(1) = vram[tiledataAddress + 1];
-    if(s.attributes.bit(5)) s.tiledata = hflip(s.tiledata);
 
     if(++sprites == 10) break;
   }
+
+  //sort by X-coordinate if opri (DMG priority) is enabled
+  if(cpu.status.opri) sort(sprite, sprites, [](auto l, auto r) { return l.x < r.x; });
 }
 
 auto PPU::runCGB() -> void {
@@ -67,22 +79,34 @@ auto PPU::runCGB() -> void {
   ob = {};
 
   n15 color = 0x7fff;
-  runBackgroundCGB();
+  if(cpu.status.cgbMode || status.bgEnable) runBackgroundCGB();
   if(latch.windowDisplayEnable) runWindowCGB();
   if(status.obEnable) runObjectsCGB();
 
-  if(ob.palette == 0) {
-    color = bg.color;
-  } else if(bg.palette == 0) {
-    color = ob.color;
-  } else if(status.bgEnable == 0) {
-    color = ob.color;
-  } else if(bg.priority) {
-    color = bg.color;
-  } else if(ob.priority) {
-    color = ob.color;
+  if(cpu.status.cgbMode ) {
+    if(ob.palette == 0) {
+      color = bg.color;
+    } else if(bg.palette == 0) {
+      color = ob.color;
+    } else if(status.bgEnable == 0) {
+      color = ob.color;
+    } else if(bg.priority) {
+      color = bg.color;
+    } else if(ob.priority) {
+      color = ob.color;
+    } else {
+      color = bg.color;
+    }
   } else {
-    color = bg.color;
+    if(ob.palette == 0) {
+      color = bg.color;
+    } else if(bg.palette == 0) {
+      color = ob.color;
+    } else if(ob.priority) {
+      color = ob.color;
+    } else {
+      color = bg.color;
+    }
   }
 
   if(Model::GameBoyColor()) {
@@ -102,15 +126,17 @@ auto PPU::runBackgroundCGB() -> void {
   index.bit(1) = background.tiledata.bit(15 - tileX);
   n5 palette = background.attributes.bit(0,2) << 2 | index;
 
+  if(!cpu.status.cgbMode) palette = bgp[index];
   bg.color = bgpd[palette];
   bg.palette = index;
-  bg.priority = background.attributes.bit(7);
+  if(cpu.status.cgbMode) bg.priority = background.attributes.bit(7);
 }
 
 auto PPU::runWindowCGB() -> void {
   if(status.ly < status.wy) return;
   if(px + 7 < status.wx) return;
   if(px + 7 == status.wx) latch.wy++;
+  if(!cpu.status.cgbMode && !status.bgEnable) return;
 
   n8 scrollY = latch.wy - 1;
   n8 scrollX = px + 7 - latch.wx;
@@ -123,9 +149,11 @@ auto PPU::runWindowCGB() -> void {
   index.bit(1) = window.tiledata.bit(15 - tileX);
   n5 palette = window.attributes.bit(0,2) << 2 | index;
 
+  if(!cpu.status.cgbMode) palette = bgp[index];
+
   bg.color = bgpd[palette];
   bg.palette = index;
-  bg.priority = window.attributes.bit(7);
+  if(cpu.status.cgbMode) bg.priority = window.attributes.bit(7);
 }
 
 auto PPU::runObjectsCGB() -> void {
@@ -135,12 +163,15 @@ auto PPU::runObjectsCGB() -> void {
 
     s32 tileX = px - s.x;
     if(tileX < 0 || tileX > 7) continue;
+    if(tileX == 0 || px == 0) readObjectCGB(s.y, s.tile, s.attributes, s.tiledata);
 
     n2 index;
     index.bit(0) = s.tiledata.bit( 7 - tileX);
     index.bit(1) = s.tiledata.bit(15 - tileX);
     if(index == 0) continue;
     n5 palette = s.attributes.bit(0,2) << 2 | index;
+
+    if(!cpu.status.cgbMode) palette = obp[s.attributes.bit(4) << 2 | index] + (s.attributes.bit(4) << 2);
 
     ob.color = obpd[palette];
     ob.palette = index;

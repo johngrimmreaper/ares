@@ -20,6 +20,15 @@ struct Vulkan::Implementation {
   ::Vulkan::Context context;
   ::Vulkan::Device device;
   ::RDP::CommandProcessor* processor = nullptr;
+  atomic<const char*> crash_error = nullptr;
+
+  struct Validation : public ::RDP::ValidationInterface {
+    Implementation& self;
+    Validation(Implementation& i) : self(i) {}
+    void report_rdp_crash(::RDP::ValidationError err, const char *msg) override {
+      self.crash_error = msg;
+    }
+  } validator{*this};
 
   //commands are u64 words, but the backend uses u32 swapped words.
   //size and offset are in u64 words.
@@ -35,18 +44,30 @@ struct Vulkan::Implementation {
 };
 
 auto Vulkan::load(Node::Object) -> bool {
-  Util::set_thread_logging_interface(&loggingInterface);
-  delete implementation;
-  implementation = new Vulkan::Implementation(rdram.ram.data, rdram.ram.size);
-  if(!implementation->processor) {
+  if (vulkan.enable) {
+    Util::set_thread_logging_interface(&loggingInterface);
     delete implementation;
-    implementation = nullptr;
+    implementation = new Vulkan::Implementation(rdram.ram.data, rdram.ram.size);
+    if(!implementation->processor) {
+      delete implementation;
+      implementation = nullptr;
+    }
+
+    if (!implementation) {
+      platform->status("Vulkan init failed, falling back to MAME RDP");
+      vulkan.enable = false;
+    } else {
+      platform->status("Vulkan Enabled: using paraLLEl-RDP");
+    }
+  } else {
+    platform->status("Vulkan Disabled: using MAME RDP");
   }
+
   return true;
 }
 
 auto Vulkan::unload() -> void {
-  delete implementation;
+  if (implementation) delete implementation;
   implementation = nullptr;
 }
 
@@ -104,7 +125,7 @@ auto Vulkan::render() -> bool {
 
   queueOffset = 0;
   queueSize = 0;
-  command.start = command.current = command.end;
+  command.current = command.end;
   return true;
 }
 
@@ -135,6 +156,9 @@ auto Vulkan::scanoutAsync(bool field) -> bool {
   ::RDP::ScanoutOptions options;
   options.downscale_steps = supersampleScanout ? 16 : 0;
   options.persist_frame_on_invalid_input = true;  //this is a compatibility hack, but I'm not sure what for ...
+  if(disableVideoInterfaceProcessing) {
+    options.vi = {false, false, false, false, false, false};
+  }
 
   if(implementation->scanout.fence) {
     implementation->scanout.fence->wait();
@@ -172,6 +196,11 @@ auto Vulkan::endScanout() -> void {
   }
 }
 
+auto Vulkan::crashed() -> const char* {
+  if(implementation) return implementation->crash_error;
+  return nullptr;
+}
+
 Vulkan::Implementation::Implementation(u8* data, u32 size) {
   if(!::Vulkan::Context::init_loader(nullptr)) return;
   if(!context.init_instance_and_device(nullptr, 0, nullptr, 0, ::Vulkan::CONTEXT_CREATION_DISABLE_BINDLESS_BIT)) return;
@@ -195,6 +224,7 @@ Vulkan::Implementation::Implementation(u8* data, u32 size) {
     delete processor;
     processor = nullptr;
   }
+  processor->set_validation_interface(&validator);
 }
 
 Vulkan::Implementation::~Implementation() {

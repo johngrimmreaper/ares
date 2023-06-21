@@ -1,4 +1,5 @@
 namespace Systems {
+  #include "atari-2600.cpp"
   #include "colecovision.cpp"
   #include "famicom.cpp"
   #include "game-boy.cpp"
@@ -17,6 +18,7 @@ namespace Systems {
   #include "neo-geo-pocket.cpp"
   #include "neo-geo-pocket-color.cpp"
   #include "nintendo-64.cpp"
+  #include "nintendo-64dd.cpp"
   #include "pc-engine.cpp"
   #include "saturn.cpp"
   #include "supergrafx.cpp"
@@ -27,9 +29,12 @@ namespace Systems {
   #include "wonderswan.cpp"
   #include "wonderswan-color.cpp"
   #include "pocket-challenge-v2.cpp"
+  #include "zx-spectrum.cpp"
+  #include "zx-spectrum-128.cpp"
 }
 
 auto System::create(string name) -> shared_pointer<Pak> {
+  if(name == "Atari 2600") return new Systems::Atari2600;
   if(name == "ColecoVision") return new Systems::ColecoVision;
   if(name == "Famicom") return new Systems::Famicom;
   if(name == "Game Boy") return new Systems::GameBoy;
@@ -48,6 +53,7 @@ auto System::create(string name) -> shared_pointer<Pak> {
   if(name == "Neo Geo Pocket") return new Systems::NeoGeoPocket;
   if(name == "Neo Geo Pocket Color") return new Systems::NeoGeoPocketColor;
   if(name == "Nintendo 64") return new Systems::Nintendo64;
+  if(name == "Nintendo 64DD") return new Systems::Nintendo64DD;
   if(name == "PC Engine") return new Systems::PCEngine;
   if(name == "Saturn") return new Systems::Saturn;
   if(name == "SuperGrafx") return new Systems::SuperGrafx;
@@ -58,6 +64,8 @@ auto System::create(string name) -> shared_pointer<Pak> {
   if(name == "WonderSwan") return new Systems::WonderSwan;
   if(name == "WonderSwan Color") return new Systems::WonderSwanColor;
   if(name == "Pocket Challenge V2") return new Systems::PocketChallengeV2;
+  if(name == "ZX Spectrum") return new Systems::ZXSpectrum;
+  if(name == "ZX Spectrum 128") return new Systems::ZXSpectrum128;
   return {};
 }
 

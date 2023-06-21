@@ -25,21 +25,43 @@ struct PPU : Thread, IO {
     Node::Video::Sprite volumeB3;
   } icon;
 
+  bool accurate;
+
   auto hcounter() const -> u32 { return io.hcounter; }
   auto vcounter() const -> u32 { return io.vcounter; }
   auto field() const -> bool { return io.field; }
 
-  auto planar() const -> bool { return system.mode().bit(0) == 0; }
-  auto packed() const -> bool { return system.mode().bit(0) == 1; }
+  auto planar() const -> bool { return system.mode().bit(0,2) != 7; }
+  auto packed() const -> bool { return system.mode().bit(0,2) == 7; }
   auto depth() const -> u32 { return system.mode().bit(1,2) != 3 ? 2 : 4; }
-  auto grayscale() const -> bool { return system.mode().bit(1,2) == 0; }
+  auto grayscale() const -> bool { return system.mode().bit(2) == 0; }
+
+  struct Debugger {
+    PPU& self;
+
+    //debugger.cpp
+    auto load(Node::Object) -> void;
+    auto unload(Node::Object) -> void;
+    auto ports() -> string;
+
+    struct Graphics {
+      Node::Debugger::Graphics screen1;
+      Node::Debugger::Graphics screen2;
+      Node::Debugger::Graphics tiles;
+    } graphics;
+
+    struct Properties {
+      Node::Debugger::Properties ports;
+    } properties;
+  } debugger{*this};
 
   //ppu.cpp
+  auto setAccurate(bool value) -> void;
+
   auto load(Node::Object) -> void;
   auto unload() -> void;
 
   auto main() -> void;
-  auto scanline() -> void;
   auto frame() -> void;
   auto step(u32 clocks) -> void;
   auto power() -> void;
@@ -88,6 +110,7 @@ struct PPU : Thread, IO {
 
     //screen.cpp
     auto scanline(n8 y) -> void;
+    auto screenPixel(n8 x, n8 y, Output& output) -> void;
     auto pixel(n8 x, n8 y) -> void;
     auto power() -> void;
 
@@ -103,7 +126,8 @@ struct PPU : Thread, IO {
     //screen.cpp
     auto scanline(n8 y) -> void;
     auto pixel(n8 x, n8 y) -> void;
-    auto power() -> void;
+    auto power() -> void;  auto setAccurate(bool value) -> void;
+
   } screen1{*this};
 
   struct Screen2 : Screen {
@@ -120,7 +144,7 @@ struct PPU : Thread, IO {
     Screen2& screen2;
 
     //sprite.cpp
-    auto frame() -> void;
+    auto oamSyncScanline() -> void;
     auto scanline(n8 y) -> void;
     auto pixel(n8 x, n8 y) -> void;
     auto power() -> void;

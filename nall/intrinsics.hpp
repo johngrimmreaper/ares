@@ -1,5 +1,11 @@
 #pragma once
 
+#if defined(NALL_HEADER_ONLY)
+  #define NALL_HEADER_INLINE inline
+#else
+  #define NALL_HEADER_INLINE
+#endif
+
 #if defined(__APPLE__)
   #include <machine/endian.h>
 #elif defined(linux) || defined(__linux__)
@@ -19,6 +25,7 @@ namespace nall {
     static constexpr bool GCC       = 0;
     static constexpr bool Microsoft = 0;
   };
+  #pragma clang diagnostic warning "-Wimplicit-fallthrough"
   #pragma clang diagnostic warning "-Wreturn-type"
   #pragma clang diagnostic ignored "-Wunused-result"
   #pragma clang diagnostic ignored "-Wunknown-pragmas"
@@ -37,6 +44,7 @@ namespace nall {
     static constexpr bool GCC       = 1;
     static constexpr bool Microsoft = 0;
   };
+  #pragma GCC diagnostic warning "-Wimplicit-fallthrough"
   #pragma GCC diagnostic warning "-Wreturn-type"
   #pragma GCC diagnostic ignored "-Wunused-result"
   #pragma GCC diagnostic ignored "-Wunknown-pragmas"
@@ -180,6 +188,9 @@ namespace nall {
   };
 #elif defined(__amd64__) || defined(_M_AMD64)
   #define ARCHITECTURE_AMD64
+  #if defined(__SSE4_1__)
+    #define ARCHITECTURE_SUPPORTS_SSE4_1 1
+  #endif
   struct Architecture {
     static constexpr bool x86   = 0;
     static constexpr bool amd64 = 1;
@@ -190,6 +201,7 @@ namespace nall {
   };
 #elif defined(__aarch64__)
   #define ARCHITECTURE_ARM64
+  #define ARCHITECTURE_SUPPORTS_SSE4_1 1 // simulated via sse2neon.h
   struct Architecture {
     static constexpr bool x86   = 0;
     static constexpr bool amd64 = 0;
@@ -230,6 +242,10 @@ namespace nall {
   };
 #else
   #error "unable to detect architecture"
+#endif
+
+#if !defined(ARCHITECTURE_SUPPORTS_SSE4_1)
+  #define ARCHITECTURE_SUPPORTS_SSE4_1 0
 #endif
 
 /* Endian detection */

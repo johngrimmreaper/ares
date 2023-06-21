@@ -3,6 +3,7 @@
 namespace ares::WonderSwan {
 
 APU apu;
+#include "debugger.cpp"
 #include "io.cpp"
 #include "dma.cpp"
 #include "channel1.cpp"
@@ -12,31 +13,52 @@ APU apu;
 #include "channel5.cpp"
 #include "serialization.cpp"
 
+auto APU::setAccurate(bool value) -> void {
+  accurate = value;
+}
+
 auto APU::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("APU");
 
   stream = node->append<Node::Audio::Stream>("PSG");
   stream->setChannels(2);
-  stream->setFrequency(3'072'000);
-  stream->addHighPassFilter(20.0, 1);
+  stream->setFrequency(24'000);
+  stream->addHighPassFilter(15.915, 1);
+
+  debugger.load(node);
 }
 
 auto APU::unload() -> void {
+  debugger.unload(node);
+
   node->remove(stream);
   stream.reset();
   node.reset();
 }
 
 auto APU::main() -> void {
-  dma.run();
-  channel1.run();
-  channel2.run();
-  channel3.run();
-  channel4.run();
-  channel5.run();
-  dacRun();
-  if(++state.sweepClock == 0) channel3.sweep();
-  step(1);
+  // further verification could always be useful
+  u32 steps = accurate ? 1 : 128;
+  for(u32 s = 0; s < steps; s++) {
+    // TODO: is the period value (run()) updated before or after the outputs (runOutput())?
+    channel1.run();
+    channel2.run();
+    channel3.run();
+    if(++state.sweepClock == 0) channel3.sweep(); // TODO: which cycle is this, or is it separate?
+    channel4.run();
+
+    // TODO: are voice/noise modes handled on different cycles than tone modes?
+    switch(state.apuClock++) {
+    case 0: if(channel1.io.enable)                      channel1.runOutput(); break;
+    case 1: if(channel2.io.enable || channel2.io.voice) channel2.runOutput(); break;
+    case 2: if(channel3.io.enable)                      channel3.runOutput(); break;
+    case 3: if(channel4.io.enable)                      channel4.runOutput(); break;
+    case 4: if(channel5.io.enable)                      channel5.runOutput(); break; // TODO: which cycle is this?
+    case 5: dma.run(); break; // TODO: which cycle is this?
+    case 6: dacRun(); break; // TODO: which cycle is this?
+    }
+  }
+  step(steps);
 }
 
 auto APU::sample(u32 channel, n5 index) -> n4 {
@@ -47,33 +69,32 @@ auto APU::sample(u32 channel, n5 index) -> n4 {
 }
 
 auto APU::dacRun() -> void {
+  bool outputEnable = io.headphonesConnected ? io.headphonesEnable : io.speakerEnable;
+
+  if(!outputEnable) {
+    stream->frame(0, 0);
+    return;
+  }
+
   s32 left = 0;
-  if(channel1.io.enable) left += channel1.output.left;
-  if(channel2.io.enable) left += channel2.output.left;
-  if(channel3.io.enable) left += channel3.output.left;
-  if(channel4.io.enable) left += channel4.output.left;
-  if(channel5.io.enable) left += channel5.output.left * io.headphonesConnected;
-  left = sclamp<16>(left << 5);
+  if(channel1.io.enable)                      left += channel1.output.left;
+  if(channel2.io.enable || channel2.io.voice) left += channel2.output.left;
+  if(channel3.io.enable)                      left += channel3.output.left;
+  if(channel4.io.enable)                      left += channel4.output.left;
+  if(channel5.io.enable)                      left += channel5.output.left * io.headphonesConnected;
 
   s32 right = 0;
-  if(channel1.io.enable) right += channel1.output.right;
-  if(channel2.io.enable) right += channel2.output.right;
-  if(channel3.io.enable) right += channel3.output.right;
-  if(channel4.io.enable) right += channel4.output.right;
-  if(channel5.io.enable) right += channel5.output.right * io.headphonesConnected;
-  right = sclamp<16>(right << 5);
+  if(channel1.io.enable)                      right += channel1.output.right;
+  if(channel2.io.enable || channel2.io.voice) right += channel2.output.right;
+  if(channel3.io.enable)                      right += channel3.output.right;
+  if(channel4.io.enable)                      right += channel4.output.right;
+  if(channel5.io.enable)                      right += channel5.output.right * io.headphonesConnected;
 
   if(!io.headphonesConnected) {
-    left = right = (left + right) / 2 >> 3 - io.speakerShift;  //monaural output
-    if(!io.speakerEnable) {
-      left  = 0;
-      right = 0;
-    }
+    left = right = sclamp<16>((((left + right) >> io.speakerShift) & 0xFF) << 7);
   } else {
-    if(!io.headphonesEnable) {
-      left  = 0;
-      right = 0;
-    }
+    left = sclip<16>(left << 5);
+    right = sclip<16>(right << 5);
   }
 
   //ASWAN has three volume steps (0%, 50%, 100%); SPHINX and SPHINX2 have four (0%, 33%, 66%, 100%)
@@ -107,6 +128,9 @@ auto APU::power() -> void {
   io.headphonesConnected = system.headphones->value();
   io.masterVolume = SoC::ASWAN() ? 2 : 3;
   state = {};
+
+  state.apuClock = 0;
+  state.sweepClock = 0;
 }
 
 }

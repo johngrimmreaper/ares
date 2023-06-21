@@ -25,6 +25,8 @@ auto MasterSystem::load(string location) -> bool {
   pak->setAttribute("board",  document["game/board" ].string());
   pak->setAttribute("title",  document["game/title" ].string());
   pak->setAttribute("region", document["game/region"].string());
+  pak->setAttribute("paddle", (bool)document["game/paddle"]);
+  pak->setAttribute("sportspad", (bool)document["game/sportspad"]);
   pak->append("manifest.bml", manifest);
   pak->append("program.rom",  rom);
 
@@ -50,13 +52,54 @@ auto MasterSystem::analyze(vector<u8>& rom) -> string {
   string board  = "Sega";
   string region = "NTSC-J, NTSC-U, PAL";  //database required to detect region
   u32 ram       = 32_KiB;                 //database required to detect RAM size
+  bool paddle = false;
+  bool sportspad = false;
 
   //Region
   //======
 
+  //BMX Trial - Alex Kidd (Japan)
+  if(hash == "0fdd18f1212072bfbc0cfeaf030436d746733029ef26a8a6470c7be101cfedfb") {
+    paddle = true;
+    region = "NTSC-J";
+  }
+
+  //Galactic Protector (Japan)
+  if(hash == "2d16948696509309493d78c4cd7e9e8db407db593464e5a804155a1e12cf4067") {
+    paddle = true;
+    region = "NTSC-J";
+  }
+
+  //Great Ice Hockey (Japan, USA) (En)
+  if(hash == "4b8fe9cb1688c730807fbb68d2f2c135a3a64a6b668af4bca8fed2c3ed050fe1") {
+    sportspad = true;
+  }
+
+  //Megumi Rescue (Japan)
+  if(hash == "d06ec2a0bb145f48695a07d4a6fe374e50ec3dff1a9287c5972b206b74e37c07") {
+    paddle = true;
+    region = "NTSC-J";
+  }
+
   //PGA Tour Golf (Europe)
   if(hash == "a3856f0d15511f7a6d48fa6c47da2c81adf372e6a04f83298a10cd45b6711530") {
     region = "PAL";
+  }
+
+  //Sports Pad Football (USA)
+  if(hash == "70719f8e88cdc58180d5042b0b0cbc2298144acdf062e7e3f14aaecaeb8b50e4") {
+    sportspad = true;
+  }
+
+  //Sports Pad Soccer (Japan)
+  if(hash == "4b856123cd090d584af0a6a94ac0a341aa439562a7d8d9e0669999a292e32309") {
+    sportspad = true;
+  }
+
+  //Woody Pop - Shinjinrui no Block Kuzushi (Japan)
+  if(hash == "5cde2716a76d16ee8b693dfe8f08da45d6f76faa945f87657fea9c5cfa64ae34") {
+    paddle = true;
+    region = "NTSC-J";
   }
 
   //Ys (Japan)
@@ -196,6 +239,8 @@ auto MasterSystem::analyze(vector<u8>& rom) -> string {
   s +={"  title:  ", Medium::name(location), "\n"};
   s +={"  region: ", region, "\n"};
   s +={"  board:  ", board, "\n"};
+  if(paddle) s += "  paddle\n";
+  if(sportspad) s += "  sportspad\n";
   s += "    memory\n";
   s += "      type: ROM\n";
   s +={"      size: 0x", hex(rom.size()), "\n"};

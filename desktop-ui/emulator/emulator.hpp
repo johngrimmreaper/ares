@@ -21,7 +21,8 @@ struct Emulator {
   auto errorFirmware(const Firmware&, string system = "") -> void;
   auto load(mia::Pak& node, string name) -> bool;
   auto save(mia::Pak& node, string name) -> bool;
-  auto input(ares::Node::Input::Input) -> void;
+  virtual auto input(ares::Node::Input::Input) -> void;
+  auto inputKeyboard(string name) -> bool;
   virtual auto load(Menu) -> void {}
   virtual auto load() -> bool = 0;
   virtual auto save() -> bool { return true; }
@@ -46,7 +47,6 @@ struct Emulator {
   vector<string> portBlacklist;
 
   struct Configuration {
-    bool visible = true;  //whether or not to show this emulator in the load menu
     string game;          //the most recently used folder for games for each emulator core
   } configuration;
 

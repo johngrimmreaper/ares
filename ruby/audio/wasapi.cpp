@@ -6,6 +6,13 @@
 #include <endpointvolume.h>
 #include <functiondiscoverykeys_devpkey.h>
 
+#if defined(_MSC_VER)
+  #define CLSID_MMDeviceEnumerator __uuidof(MMDeviceEnumerator)
+  #define IID_IMMDeviceEnumerator  __uuidof(IMMDeviceEnumerator)
+  #define IID_IAudioClient         __uuidof(IAudioClient)
+  #define IID_IAudioRenderClient   __uuidof(IAudioRenderClient)
+#endif
+
 struct AudioWASAPI : AudioDriver {
   AudioWASAPI& self = *this;
   AudioWASAPI(Audio& super) : AudioDriver(super) { construct(); }
@@ -13,7 +20,7 @@ struct AudioWASAPI : AudioDriver {
 
   auto create() -> bool override {
     super.setExclusive(false);
-    super.setDevice(hasDevices().first());
+    if(hasDevices()) super.setDevice(hasDevices().first());
     super.setBlocking(false);
     super.setChannels(2);
     super.setFrequency(48000);
@@ -55,15 +62,18 @@ struct AudioWASAPI : AudioDriver {
     self.queue.read = 0;
     self.queue.write = 0;
     self.queue.count = 0;
-    self.audioClient->Stop();
-    self.audioClient->Reset();
-    self.audioClient->Start();
+    memory::fill<u8>(self.queue.samples, sizeof(self.queue.samples));
+
+    if(self.audioClient) {
+      self.audioClient->Stop();
+      self.audioClient->Reset();
+      self.audioClient->Start();
+    }
   }
 
   auto output(const f64 samples[]) -> void override {
-    for(u32 n : range(self.channels)) {
-      self.queue.samples[self.queue.write][n] = samples[n];
-    }
+    self.queue.samples[self.queue.write][0] = samples[0];
+    self.queue.samples[self.queue.write][1] = samples[1];
     self.queue.write++;
     self.queue.count++;
 

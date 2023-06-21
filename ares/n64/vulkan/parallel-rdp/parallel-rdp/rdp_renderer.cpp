@@ -20,6 +20,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define NOMINMAX
 #include "rdp_renderer.hpp"
 #include "rdp_device.hpp"
 #include "logging.hpp"
@@ -27,6 +28,7 @@
 #include "luts.hpp"
 #include "timer.hpp"
 #include <limits>
+#include <stdlib.h>
 #ifdef PARALLEL_RDP_SHADER_DIR
 #include "global_managers.hpp"
 #include "os_filesystem.hpp"
@@ -120,6 +122,11 @@ void Renderer::set_device(Vulkan::Device *device_)
 	device = device_;
 }
 
+void Renderer::set_validation_interface(ValidationInterface *iface)
+{
+	validation_iface = iface;
+}
+
 bool Renderer::init_caps()
 {
 	auto &features = device->get_device_features();
@@ -151,9 +158,9 @@ bool Renderer::init_caps()
 
 	bool allow_small_types = true;
 	bool forces_small_types = false;
-	if (const char *small = getenv("PARALLEL_RDP_SMALL_TYPES"))
+	if (const char *small_type = getenv("PARALLEL_RDP_SMALL_TYPES"))
 	{
-		allow_small_types = strtol(small, nullptr, 0) > 0;
+		allow_small_types = strtol(small_type, nullptr, 0) > 0;
 		forces_small_types = true;
 		LOGI("Allow small types = %d.\n", int(allow_small_types));
 	}
@@ -1397,10 +1404,57 @@ void Renderer::fixup_triangle_setup(TriangleSetup &setup) const
 		setup.flags |= (stream.static_raster_state.flags & RASTERIZATION_INTERLACE_KEEP_ODD_BIT) ?
 		               TRIANGLE_SETUP_INTERLACE_KEEP_ODD_BIT : 0;
 	}
+
+	// Span size is inclusive, not exclusive.
+	// Rasterization is based on X range directly.
+	if ((stream.static_raster_state.flags & (RASTERIZATION_COPY_BIT | RASTERIZATION_FILL_BIT)) != 0)
+		setup.flags |= TRIANGLE_SETUP_FILL_COPY_RASTER_BIT;
+}
+
+void Renderer::validate_draw_state() const
+{
+	if ((stream.static_raster_state.flags & RASTERIZATION_FILL_BIT) != 0)
+	{
+		if (fb.fmt == FBFormat::I4)
+		{
+			validation_iface->report_rdp_crash(ValidationError::Fill4bpp,
+			                                   "Attempted to use Fill mode on 4bpp surface.");
+		}
+
+		if ((stream.depth_blend_state.flags & DEPTH_BLEND_DEPTH_TEST_BIT) != 0)
+		{
+			validation_iface->report_rdp_crash(ValidationError::FillDepthTest,
+			                                   "Attempted to use Fill mode with depth test.");
+		}
+
+		if ((stream.depth_blend_state.flags & DEPTH_BLEND_IMAGE_READ_ENABLE_BIT) != 0)
+		{
+			validation_iface->report_rdp_crash(ValidationError::FillImageReadEnable,
+			                                   "Attempted to use Fill mode with image read enable.");
+		}
+
+		if ((stream.depth_blend_state.flags & DEPTH_BLEND_DEPTH_UPDATE_BIT) != 0 &&
+		    !constants.use_prim_depth)
+		{
+			validation_iface->report_rdp_crash(ValidationError::FillDepthWrite,
+			                                   "Attempted to use Fill mode with depth write enabled.");
+		}
+	}
+	else if ((stream.static_raster_state.flags & RASTERIZATION_COPY_BIT) != 0)
+	{
+		if (fb.fmt == FBFormat::RGBA8888)
+		{
+			validation_iface->report_rdp_crash(ValidationError::Copy32bpp,
+			                                   "Attempted to use Copy mode on 32bpp surface.");
+		}
+	}
 }
 
 void Renderer::draw_shaded_primitive(TriangleSetup &setup, const AttributeSetup &attr)
 {
+	if (validation_iface)
+		validate_draw_state();
+
 	fixup_triangle_setup(setup);
 
 	unsigned num_tiles = compute_conservative_max_num_tiles(setup);
@@ -3035,6 +3089,15 @@ bool Renderer::tmem_upload_needs_flush(uint32_t addr) const
 
 void Renderer::load_tile(uint32_t tile, const LoadTileInfo &info)
 {
+	if (validation_iface && info.mode == UploadMode::TLUT)
+	{
+		if ((info.thi >> 2) > (info.tlo >> 2))
+		{
+			validation_iface->report_rdp_crash(ValidationError::InvalidMultilineLoadTlut,
+			                                   "Attempting to load multiple lines in TLUT.");
+		}
+	}
+
 	if (tmem_upload_needs_flush(info.tex_addr))
 		flush_queues();
 
@@ -3051,7 +3114,7 @@ void Renderer::load_tile(uint32_t tile, const LoadTileInfo &info)
 	else
 	{
 		unsigned pixel_count = ((info.shi - info.slo) + 1) & 0xfff;
-		if (!pixel_count)
+		if (!pixel_count || pixel_count > 2048)
 			return;
 	}
 
@@ -3166,6 +3229,8 @@ void Renderer::load_tile_iteration(uint32_t tile, const LoadTileInfo &info, uint
 	if (info.size == TextureSize::Bpp4)
 	{
 		LOGE("4-bit VRAM pointer crashes the RDP.\n");
+		if (validation_iface)
+			validation_iface->report_rdp_crash(ValidationError::LoadTile4bpp, "4-bit VRAM pointer crashes the RDP.");
 		return;
 	}
 
@@ -3498,7 +3563,7 @@ bool Renderer::supports_subgroup_size_control(uint32_t minimum_size, uint32_t ma
 void Renderer::PipelineExecutor::perform_work(const Vulkan::DeferredPipelineCompile &compile) const
 {
 	auto start_ts = device->write_calibrated_timestamp();
-	Vulkan::CommandBuffer::build_compute_pipeline(device, compile);
+	Vulkan::CommandBuffer::build_compute_pipeline(device, compile, Vulkan::CommandBuffer::CompileMode::AsyncThread);
 	auto end_ts = device->write_calibrated_timestamp();
 	device->register_time_interval("RDP Pipeline", std::move(start_ts), std::move(end_ts),
 	                               "pipeline-compilation", std::to_string(compile.hash));

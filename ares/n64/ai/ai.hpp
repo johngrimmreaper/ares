@@ -1,6 +1,6 @@
 //Audio Interface
 
-struct AI : Thread, Memory::IO<AI> {
+struct AI : Thread, Memory::RCP<AI> {
   Node::Object node;
   Node::Audio::Stream stream;
 
@@ -18,13 +18,13 @@ struct AI : Thread, Memory::IO<AI> {
   auto load(Node::Object) -> void;
   auto unload() -> void;
   auto main() -> void;
-  auto sample() -> void;
+  auto sample(f64& left, f64& right) -> void;
   auto step(u32 clocks) -> void;
   auto power(bool reset) -> void;
 
   //io.cpp
-  auto readWord(u32 address) -> u32;
-  auto writeWord(u32 address, u32 data) -> void;
+  auto readWord(u32 address, u32& cycles) -> u32;
+  auto writeWord(u32 address, u32 data, u32& cycles) -> void;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
@@ -36,6 +36,7 @@ struct AI : Thread, Memory::IO<AI> {
   struct IO {
     n1  dmaEnable;
     n24 dmaAddress[2];
+    n1  dmaAddressCarry;
     n18 dmaLength[2];
     n2  dmaCount;
     n14 dacRate;

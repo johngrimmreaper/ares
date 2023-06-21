@@ -25,12 +25,12 @@ auto Cartridge::connect() -> void {
     board = new Board::SVP(*this);
   } else if(pak->attribute("label") == "Game Genie") {
     board = new Board::GameGenie(*this);
-  } else if(pak->read("program.rom") && pak->read("program.rom")->size() > 0x400000) {
-    board = new Board::Banked(*this);
   } else if(pak->attribute("jcart").boolean()) {
     board = new Board::JCart(*this);
+  } else if(pak->attribute("board") == "REALTEC") {
+    board = new Board::Realtec(*this);
   } else {
-    board = new Board::Linear(*this);
+    board = new Board::Standard(*this);
   }
   board->pak = pak;
   board->load();
@@ -43,6 +43,7 @@ auto Cartridge::disconnect() -> void {
   board->unload();
   board->pak.reset();
   board.reset();
+  child.reset();
   pak.reset();
   node.reset();
   information = {};
@@ -63,16 +64,24 @@ auto Cartridge::step(u32 clocks) -> void {
 }
 
 auto Cartridge::power(bool reset) -> void {
-  if(!board) board = new Board::Interface(*this);
+  if(!board) {
+    if(Mega32X()) {
+      board = new Board::Mega32X{*this};
+    } else {
+      board = new Board::Interface(*this);
+    }
+
+    board->load();
+  }
   Thread::create(board->frequency(), {&Cartridge::main, this});
   board->power(reset);
 }
 
-auto Cartridge::read(n1 upper, n1 lower, n22 address, n16 data) -> n16 {
+auto Cartridge::read(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
   return board->read(upper, lower, address, data);
 }
 
-auto Cartridge::write(n1 upper, n1 lower, n22 address, n16 data) -> void {
+auto Cartridge::write(n1 upper, n1 lower, n24 address, n16 data) -> void {
   return board->write(upper, lower, address, data);
 }
 

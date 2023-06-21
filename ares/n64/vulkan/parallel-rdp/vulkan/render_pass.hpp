@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -168,8 +168,6 @@ private:
 	std::vector<SubpassInfo> subpasses_info;
 
 	void setup_subpasses(const VkRenderPassCreateInfo &create_info);
-
-	void fixup_render_pass_workaround(VkRenderPassCreateInfo &create_info, VkAttachmentDescription *attachments);
 };
 
 class Framebuffer : public Cookie, public NoCopyNoMove, public InternalSyncEnabled
@@ -235,9 +233,7 @@ private:
 
 	Device *device;
 	Util::TemporaryHashmap<FramebufferNode, VULKAN_FRAMEBUFFER_RING_SIZE, false> framebuffers;
-#ifdef GRANITE_VULKAN_MT
 	std::mutex lock;
-#endif
 };
 
 class TransientAttachmentAllocator
@@ -267,9 +263,7 @@ private:
 
 	Device *device;
 	Util::TemporaryHashmap<TransientNode, VULKAN_FRAMEBUFFER_RING_SIZE, false> attachments;
-#ifdef GRANITE_VULKAN_MT
 	std::mutex lock;
-#endif
 };
 }
 

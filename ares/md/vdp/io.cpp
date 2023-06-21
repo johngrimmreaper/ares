@@ -151,22 +151,17 @@ auto VDP::readControlPort() -> n16 {
   command.latch = 0;
 
   n16 result;
-  result.bit( 0) = Region::PAL();
-  result.bit( 1) = command.pending;
-  result.bit( 2) = hblank();
-  result.bit( 3) = vblank() || !io.displayEnable;
-  result.bit( 4) = io.interlaceMode.bit(0) && field();
-  result.bit( 5) = sprite.collision;
-  result.bit( 6) = sprite.overflow;
-  result.bit( 7) = irq.vblank.pending;
-  result.bit( 8) = fifo.full();
-  result.bit( 9) = fifo.empty();
-  result.bit(10) = 1;  //constants (bits 10-15)
-  result.bit(11) = 0;  //todo: should these bits be open bus instead?
-  result.bit(12) = 1;
-  result.bit(13) = 1;
-  result.bit(14) = 0;
-  result.bit(15) = 0;
+  result.bit( 0)    = Region::PAL();
+  result.bit( 1)    = command.pending;
+  result.bit( 2)    = hblank();
+  result.bit( 3)    = vblank() || !io.displayEnable;
+  result.bit( 4)    = io.interlaceMode.bit(0) && field();
+  result.bit( 5)    = sprite.collision;
+  result.bit( 6)    = sprite.overflow;
+  result.bit( 7)    = irq.vblank.pending;
+  result.bit( 8)    = fifo.full();
+  result.bit( 9)    = fifo.empty();
+  result.bit(10,15) = cpu.irc().bit(10,15); // open bus
 
   sprite.collision = 0;
   sprite.overflow  = 0;
@@ -192,6 +187,7 @@ auto VDP::writeControlPort(n16 data) -> void {
 
     prefetch.read(command.target, command.address);
 
+    if(command.pending && dma.mode == 1) dma.delay = 4; // based on measurement noted by Mask of Destiny
     dma.wait = dma.mode == 2;
     dma.synchronize();
     return;
@@ -210,7 +206,9 @@ auto VDP::writeControlPort(n16 data) -> void {
   debugger.io(n5(data >> 8), n8(data));
 
   //register write (d13 is ignored)
-  switch(data.bit(8,12)) {
+  u5 reg = data.bit(8,12);
+  if(!io.videoMode5 && reg > 0xA) return;
+  switch(reg) {
 
   //mode register 1
   case 0x00: {
@@ -228,7 +226,10 @@ auto VDP::writeControlPort(n16 data) -> void {
   //mode register 2
   case 0x01: {
     io.videoMode5      = data.bit(2);
-    io.overscan        = data.bit(3);
+    if(io.overscan ^ data.bit(3)) {
+      io.overscan      = data.bit(3);
+      vblankcheck();
+    }
     dma.enable         = data.bit(4);
     irq.vblank.enable  = data.bit(5);
     io.displayEnable   = data.bit(6);

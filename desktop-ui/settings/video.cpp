@@ -55,9 +55,34 @@ auto VideoSettings::construct() -> void {
   });
   overscanLayout.setAlignment(1).setPadding(12_sx, 0);
   overscanHint.setText("Shows extended PAL CRT lines, but these are usually blank in most games").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
+  pixelAccuracyOption.setText("Pixel Accuracy Mode").setChecked(settings.video.pixelAccuracy).onToggle([&] {
+    settings.video.pixelAccuracy = pixelAccuracyOption.checked();
+    if(emulator) emulator->setBoolean("Pixel Accuracy", settings.video.pixelAccuracy);
+  });
+  pixelAccuracyLayout.setAlignment(1).setPadding(12_sx, 0);
+  pixelAccuracyHint.setText("Use pixel-accurate emulation where available").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
 
   renderSettingsLabel.setText("N64 Render Settings").setFont(Font().setBold());
+
   renderQualityLayout.setPadding(12_sx, 0);
+    enableVulkanOption.setText("Enable GPU acceleration").setChecked(settings.video.enableVulkan).onToggle([&] {
+    settings.video.enableVulkan = enableVulkanOption.checked();
+    if(emulator) emulator->setBoolean("Enable GPU acceleration", settings.video.enableVulkan);
+
+    renderSupersamplingOption.setEnabled(settings.video.enableVulkan && settings.video.quality != "SD");
+    renderQualitySD.setEnabled(settings.video.enableVulkan);
+    renderQualityHD.setEnabled(settings.video.enableVulkan);
+    renderQualityUHD.setEnabled(settings.video.enableVulkan);
+    disableVideoInterfaceProcessingOption.setEnabled(settings.video.enableVulkan);
+  });
+  enableVulkanLayout.setAlignment(1).setPadding(12_sx, 0);
+  enableVulkanHint.setText("Enables Vulkan/Metal Hardware rendering").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
+  disableVideoInterfaceProcessingOption.setText("Disable Video Interface Processing").setChecked(settings.video.disableVideoInterfaceProcessing).onToggle([&] {
+    settings.video.disableVideoInterfaceProcessing = disableVideoInterfaceProcessingOption.checked();
+    if(emulator) emulator->setBoolean("Disable Video Interface Processing", settings.video.disableVideoInterfaceProcessing);
+  });
+  disableVideoInterfaceProcessingLayout.setAlignment(1).setPadding(12_sx, 0);
+  disableVideoInterfaceProcessingHint.setText("Disables Video Interface post processing to render image from VRAM directly").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
   renderQualitySD.setText("SD Quality").onActivate([&] {
     settings.video.quality = "SD";
     renderSupersamplingOption.setChecked(false).setEnabled(false);
@@ -84,8 +109,10 @@ auto VideoSettings::construct() -> void {
   #if !defined(VULKAN)
   //hide Vulkan-specific options if Vulkan is not available
   renderSettingsLabel.setCollapsible(true).setVisible(false);
+  enableVulkanLayout.setCollapsible(true).setVisible(false);
   renderQualityLayout.setCollapsible(true).setVisible(false);
   renderSupersamplingLayout.setCollapsible(true).setVisible(false);
   renderSettingsHint.setCollapsible(true).setVisible(false);
+  disableVideoInterfaceProcessingLayout.setCollapsible(true).setVisible(false);
   #endif
 }

@@ -19,7 +19,7 @@ auto BSMemoryCartridge::connect() -> void {
 
   if(auto fp = pak->read("program.flash")) {
     ROM = 0;
-    memory.allocate(fp->size());
+    memory.allocate(max(fp->size(), 0x100000));
     fp->read({memory.data(), memory.size()});
   }
 
@@ -116,7 +116,7 @@ auto BSMemoryCartridge::main() -> void {
 
   compatible.status.ready = 1;
   global.status.ready = 1;
-  Thread::step(10'000);  //10 milliseconds
+  step(10'000);  //10 milliseconds
 }
 
 auto BSMemoryCartridge::step(u32 clocks) -> void {

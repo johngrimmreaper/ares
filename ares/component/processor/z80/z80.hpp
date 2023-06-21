@@ -22,8 +22,10 @@ struct Z80 {
 
   //z80.cpp
   auto power(MOSFET = MOSFET::NMOS) -> void;
+  auto reset() -> void;
 
-  auto irq(bool maskable, n16 vector = 0x0000, n8 extbus = 0xff) -> bool;
+  auto irq(n8 extbus = 0xff) -> bool;
+  auto nmi() -> bool;
   auto parity(n8) const -> bool;
 
   //memory.cpp
@@ -33,7 +35,7 @@ struct Z80 {
   auto operands() -> n16;
   auto push(n16) -> void;
   auto pop() -> n16;
-  auto displace(n16&) -> n16;
+  auto displace(n16&, u32 wclocks = 5) -> n16;
   auto read(n16 address) -> n8;
   auto write(n16 address, n8 data) -> void;
   auto in(n16 address) -> n8;

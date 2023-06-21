@@ -2,27 +2,31 @@ name := ares
 build := optimized
 threaded := true
 openmp := false
-vulkan := false
+vulkan := true
+mame.rdp := true
 local := true
-flags += -I. -I.. -I../ares -DMIA_LIBRARY
+lto := true
+flags += -I. -I.. -I../ares -I../thirdparty -DMIA_LIBRARY
 
 nall.path := ../nall
 include $(nall.path)/GNUmakefile
 
-ifeq ($(platform),windows)
- #vulkan := $(if $(shell if exist ..\ares\n64\vulkan\parallel-rdp) echo 1),true,false)
-  vulkan := $(if $(shell test -e ../ares/n64/vulkan/parallel-rdp && echo 1),true,false)
-  local := false
-else ifeq ($(platform),linux)
-  vulkan := $(if $(shell test -e ../ares/n64/vulkan/parallel-rdp && echo 1),true,false)
-endif
-
-ifeq ($(local),true)
-  flags += -march=native
+ifeq ($(arch),amd64)
+  ifeq ($(local),true)
+    flags += -march=native
+  else
+    # For official builds, default to x86-64-v2 (Intel Nehalem, AMD Bulldozer) which supports up to SSE 4.2.
+    flags += -march=x86-64-v2
+  endif
 endif
 
 libco.path := ../libco
 include $(libco.path)/GNUmakefile
+
+thirdparty.path := ../thirdparty
+sljit.path := $(thirdparty.path)/sljit/sljit_src
+libchdr.path := $(thirdparty.path)/libchdr
+include $(thirdparty.path)/GNUmakefile
 
 ruby.path := ../ruby
 include $(ruby.path)/GNUmakefile
@@ -32,7 +36,7 @@ hiro.resource := resource/ares.rc
 include $(hiro.path)/GNUmakefile
 
 profile := performance
-cores := fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp
+cores := a26 fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp spec
 #cores += saturn
 
 ares.path := ../ares
@@ -61,27 +65,39 @@ $(object.path)/desktop-ui-presentation.o: $(desktop-ui.path)/presentation/presen
 $(object.path)/desktop-ui-settings.o: $(desktop-ui.path)/settings/settings.cpp
 $(object.path)/desktop-ui-tools.o: $(desktop-ui.path)/tools/tools.cpp
 
-all.objects := $(libco.objects) $(ruby.objects) $(hiro.objects) $(ares.objects) $(mia.objects) $(desktop-ui.objects)
-all.options := $(libco.options) $(ruby.options) $(hiro.options) $(ares.options) $(mia.options) $(desktop-ui.options) $(options)
+all.objects := $(libco.objects) $(sljit.objects) $(libchdr.objects) $(nall.objects) $(ruby.objects) $(hiro.objects) $(ares.objects) $(mia.objects) $(desktop-ui.objects)
+all.options := $(libco.options) $(sljit.options) $(libchdr.options) $(nall.options) $(ruby.options) $(hiro.options) $(ares.options) $(mia.options) $(desktop-ui.options) $(options)
 
-all: $(all.objects)
-	$(info Linking $(output.path)/$(name) ...)
-	+@$(compiler) -o $(output.path)/$(name) $(all.objects) $(all.options)
+$(all.objects): | $(object.path)
+
+all: $(all.objects) | $(output.path)
+	$(info Linking $(output.path)/$(name)$(extension) ...)
+	+@$(compiler) -o $(output.path)/$(name)$(extension) $(all.objects) $(all.options)
+	$(call copy,../LICENSE,$(output.path)/LICENSE.txt)
 ifeq ($(platform),macos)
 # Apply workaround for buggy linker in Xcode < 11.4.1
 	@$(compiler) -o $(output.path)/macos-fix-jit macos-fix-jit.cpp
 	$(output.path)/macos-fix-jit $(output.path)/$(name)
+	rm -f $(output.path)/macos-fix-jit
 	rm -rf $(output.path)/$(name).app
+	install_name_tool -add_rpath @executable_path/../Frameworks $(output.path)/$(name)
 	mkdir -p $(output.path)/$(name).app/Contents/MacOS/
 	mkdir -p $(output.path)/$(name).app/Contents/Resources/
+	mkdir -p $(output.path)/$(name).app/Contents/Frameworks/
+ifneq ($(ares.dylibs),)
+	cp $(ares.dylibs) $(output.path)/$(name).app/Contents/Frameworks/
+endif
 	mv $(output.path)/$(name) $(output.path)/$(name).app/Contents/MacOS/$(name)
 	cp resource/$(name).plist $(output.path)/$(name).app/Contents/Info.plist
 	cp -R $(ares.path)/Shaders $(output.path)/$(name).app/Contents/Resources/
 	cp -R $(mia.path)/Database $(output.path)/$(name).app/Contents/Resources/	
 	sips -s format icns resource/$(name).png --out $(output.path)/$(name).app/Contents/Resources/$(name).icns
+	codesign --force --deep --options runtime --entitlements resource/$(name).selfsigned.entitlements --sign - $(output.path)/$(name).app
 else ifeq ($(platform),windows)
-	cp -R $(ares.path)/Shaders $(output.path)/
-	cp -R $(mia.path)/Database $(output.path)/
+	$(call mkdir,$(output.path)/Shaders/)
+	$(call mkdir,$(output.path)/Database/)
+	$(call rcopy,$(ares.path)/Shaders/*,$(output.path)/Shaders/)
+	$(call rcopy,$(mia.path)/Database/*,$(output.path)/Database/)
 endif
 
 verbose: nall.verbose ruby.verbose hiro.verbose all;
@@ -90,12 +106,12 @@ clean:
 ifeq ($(platform),macos)
 	rm -rf $(output.path)/$(name).app
 endif
-	$(call rdelete,$(object.path)/*)
-	$(call rdelete,$(output.path)/*)
+	$(call rdelete,$(object.path))
+	$(call rdelete,$(output.path))
 
 install: all
 ifeq ($(platform),windows)
-	mkdir -p $(prefix)/$(name)/
+	$(call mkdir,$(prefix)/$(name)/)
 else ifeq ($(shell id -un),root)
 	$(error "make install should not be run as root")
 else ifeq ($(platform),macos)

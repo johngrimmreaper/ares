@@ -62,10 +62,15 @@ struct System : IO {
     //debugger.cpp
     auto load(Node::Object) -> void;
     auto unload(Node::Object) -> void;
+    auto ports() -> string;
 
     struct Memory {
       Node::Debugger::Memory eeprom;
     } memory;
+
+    struct Properties {
+      Node::Debugger::Properties ports;
+    } properties;
   } debugger{*this};
 
   auto name() const -> string { return information.name; }
@@ -73,18 +78,13 @@ struct System : IO {
   auto soc() const -> SoC { return information.soc; }
   auto mode() const -> n3 { return io.mode; }
   auto memory() const -> u32 { return io.mode.bit(2) == 0 ? 16_KiB : 64_KiB; }
+  auto color() const -> bool { return io.mode.bit(2) != 0; }
 
   //mode:
-  //xx0 => planar tiledata
-  //xx1 => packed tiledata
-  //x0x => 512 tiles
-  //x1x => 1024 tiles
-  //0xx => 16 KiB memory mode
-  //1xx => 64 KiB memory mode
-  //00x => 2bpp, grayscale
-  //01x => 2bpp, color
-  //10x => 2bpp, color
-  //11x => 4bpp, color
+  //0xx => 2bpp, mono, planar tiledata (WSC enhancements locked)
+  //10x => 2bpp, color, planar tiledata (WSC enhancements unlocked)
+  //110 => 4bpp, color, planar tiledata
+  //111 => 4bpp, color, packed tiledata
 
   //system.cpp
   auto game() -> string;

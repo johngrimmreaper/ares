@@ -69,6 +69,7 @@ struct InputHotkey : InputDigital {
   InputHotkey(string name) : name(name) {}
   auto& onPress(function<void ()> press) { return this->press = press, *this; }
   auto& onRelease(function<void ()> release) { return this->release = release, *this; }
+  auto value() -> s16 override;
 
   const string name;
 
@@ -142,26 +143,24 @@ struct VirtualPad : InputDevice {
   InputDigital right;
   InputDigital select;
   InputDigital start;
-  InputDigital a;
-  InputDigital b;
-  InputDigital c;
-  InputDigital x;
-  InputDigital y;
-  InputDigital z;
-  InputDigital l1;
-  InputDigital r1;
-  InputDigital l2;
-  InputDigital r2;
-  InputDigital lt;
-  InputDigital rt;
-  InputAnalog  lup;
-  InputAnalog  ldown;
-  InputAnalog  lleft;
-  InputAnalog  lright;
-  InputAnalog  rup;
-  InputAnalog  rdown;
-  InputAnalog  rleft;
-  InputAnalog  rright;
+  InputDigital south;
+  InputDigital east;
+  InputDigital west;
+  InputDigital north;
+  InputDigital l_bumper;
+  InputDigital r_bumper;
+  InputAnalog  l_trigger;
+  InputAnalog  r_trigger;
+  InputDigital lstick_click;
+  InputDigital rstick_click;
+  InputAnalog  lstick_up;
+  InputAnalog  lstick_down;
+  InputAnalog  lstick_left;
+  InputAnalog  lstick_right;
+  InputAnalog  rstick_up;
+  InputAnalog  rstick_down;
+  InputAnalog  rstick_left;
+  InputAnalog  rstick_right;
   InputRumble  rumble;
 };
 
@@ -173,6 +172,7 @@ struct VirtualMouse : InputDevice {
   InputDigital  left;
   InputDigital  middle;
   InputDigital  right;
+  InputDigital  extra;
 };
 
 struct VirtualPort {

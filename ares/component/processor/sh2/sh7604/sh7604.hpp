@@ -5,6 +5,10 @@
 //struct SH2 {
   enum : u32 { Byte, Word, Long };
 
+  struct Bus {
+    enum : u32 { Cache, Internal, Peripheral };
+  };
+
   struct Area { enum : u32 {
     Cached   = 0,
     Uncached = 1,
@@ -15,12 +19,12 @@
   };};
 
   //bus.cpp
-  auto readByte(u32 address) -> u32;
-  auto readWord(u32 address) -> u32;
-  auto readLong(u32 address) -> u32;
-  auto writeByte(u32 address, u32 data) -> void;
-  auto writeWord(u32 address, u32 data) -> void;
-  auto writeLong(u32 address, u32 data) -> void;
+  template<u32 Origin = Bus::Cache> auto readByte(u32 address) -> u32;
+  template<u32 Origin = Bus::Cache> auto readWord(u32 address) -> u32;
+  template<u32 Origin = Bus::Cache> auto readLong(u32 address) -> u32;
+  template<u32 Origin = Bus::Cache> auto writeByte(u32 address, u32 data) -> void;
+  template<u32 Origin = Bus::Cache> auto writeWord(u32 address, u32 data) -> void;
+  template<u32 Origin = Bus::Cache> auto writeLong(u32 address, u32 data) -> void;
 
   //io.cpp
   auto internalReadByte(u32 address, n8 data = 0) -> n8;
@@ -112,8 +116,8 @@
       n7 fovv;      //FRT overflow interrupt vector number
     } vcrd;
     struct VCRWDT { //vector number setting register WDT
-      n4 bcmv;      //BSC compare match interrupt vector number
-      n4 witv;      //WDT interval interrupt vector number
+      n7 bcmv;      //BSC compare match interrupt vector number
+      n7 witv;      //WDT interval interrupt vector number
     } vcrwdt;
   } intc;
 
@@ -155,8 +159,9 @@
       n1 pr;        //priority mode bit
     } dmaor;
 
+    n1 dreq[2];
+
     //internal:
-    n1 dreq;
     n2 pendingIRQ;
   } dmac;
 
@@ -197,7 +202,7 @@
       n1 fer;       //framing error
       n1 orer;      //overrun error
       n1 rdrf;      //receive data register full
-      n1 tdre;      //transmit data register empty
+      n1 tdre = 1;  //transmit data register empty
     } ssr;
     n8 brr = 0xff;  //bit rate register
     n8 tdr = 0xff;  //transmit data register
@@ -210,6 +215,9 @@
 
   //watchdog timer
   struct WDT {
+    //timer.cpp
+    auto run() -> void;
+
     //serialization.cpp
     auto serialize(serializer&) -> void;
 
@@ -225,6 +233,11 @@
       n1 wovf;      //watchdog timer overflow flag
     } rstcsr;
     n8 wtcnt;       //watchdog timer counter
+
+    //internal
+    n32 counter;
+    n1 pendingIRQ;
+    n8 select;
   } wdt;
 
   //user break controller

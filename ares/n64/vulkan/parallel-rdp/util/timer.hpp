@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,7 +23,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <memory>
 
 namespace Util
 {
@@ -48,20 +47,6 @@ private:
 	int64_t idle_start;
 	int64_t idle_time = 0;
 	int64_t get_time();
-};
-
-class FrameLimiter
-{
-public:
-	FrameLimiter();
-	~FrameLimiter();
-	bool begin_interval_ns(uint64_t ns);
-	bool wait_interval();
-	bool is_active() const;
-
-private:
-	struct Impl;
-	std::unique_ptr<Impl> impl;
 };
 
 class Timer

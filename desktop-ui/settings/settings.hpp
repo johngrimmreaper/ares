@@ -12,7 +12,7 @@ struct Settings : Markup::Node {
     bool exclusive = false;
     bool blocking = false;
     bool flush = false;
-    string shader = "Blur";
+    string shader = "None";
     u32 multiplier = 2;
     string output = "Scale";
     bool aspectCorrection = true;
@@ -22,13 +22,16 @@ struct Settings : Markup::Node {
     f64 luminance = 1.0;
     f64 saturation = 1.0;
     f64 gamma = 1.0;
-    bool colorBleed = true;
+    bool colorBleed = false;
     bool colorEmulation = true;
     bool interframeBlending = true;
     bool overscan = false;
+    bool pixelAccuracy = false;
 
     string quality = "SD";
     bool supersampling = false;
+    bool enableVulkan = true;
+    bool disableVideoInterfaceProcessing = false;
   } video;
 
   struct Audio {
@@ -61,8 +64,6 @@ struct Settings : Markup::Node {
     bool rewind = false;
     bool runAhead = false;
     bool autoSaveMemory = true;
-    bool nativeFileDialogs = true;
-    bool groupEmulators = true;
   } general;
 
   struct Rewind {
@@ -116,8 +117,17 @@ struct VideoSettings : VerticalLayout {
     HorizontalLayout overscanLayout{this, Size{~0, 0}};
       CheckLabel overscanOption{&overscanLayout, Size{0, 0}, 5};
       Label overscanHint{&overscanLayout, Size{~0, 0}};
+    HorizontalLayout pixelAccuracyLayout{this, Size{~0, 0}};
+      CheckLabel pixelAccuracyOption{&pixelAccuracyLayout, Size{0, 0}, 5};
+      Label pixelAccuracyHint{&pixelAccuracyLayout, Size{~0, 0}};
   //
   Label renderSettingsLabel{this, Size{~0, 0}, 5};
+  HorizontalLayout enableVulkanLayout{this, Size{~0, 0}};
+    CheckLabel enableVulkanOption{&enableVulkanLayout, Size{0, 0}, 5};
+    Label enableVulkanHint{&enableVulkanLayout, Size{~0, 0}};  
+  HorizontalLayout disableVideoInterfaceProcessingLayout{this, Size{~0, 0}, 5};
+    CheckLabel disableVideoInterfaceProcessingOption{&disableVideoInterfaceProcessingLayout, Size{0, 0}, 5};
+    Label disableVideoInterfaceProcessingHint{&disableVideoInterfaceProcessingLayout, Size{0, 0}};
   HorizontalLayout renderQualityLayout{this, Size{~0, 0}, 5};
     RadioLabel renderQualitySD{&renderQualityLayout, Size{0, 0}};
     RadioLabel renderQualityHD{&renderQualityLayout, Size{0, 0}};
@@ -197,17 +207,6 @@ struct HotkeySettings : VerticalLayout {
   Timer timer;
 };
 
-struct EmulatorSettings : VerticalLayout {
-  auto construct() -> void;
-  auto eventToggle(TableViewCell cell) -> void;
-
-  Label emulatorLabel{this, Size{~0, 0}, 5};
-  TableView emulatorList{this, Size{~0, ~0}};
-  HorizontalLayout groupEmulatorsLayout{this, Size{~0, 0}};
-    CheckLabel groupEmulators{&groupEmulatorsLayout, Size{0, 0}, 5};
-    Label groupEmulatorsHint{&groupEmulatorsLayout, Size{~0, 0}};
-};
-
 struct OptionSettings : VerticalLayout {
   auto construct() -> void;
   HorizontalLayout rewindLayout{this, Size{~0, 0}, 5};
@@ -219,9 +218,6 @@ struct OptionSettings : VerticalLayout {
   HorizontalLayout autoSaveMemoryLayout{this, Size{~0, 0}, 5};
     CheckLabel autoSaveMemory{&autoSaveMemoryLayout, Size{0, 0}, 5};
     Label autoSaveMemoryHint{&autoSaveMemoryLayout, Size{~0, 0}};
-  HorizontalLayout nativeFileDialogsLayout{this, Size{~0, 0}, 5};
-    CheckLabel nativeFileDialogs{&nativeFileDialogsLayout, Size{0, 0}, 5};
-    Label nativeFileDialogsHint{&nativeFileDialogsLayout, Size{~0, 0}};
 };
 
 struct FirmwareSettings : VerticalLayout {
@@ -297,9 +293,10 @@ struct DriverSettings : VerticalLayout {
     ComboButton audioDriverList{&audioDriverLayout, Size{0, 0}};
     Button audioDriverAssign{&audioDriverLayout, Size{0, 0}};
     Label audioDriverActive{&audioDriverLayout, Size{0, 0}};
+  HorizontalLayout audioDeviceLayout{this, Size{~0, 0}};
+    Label audioDeviceLabel{&audioDeviceLayout, Size{0, 0}};
+    ComboButton audioDeviceList{&audioDeviceLayout, Size{0, 0}};
   HorizontalLayout audioPropertyLayout{this, Size{~0, 0}};
-    Label audioDeviceLabel{&audioPropertyLayout, Size{0, 0}};
-    ComboButton audioDeviceList{&audioPropertyLayout, Size{0, 0}};
     Label audioFrequencyLabel{&audioPropertyLayout, Size{0, 0}};
     ComboButton audioFrequencyList{&audioPropertyLayout, Size{0, 0}};
     Label audioLatencyLabel{&audioPropertyLayout, Size{0, 0}};
@@ -341,7 +338,6 @@ struct SettingsWindow : Window {
       AudioSettings audioSettings;
       InputSettings inputSettings;
       HotkeySettings hotkeySettings;
-      EmulatorSettings emulatorSettings;
       OptionSettings optionSettings;
       FirmwareSettings firmwareSettings;
       PathSettings pathSettings;
@@ -356,7 +352,6 @@ extern VideoSettings& videoSettings;
 extern AudioSettings& audioSettings;
 extern InputSettings& inputSettings;
 extern HotkeySettings& hotkeySettings;
-extern EmulatorSettings& emulatorSettings;
 extern OptionSettings& optionSettings;
 extern FirmwareSettings& firmwareSettings;
 extern PathSettings& pathSettings;

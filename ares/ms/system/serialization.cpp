@@ -1,3 +1,5 @@
+static const string SerializerVersion = "v131";
+
 auto System::serialize(bool synchronize) -> serializer {
   if(synchronize) scheduler.enter(Scheduler::Mode::Synchronize);
   serializer s;
@@ -42,9 +44,9 @@ auto System::serialize(serializer& s, bool synchronize) -> void {
   s(cpu);
   s(vdp);
   s(psg);
+  s(controllerPort1);
+  s(controllerPort2);
   if(Device::MasterSystem()) {
-    s(controllerPort1);
-    s(controllerPort2);
     if(MasterSystem::Region::NTSCJ()) {
       if(MasterSystem::Model::MarkIII()) {
         s(expansionPort);

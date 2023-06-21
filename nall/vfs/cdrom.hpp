@@ -5,14 +5,16 @@
 #include <nall/file.hpp>
 #include <nall/string.hpp>
 #include <nall/decode/cue.hpp>
+#include <nall/decode/chd.hpp>
 #include <nall/decode/wav.hpp>
 
 namespace nall::vfs {
 
 struct cdrom : file {
-  static auto open(const string& cueLocation) -> shared_pointer<cdrom> {
+  static auto open(const string& location) -> shared_pointer<cdrom> {
     auto instance = shared_pointer<cdrom>{new cdrom};
-    if(instance->load(cueLocation)) return instance;
+    if(location.iendsWith(".cue") && instance->loadCue(location)) return instance;
+    if(location.iendsWith(".chd") && instance->loadChd(location)) return instance;
     return {};
   }
 
@@ -44,7 +46,7 @@ struct cdrom : file {
   }
 
 private:
-  auto load(const string& cueLocation) -> bool {
+  auto loadCue(const string& cueLocation) -> bool {
     Decode::CUE cuesheet;
     if(!cuesheet.load(cueLocation)) return false;
 
@@ -132,9 +134,9 @@ private:
               memory::assign(target + 0, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff);  //sync
               memory::assign(target + 6, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00);  //sync
               auto [minute, second, frame] = CD::MSF(lbaFileBase + index.lba + sector);
-              target[12] = CD::BCD::encode(minute);
-              target[13] = CD::BCD::encode(second);
-              target[14] = CD::BCD::encode(frame);
+              target[12] = BCD::encode(minute);
+              target[13] = BCD::encode(second);
+              target[14] = BCD::encode(frame);
               target[15] = 0x01;  //mode
               filedata.read({target + 16, length});
               CD::RSPC::encodeMode1({target, 2352});
@@ -152,6 +154,88 @@ private:
 
     auto subchannel = session.encode(LeadInSectors + session.leadOut.end + 1);
     if(auto overlay = nall::file::read({Location::notsuffix(cueLocation), ".sub"})) {
+      auto target = subchannel.data() + 96 * (LeadInSectors + Track1Pregap);
+      auto length = (s64)subchannel.size() - 96 * (LeadInSectors + Track1Pregap);
+      memory::copy(target, length, overlay.data(), overlay.size());
+    }
+
+    for(u64 sector : range(size() / 2448)) {
+      auto source = subchannel.data() + sector * 96;
+      auto target = _image.data() + sector * 2448 + 2352;
+      memory::copy(target, source, 96);
+    }
+
+    return true;
+  }
+
+  auto loadChd(const string& location) -> bool {
+    Decode::CHD chd;
+    if(!chd.load(location)) return false;
+
+    CD::Session session;
+    session.leadIn.lba = -LeadInSectors;
+    session.leadIn.end = -1;
+
+    s32 lbaIndex = 0;
+    for(auto& track : chd.tracks) {
+      session.tracks[track.number].control = track.type == "AUDIO" ? 0b0000 : 0b0100;
+      for(auto& index : track.indices) {
+        session.tracks[track.number].indices[index.number].lba = index.lba;
+        session.tracks[track.number].indices[index.number].end = index.end;
+        lbaIndex = session.tracks[track.number].indices[index.number].end + 1;
+      }
+    }
+
+    session.leadOut.lba = lbaIndex;
+    session.leadOut.end = lbaIndex + LeadOutSectors - 1;
+
+    // determine track and index ranges
+    session.firstTrack = 0xff;
+    for(u32 track : range(100)) {
+      if(!session.tracks[track]) continue;
+      if(session.firstTrack > 99) session.firstTrack = track;
+      // find first index
+      for(u32 indexID : range(100)) {
+        auto& index = session.tracks[track].indices[indexID];
+        if(index) { session.tracks[track].firstIndex = indexID; break; }
+      }
+      // find last index
+      for(u32 indexID : reverse(range(100))) {
+        auto& index = session.tracks[track].indices[indexID];
+        if(index) { session.tracks[track].lastIndex = indexID; break; }
+      }
+      session.lastTrack = track;
+    }
+
+    _image.resize(2448 * (LeadInSectors + lbaIndex + LeadOutSectors));
+
+    s32 lba = 0;
+    for(auto& track : chd.tracks) {
+      for(auto& index : track.indices) {
+        for(s32 sector : range(index.sectorCount())) {
+          auto target = _image.data() + 2448ull * (LeadInSectors + index.lba + sector);
+          auto sectorData = chd.read(lba);
+          if(sectorData.size() == 2048) {
+            //ISO: generate header + parity data
+            memory::assign(target + 0, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff);  //sync
+            memory::assign(target + 6, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00);  //sync
+            auto [minute, second, frame] = CD::MSF(index.lba + sector);
+            target[12] = BCD::encode(minute);
+            target[13] = BCD::encode(second);
+            target[14] = BCD::encode(frame);
+            target[15] = 0x01;  //mode
+            memory::copy(target + 16, 2048, sectorData.data(), sectorData.size());
+            CD::RSPC::encodeMode1({target, 2352});
+          } else {
+            memory::copy(target, 2352, sectorData.data(), sectorData.size());
+          }
+          lba++;
+        }
+      }
+    }
+
+    auto subchannel = session.encode(LeadInSectors + session.leadOut.end + 1);
+    if(auto overlay = nall::file::read({Location::notsuffix(location), ".sub"})) {
       auto target = subchannel.data() + 96 * (LeadInSectors + Track1Pregap);
       auto length = (s64)subchannel.size() - 96 * (LeadInSectors + Track1Pregap);
       memory::copy(target, length, overlay.data(), overlay.size());

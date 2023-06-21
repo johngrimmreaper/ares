@@ -31,7 +31,7 @@ auto Famicom::load(string location) -> bool {
   pak->setAttribute("board", document["game/board"].string());
   pak->setAttribute("mirror", document["game/board/mirror/mode"].string());
   pak->setAttribute("chip", document["game/board/chip/type"].string());
-  pak->setAttribute("chip/key", document["game/board/chip/key"].string());
+  pak->setAttribute("chip/key", document["game/board/chip/key"].natural());
   pak->setAttribute("pinout/a0", document["game/board/chip/pinout/a0"].natural());
   pak->setAttribute("pinout/a1", document["game/board/chip/pinout/a1"].natural());
   pak->append("manifest.bml", manifest);
@@ -84,6 +84,8 @@ auto Famicom::analyze(vector<u8>& data) -> string {
   if(data.size() < 256) return {};
 
   string digest = Hash::SHA256(data).digest();
+  string manifest = Medium::manifestDatabase(digest);
+  if(manifest) return manifest;
 
   if(digest == "99c18490ed9002d9c6d999b9d8d15be5c051bdfa7cc7e73318053c9a994b0178"  //Nintendo Famicom Disk System (Japan)
   || digest == "a0a9d57cbace21bf9c85c2b85e86656317f0768d7772acc90c7411ab1dbff2bf"  //Sharp Twin Famicom (Japan)
@@ -132,7 +134,13 @@ auto Famicom::analyzeFDS(vector<u8>& data) -> string {
 auto Famicom::analyzeINES(vector<u8>& data) -> string {
   string hash = Hash::SHA256({data.data() + 16, data.size() - 16}).digest();
   string manifest = Medium::manifestDatabase(hash);
-  if(manifest) return manifest;
+  if(manifest) {
+    manifest += "    memory\n";
+    manifest += "      type: ROM\n";
+    manifest += "      size: 0x10\n";
+    manifest += "      content: iNES\n";
+    return manifest;
+  }
 
   u32 mapper = ((data[7] >> 4) << 4) | (data[6] >> 4);
   u32 mirror = ((data[6] & 0x08) >> 2) | (data[6] & 0x01);
@@ -141,17 +149,33 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
   u32 prgram = 0u;
   u32 chrram = chrrom == 0u ? 8192u : 0u;
   u32 eeprom = 0u;
+  u32 submapper = 0u;
+
+  string region = "NTSC-J, NTSC-U, PAL"; //iNES 1.0 requires database to detect region
+
+  bool iNes2 = (data[7] & 0xc) == 0x8;
+  if (iNes2) {
+    mapper |= ((data[8] & 0xf) << 8);
+    submapper = data[8] >> 4;
+    u32 timing = data[12] & 3;
+
+    // TODO: add DENDY (pirate famiclone) timing
+    if (timing == 1) region = "PAL";
+  }
 
   string s;
   s += "game\n";
   s +={"  sha256: ", hash, "\n"};
   s +={"  name:   ", Medium::name(location), "\n"};
   s +={"  title:  ", Medium::name(location), "\n"};
-  s += "  region: NTSC-J, NTSC-U, PAL\n";  //database required to detect region
+  s +={"  region: ", region, "\n"};
 
   switch(mapper) {
 
   default:
+    debug(unimplemented, "[famicom] unknown iNES mapper number ", mapper);
+    [[fallthrough]];
+  case   0:
     s += "  board:  HVC-NROM-256\n";
     s +={"    mirror mode=", !mirror ? "horizontal" : "vertical", "\n"};
     break;
@@ -173,20 +197,15 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
     break;
 
   case   4:
-    //MMC3
     s += "  board:  HVC-TLROM\n";
     s += "    chip type=MMC3B\n";
     prgram = 8192;
-    //MMC6
-  //s += "  board:  HVC-HKROM\n";
-  //s += "    chip type=MMC6\n";
-  //prgram = 1024;
     break;
 
   case   5:
-    s += "  board:  HVC-ELROM\n";
+    s += "  board:  HVC-EWROM\n";
     s += "    chip type=MMC5\n";
-    prgram = 65536;
+    prgram = 32768;
     break;
 
   case   7:
@@ -285,8 +304,13 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
     break;
 
   case  34:
-    s += "  board:  HVC-BNROM\n";
-    s +={"    mirror mode=", !mirror ? "horizontal" : "vertical", "\n"};
+    if(submapper == 0 && chrrom != 0 || submapper == 1) {
+      s += "  board:  AVE-NINA-001\n";
+      prgram = 8192;
+    } else {
+      s += "  board:  HVC-BNROM\n";
+      s +={"    mirror mode=", !mirror ? "horizontal" : "vertical", "\n"};
+    }
     break;
 
   case  48:
@@ -428,6 +452,7 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
 
   case 111:
     s += "  board:  GTROM\n";
+    chrram = 16384;
     break;
 
   case 118:
@@ -520,6 +545,13 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
   case 228:
     s += "  board:  MLT-ACTION52\n";
     break;
+  }
+
+
+  // iNES 2.0 overrides auto-detected ram amounts
+  if(iNes2) {
+    u32 chrshift = data[11] & 0xf;
+    chrram = chrshift > 0 ? 64 << chrshift : 0;
   }
 
   s += "    memory\n";

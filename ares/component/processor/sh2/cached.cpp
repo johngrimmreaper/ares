@@ -1,3 +1,11 @@
+auto SH2::Recompiler::invalidate(u32 address) -> void {
+  auto pool = pools[address >> 8 & 0xffffff];
+  if(!pool) return;
+  memory::jitprotect(false);
+  pool->blocks[address >> 1 & 0x7f] = nullptr;
+  memory::jitprotect(true);
+}
+
 auto SH2::Recompiler::pool(u32 address) -> Pool* {
   auto& pool = pools[address >> 8 & 0xffffff];
   if(!pool) pool = (Pool*)allocator.acquire(sizeof(Pool));
@@ -7,7 +15,9 @@ auto SH2::Recompiler::pool(u32 address) -> Pool* {
 auto SH2::Recompiler::block(u32 address) -> Block* {
   if(auto block = pool(address)->blocks[address >> 1 & 0x7f]) return block;
   auto block = emit(address);
-  return pool(address)->blocks[address >> 1 & 0x7f] = block;
+  pool(address)->blocks[address >> 1 & 0x7f] = block;
+  memory::jitprotect(true);
+  return block;
 }
 
 alwaysinline auto SH2::Recompiler::emitInstruction(u16 opcode) -> bool {
@@ -25,34 +35,37 @@ alwaysinline auto SH2::Recompiler::emitInstruction(u16 opcode) -> bool {
   return 0;
 }
 
+#define CCR mem(sreg(1), offsetof(Registers, CCR))
+
 auto SH2::Recompiler::emit(u32 address) -> Block* {
   if(unlikely(allocator.available() < 1_MiB)) {
     print("SH2 allocator flush\n");
+    memory::jitprotect(false);
     allocator.release(bump_allocator::zero_fill);
+    memory::jitprotect(true);
     reset();
   }
 
   auto block = (Block*)allocator.acquire(sizeof(Block));
-  block->code = allocator.acquire();
-  bind({block->code, allocator.available()});
+  beginFunction(2);
 
   bool hasBranched = 0;
   while(true) {
     u16 instruction = self.readWord(address);
     bool branched = emitInstruction(instruction);
-    mov(rax, mem64(&self.CCR));
-    inc(rax);
-    mov(mem64(&self.CCR), rax);
-    call(&SH2::instructionEpilogue, &self);
+    add64(CCR, CCR, imm(1));
+    call(&SH2::instructionEpilogue);
     address += 2;
     if(hasBranched || (address & 0xfe) == 0) break;  //block boundary
     hasBranched = branched;
-    test(al, al);
-    jz(imm8(1));
-    ret();
+    testJumpEpilog();
   }
-  ret();
+  jumpEpilog();
 
-  allocator.reserve(size());
+  memory::jitprotect(false);
+  block->code = endFunction();
+
   return block;
 }
+
+#undef CCR

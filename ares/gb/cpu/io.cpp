@@ -87,33 +87,33 @@ auto CPU::readIO(u32 cycle, n16 address, n8 data) -> n8 {
     return data;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff4d && cycle == 2) {  //KEY1
     data.bit(0) = status.speedSwitch;
     data.bit(7) = status.speedDouble;
     return data;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff55 && cycle == 2) {  //HDMA5
     data.bit(0,6) =  status.dmaLength;
     data.bit(7)   = !status.hdmaActive;
     return data;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff56 && cycle == 2) {  //RP
     //unemulated
     return 0x02;
   }
 
   if(Model::GameBoyColor())
-  if(address == 0xff6c && cycle == 2) {  //???
-    data.bit(0) = status.ff6c;
+  if(address == 0xff6c && cycle == 2) {  //OPRI
+    data.bit(0) = status.opri;
     return data;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff70 && cycle == 2) {  //SVBK
     return status.wramBank;
   }
@@ -207,37 +207,44 @@ auto CPU::writeIO(u32 cycle, n16 address, n8 data) -> void {
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && cartridge.bootromEnable)
+  if(address == 0xff4c && cycle == 2) {  //KEY0
+    status.cgbMode    = !(data & 0x0c);
+    status.opriEnable = data.bit(3);
+    return;
+  }
+
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff4d && cycle == 2) {  //KEY1
     status.speedSwitch = data.bit(0);
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff51 && cycle == 2) {  //HDMA1
     status.dmaSource.bit(8,15) = data.bit(0,7);
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff52 && cycle == 2) {  //HDMA2
     status.dmaSource.bit(4,7) = data.bit(4,7);
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff53 && cycle == 2) {  //HDMA3
     status.dmaTarget.bit(8,15) = data.bit(0,7);
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff54 && cycle == 2) {  //HDMA4
     status.dmaTarget.bit(4,7) = data.bit(4,7);
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff55 && cycle == 2) {  //HDMA5
     //1->0 transistion stops an active HDMA (and does not trigger GDMA)
     if(status.hdmaActive && !data.bit(7)) {
@@ -261,14 +268,14 @@ auto CPU::writeIO(u32 cycle, n16 address, n8 data) -> void {
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff56 && cycle == 2) {  //RP
     return;
   }
 
-  if(Model::GameBoyColor())
-  if(address == 0xff6c && cycle == 2) {  //???
-    status.ff6c = data.bit(0);
+  if(Model::GameBoyColor() && (cartridge.bootromEnable || status.opriEnable))
+  if(address == 0xff6c && cycle == 2) {  //OPRI
+    status.opri = data.bit(0);
     return;
   }
 
@@ -296,7 +303,7 @@ auto CPU::writeIO(u32 cycle, n16 address, n8 data) -> void {
     return;
   }
 
-  if(Model::GameBoyColor())
+  if(Model::GameBoyColor() && status.cgbMode)
   if(address == 0xff70 && cycle == 2) {  //SVBK
     status.wramBank = data.bit(0,3);
     return;

@@ -43,6 +43,7 @@ auto SH2::ANDM(u32 i) -> void {
 
 //BF disp
 auto SH2::BF(u32 d) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   if(SR.T == 0) {
     branch(PC + 4 + (s8)d * 2);
   }
@@ -50,6 +51,7 @@ auto SH2::BF(u32 d) -> void {
 
 //BF/S disp
 auto SH2::BFS(u32 d) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   if(SR.T == 0) {
     delaySlot(PC + 4 + (s8)d * 2);
   }
@@ -57,28 +59,33 @@ auto SH2::BFS(u32 d) -> void {
 
 //BRA disp
 auto SH2::BRA(u32 d) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   delaySlot(PC + 4 + (i12)d * 2);
 }
 
 //BRAF disp
 auto SH2::BRAF(u32 m) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   delaySlot(PC + 4 + R[m]);
 }
 
 //BSR disp
 auto SH2::BSR(u32 d) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   PR = PC;
   delaySlot(PC + 4 + (i12)d * 2);
 }
 
 //BSRF Rm
 auto SH2::BSRF(u32 m) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   PR = PC;
   delaySlot(PC + 4 + R[m]);
 }
 
 //BT disp
 auto SH2::BT(u32 d) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   if(SR.T == 1) {
     branch(PC + 4 + (s8)d * 2);
   }
@@ -86,6 +93,7 @@ auto SH2::BT(u32 d) -> void {
 
 //BT/S disp
 auto SH2::BTS(u32 d) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   if(SR.T == 1) {
     delaySlot(PC + 4 + (s8)d * 2);
   }
@@ -221,11 +229,13 @@ auto SH2::ILLEGAL() -> void {
 
 //JMP @Rm
 auto SH2::JMP(u32 m) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   delaySlot(R[m] + 4);
 }
 
 //JSR @Rm
 auto SH2::JSR(u32 m) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   PR = PC;
   delaySlot(R[m] + 4);
 }
@@ -503,18 +513,21 @@ auto SH2::MOVI(u32 i, u32 n) -> void {
 }
 
 //MOV.W @(disp,PC),Rn
-auto SH2::MOVWI(u32 d, u32 n) -> void {
-  R[n] = (s16)readWord(PC + d * 2);
+noinline auto SH2::MOVWI(u32 d, u32 n) -> void {
+  u32 pc = inDelaySlot() ? PPC - 2 : PC;
+  R[n] = (s16)readWord(pc + d * 2);
 }
 
 //MOV.L @(disp,PC),Rn
-auto SH2::MOVLI(u32 d, u32 n) -> void {
-  R[n] = readLong((PC & ~3) + d * 4);
+noinline auto SH2::MOVLI(u32 d, u32 n) -> void {
+  u32 pc = inDelaySlot() ? PPC - 2 : PC;
+  R[n] = readLong((pc & ~3) + d * 4);
 }
 
 //MOVA @(disp,PC),R0
-auto SH2::MOVA(u32 d) -> void {
-  R[0] = (PC & ~3) + d * 4 - inDelaySlot() * 2;
+noinline auto SH2::MOVA(u32 d) -> void {
+  u32 pc = inDelaySlot() ? PPC - 2 : PC;
+  R[0] = (pc & ~3) + d * 4;
 }
 
 //MOVT Rn
@@ -602,13 +615,15 @@ auto SH2::ROTR(u32 n) -> void {
 
 //RTE
 auto SH2::RTE() -> void {
-  delaySlot(readLong(SP + 0));
+  if(inDelaySlot()) return illegalSlotInstruction();
+  delaySlot(readLong(SP + 0) + 4);
   SR  = readLong(SP + 4);
   SP += 8;
 }
 
 //RTS
 auto SH2::RTS() -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   delaySlot(PR + 4);
 }
 
@@ -800,18 +815,16 @@ auto SH2::TAS(u32 n) -> void {
     ) return (void)(exceptions |= AddressErrorCPU);
   }
 
-  auto cacheEnable = cache.enable;
-  cache.enable = 0;
-  u8 b = readByte(R[n]);
-  cache.enable = cacheEnable;
+  u8 b = readByte<Bus::Internal>(R[n]);
   SR.T = b == 0;
   writeByte(R[n], b | 0x80);
 }
 
 //TRAPA #imm
 auto SH2::TRAPA(u32 i) -> void {
+  if(inDelaySlot()) return illegalSlotInstruction();
   push(SR);
-  push(PC + 2);
+  push(PC - 2);
   branch(readLong(VBR + i * 4) + 4);
 }
 

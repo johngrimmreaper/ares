@@ -48,6 +48,10 @@ auto Program::log(string_view message) -> void {
   }
 }
 
+auto Program::status(string_view message) -> void {
+  showMessage(message);
+}
+
 auto Program::video(ares::Node::Video::Screen node, const u32* data, u32 pitch, u32 width, u32 height) -> void {
   if(!screens) return;
 
@@ -76,6 +80,16 @@ auto Program::video(ares::Node::Video::Screen node, const u32* data, u32 pitch, 
 
   u32 outputWidth = videoWidth * multiplier;
   u32 outputHeight = videoHeight * multiplier;
+
+  if(settings.video.output == "Perfect") {
+    outputWidth = videoWidth;
+    outputHeight = videoHeight;
+  }
+
+  if(settings.video.output == "Fixed") {
+    outputWidth = videoWidth * settings.video.multiplier;
+    outputHeight = videoHeight * settings.video.multiplier;
+  }
 
   if(multiplier == 0 || settings.video.output == "Scale") {
     f32 multiplierX = (f32)viewportWidth / (f32)videoWidth;
@@ -108,7 +122,7 @@ auto Program::video(ares::Node::Video::Screen node, const u32* data, u32 pitch, 
   current = chrono::timestamp();
   if(current != previous) {
     previous = current;
-    message.framesPerSecond = frameCounter;
+    framesPerSecond = frameCounter;
     frameCounter = 0;
   }
 }

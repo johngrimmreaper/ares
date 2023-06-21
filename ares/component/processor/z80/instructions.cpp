@@ -24,9 +24,9 @@ auto Z80::instructionADC_a_r(n8& x) -> void { Q = 1;
 
 auto Z80::instructionADC_hl_rr(n16& x) -> void { Q = 1;
   WZ = HL + 1;
-  wait(4);
-  auto lo = ADD(HL >> 0, x >> 0, CF);
   wait(3);
+  auto lo = ADD(HL >> 0, x >> 0, CF);
+  wait(4);
   auto hi = ADD(HL >> 8, x >> 8, CF);
   HL = hi << 8 | lo << 0;
   ZF = HL == 0;
@@ -47,9 +47,9 @@ auto Z80::instructionADD_a_r(n8& x) -> void { Q = 1;
 auto Z80::instructionADD_hl_rr(n16& x) -> void { Q = 1;
   WZ = HL + 1;
   bool vf = VF, zf = ZF, sf = SF;
-  wait(4);
-  auto lo = ADD(HL >> 0, x >> 0);
   wait(3);
+  auto lo = ADD(HL >> 0, x >> 0);
+  wait(4);
   auto hi = ADD(HL >> 8, x >> 8, CF);
   HL = hi << 8 | lo << 0;
   VF = vf, ZF = zf, SF = sf;  //restore unaffected flags
@@ -67,14 +67,9 @@ auto Z80::instructionAND_a_r(n8& x) -> void { Q = 1;
   A = AND(A, x);
 }
 
-auto Z80::instructionBIT_o_irr(n3 bit, n16& addr) -> void { Q = 1;
-  BIT(bit, read(addr));
-  XF = WZH.bit(3);
-  YF = WZH.bit(5);
-}
-
 auto Z80::instructionBIT_o_irr_r(n3 bit, n16& addr, n8& x) -> void { Q = 1;
   x = BIT(bit, read(addr));
+  wait(1);
   XF = WZH.bit(3);
   YF = WZH.bit(5);
 }
@@ -86,13 +81,6 @@ auto Z80::instructionBIT_o_r(n3 bit, n8& x) -> void { Q = 1;
 auto Z80::instructionCALL_c_nn(bool c) -> void { Q = 0;
   WZ = operands();
   if(!c) return;
-  wait(1);
-  push(PC);
-  PC = WZ;
-}
-
-auto Z80::instructionCALL_nn() -> void { Q = 0;
-  WZ = operands();
   wait(1);
   push(PC);
   PC = WZ;
@@ -225,8 +213,10 @@ auto Z80::instructionEI() -> void { Q = 0;
 auto Z80::instructionEX_irr_rr(n16& x, n16& y) -> void { Q = 0;
   WZL = read(x + 0);
   WZH = read(x + 1);
+  wait(1);
   write(x + 0, y >> 0);
   write(x + 1, y >> 8);
+  wait(2);
   y = WZ;
 }
 
@@ -245,7 +235,6 @@ auto Z80::instructionHALT() -> void { Q = 0;
 }
 
 auto Z80::instructionIM_o(n2 code) -> void { Q = 0;
-  wait(4);
   IM = code;
 }
 
@@ -257,11 +246,6 @@ auto Z80::instructionIN_a_in() -> void { Q = 0;
 
 auto Z80::instructionIN_r_ic(n8& x) -> void { Q = 1;
   x = IN(in(BC));
-  WZ = BC + 1;
-}
-
-auto Z80::instructionIN_ic() -> void { Q = 1;
-  IN(in(BC));
   WZ = BC + 1;
 }
 
@@ -351,7 +335,7 @@ auto Z80::instructionLD_a_inn() -> void { Q = 0;
 
 auto Z80::instructionLD_a_irr(n16& x) -> void { Q = 0;
   WZ = x;
-  A = read(displace(WZ));
+  A = read(x);
   WZ++;
 }
 
@@ -370,14 +354,16 @@ auto Z80::instructionLD_inn_rr(n16& x) -> void { Q = 0;
 
 auto Z80::instructionLD_irr_a(n16& x) -> void { Q = 0;
   WZ = x;
-  write(displace(WZ), A);
+  write(x, A);
   WZL++;
   WZH = A;
 }
 
 auto Z80::instructionLD_irr_n(n16& x) -> void { Q = 0;
-  auto addr = displace(x);
-  write(addr, operand());
+  auto addr = displace(x,0); // special case: defer wait cycles (overlap with n fetch)
+  auto data = operand();
+  if(&x == &ix.word || &x == &iy.word) wait(2);
+  write(addr, data);
 }
 
 auto Z80::instructionLD_irr_r(n16& x, n8& y) -> void { Q = 0;
@@ -417,9 +403,10 @@ auto Z80::instructionLD_r_r2(n8& x, n8& y) -> void { Q = 1;
 }
 
 auto Z80::instructionLD_rr_inn(n16& x) -> void { Q = 0;
-  auto addr = operands();
-  x.byte(0) = read(addr + 0);
-  x.byte(1) = read(addr + 1);
+  WZ = operands();
+  x.byte(0) = read(WZ);
+  WZ++;
+  x.byte(1) = read(WZ);
 }
 
 auto Z80::instructionLD_rr_nn(n16& x) -> void { Q = 0;
@@ -561,12 +548,10 @@ auto Z80::instructionPUSH_rr(n16& x) -> void { Q = 0;
   push(x);
 }
 
-auto Z80::instructionRES_o_irr(n3 bit, n16& addr) -> void { Q = 1;
-  write(addr, RES(bit, read(addr)));
-}
-
 auto Z80::instructionRES_o_irr_r(n3 bit, n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = RES(bit, read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = RES(bit, data));
 }
 
 auto Z80::instructionRES_o_r(n3 bit, n8& x) -> void { Q = 1;
@@ -574,7 +559,6 @@ auto Z80::instructionRES_o_r(n3 bit, n8& x) -> void { Q = 1;
 }
 
 auto Z80::instructionRET() -> void { Q = 0;
-  wait(1);
   WZ = pop();
   PC = WZ;
 }
@@ -598,12 +582,10 @@ auto Z80::instructionRETN() -> void { Q = 0;
   IFF1 = IFF2;
 }
 
-auto Z80::instructionRL_irr(n16& addr) -> void { Q = 1;
-  write(addr, RL(read(addr)));
-}
-
 auto Z80::instructionRL_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = RL(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = RL(data));
 }
 
 auto Z80::instructionRL_r(n8& x) -> void { Q = 1;
@@ -621,12 +603,10 @@ auto Z80::instructionRLA() -> void { Q = 1;
   YF = A.bit(5);
 }
 
-auto Z80::instructionRLC_irr(n16& addr) -> void { Q = 1;
-  write(addr, RLC(read(addr)));
-}
-
 auto Z80::instructionRLC_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = RLC(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = RLC(data));
 }
 
 auto Z80::instructionRLC_r(n8& x) -> void { Q = 1;
@@ -647,9 +627,8 @@ auto Z80::instructionRLCA() -> void { Q = 1;
 auto Z80::instructionRLD() -> void { Q = 1;
   WZ = HL + 1;
   auto data = read(HL);
-  wait(1);
+  wait(4);
   write(HL, (data << 4) | (A & 0x0f));
-  wait(3);
   A = (A & 0xf0) | (data >> 4);
 
   NF = 0;
@@ -661,12 +640,10 @@ auto Z80::instructionRLD() -> void { Q = 1;
   SF = A.bit(7);
 }
 
-auto Z80::instructionRR_irr(n16& addr) -> void { Q = 1;
-  write(addr, RR(read(addr)));
-}
-
 auto Z80::instructionRR_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = RR(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = RR(data));
 }
 
 auto Z80::instructionRR_r(n8& x) -> void { Q = 1;
@@ -684,12 +661,10 @@ auto Z80::instructionRRA() -> void { Q = 1;
   YF = A.bit(5);
 }
 
-auto Z80::instructionRRC_irr(n16& addr) -> void { Q = 1;
-  write(addr, RRC(read(addr)));
-}
-
 auto Z80::instructionRRC_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = RRC(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = RRC(data));
 }
 
 auto Z80::instructionRRC_r(n8& x) -> void { Q = 1;
@@ -710,9 +685,8 @@ auto Z80::instructionRRCA() -> void { Q = 1;
 auto Z80::instructionRRD() -> void { Q = 1;
   WZ = HL + 1;
   auto data = read(HL);
-  wait(1);
+  wait(4);
   write(HL, (data >> 4) | (A << 4));
-  wait(3);
   A = (A & 0xf0) | (data & 0x0f);
 
   NF = 0;
@@ -745,9 +719,9 @@ auto Z80::instructionSBC_a_r(n8& x) -> void { Q = 1;
 
 auto Z80::instructionSBC_hl_rr(n16& x) -> void { Q = 1;
   WZ = HL + 1;
-  wait(4);
-  auto lo = SUB(HL >> 0, x >> 0, CF);
   wait(3);
+  auto lo = SUB(HL >> 0, x >> 0, CF);
+  wait(4);
   auto hi = SUB(HL >> 8, x >> 8, CF);
   HL = hi << 8 | lo << 0;
   ZF = HL == 0;
@@ -763,60 +737,50 @@ auto Z80::instructionSCF() -> void {
   Q = 1;
 }
 
-auto Z80::instructionSET_o_irr(n3 bit, n16& addr) -> void { Q = 1;
-  write(addr, SET(bit, read(addr)));
-}
-
 auto Z80::instructionSET_o_irr_r(n3 bit, n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = SET(bit, read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = SET(bit, data));
 }
 
 auto Z80::instructionSET_o_r(n3 bit, n8& x) -> void { Q = 1;
   x = SET(bit, x);
 }
 
-auto Z80::instructionSLA_irr(n16& addr) -> void { Q = 1;
-  write(addr, SLA(read(addr)));
-}
-
 auto Z80::instructionSLA_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = SLA(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = SLA(data));
 }
 
 auto Z80::instructionSLA_r(n8& x) -> void { Q = 1;
   x = SLA(x);
 }
 
-auto Z80::instructionSLL_irr(n16& addr) -> void { Q = 1;
-  write(addr, SLL(read(addr)));
-}
-
 auto Z80::instructionSLL_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = SLL(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = SLL(data));
 }
 
 auto Z80::instructionSLL_r(n8& x) -> void { Q = 1;
   x = SLL(x);
 }
 
-auto Z80::instructionSRA_irr(n16& addr) -> void { Q = 1;
-  write(addr, SRA(read(addr)));
-}
-
 auto Z80::instructionSRA_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = SRA(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = SRA(data));
 }
 
 auto Z80::instructionSRA_r(n8& x) -> void { Q = 1;
   x = SRA(x);
 }
 
-auto Z80::instructionSRL_irr(n16& addr) -> void { Q = 1;
-  write(addr, SRL(read(addr)));
-}
-
 auto Z80::instructionSRL_irr_r(n16& addr, n8& x) -> void { Q = 1;
-  write(addr, x = SRL(read(addr)));
+  auto data = read(addr);
+  wait(1);
+  write(addr, x = SRL(data));
 }
 
 auto Z80::instructionSRL_r(n8& x) -> void { Q = 1;

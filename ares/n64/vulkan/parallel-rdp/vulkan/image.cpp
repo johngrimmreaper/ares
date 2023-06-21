@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -24,11 +24,8 @@
 #include "device.hpp"
 #include "buffer.hpp"
 
-using namespace std;
-
 namespace Vulkan
 {
-
 ImageView::ImageView(Device *device_, VkImageView view_, const ImageViewCreateInfo &info_)
     : Cookie(device_)
     , device(device_)
@@ -88,6 +85,21 @@ ImageView::~ImageView()
 	}
 }
 
+unsigned ImageView::get_view_width() const
+{
+	return info.image->get_width(info.base_level);
+}
+
+unsigned ImageView::get_view_height() const
+{
+	return info.image->get_height(info.base_level);
+}
+
+unsigned ImageView::get_view_depth() const
+{
+	return info.image->get_depth(info.base_level);
+}
+
 Image::Image(Device *device_, VkImage image_, VkImageView default_view, const DeviceAllocation &alloc_,
              const ImageCreateInfo &create_info_, VkImageViewType view_type)
     : Cookie(device_)
@@ -115,6 +127,11 @@ DeviceAllocation Image::take_allocation_ownership()
 	DeviceAllocation ret = {};
 	std::swap(ret, alloc);
 	return ret;
+}
+
+ExternalHandle Image::export_handle()
+{
+	return alloc.export_handle(*device);
 }
 
 void Image::disown_image()
@@ -188,7 +205,7 @@ VkPipelineStageFlags LinearHostImage::get_used_pipeline_stages() const
 }
 
 LinearHostImage::LinearHostImage(Device *device_, ImageHandle gpu_image_, BufferHandle cpu_image_, VkPipelineStageFlags stages_)
-	: device(device_), gpu_image(move(gpu_image_)), cpu_image(move(cpu_image_)), stages(stages_)
+	: device(device_), gpu_image(std::move(gpu_image_)), cpu_image(std::move(cpu_image_)), stages(stages_)
 {
 	if (gpu_image->get_create_info().domain == ImageDomain::LinearHostCached ||
 	    gpu_image->get_create_info().domain == ImageDomain::LinearHost)

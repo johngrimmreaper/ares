@@ -1,3 +1,11 @@
+#ifdef CORE_A26
+namespace ares::Atari2600 {
+    auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
+}
+#include "atari-2600.cpp"
+#endif
+
 #ifdef CORE_CV
   namespace ares::ColecoVision {
     auto load(Node::System& node, string name) -> bool;
@@ -82,10 +90,12 @@
 #ifdef CORE_PCE
   namespace ares::PCEngine {
     auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
   }
   #include "pc-engine.cpp"
   #include "pc-engine-cd.cpp"
   #include "supergrafx.cpp"
+  #include "supergrafx-cd.cpp"
 #endif
 
 #ifdef CORE_PS1
@@ -105,6 +115,7 @@
 #ifdef CORE_SFC
   namespace ares::SuperFamicom {
     auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
   }
   #include "super-famicom.cpp"
 #endif
@@ -119,13 +130,49 @@
 #ifdef CORE_WS
   namespace ares::WonderSwan {
     auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
   }
   #include "wonderswan.cpp"
   #include "wonderswan-color.cpp"
   #include "pocket-challenge-v2.cpp"
 #endif
 
+#ifdef CORE_SPEC
+namespace ares::ZXSpectrum {
+    auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
+  }
+  #include "zx-spectrum.cpp"
+  #include "zx-spectrum-128.cpp"
+#endif
+
 auto Emulator::construct() -> void {
+  #ifdef CORE_A26
+  emulators.append(new Atari2600);
+  #endif
+
+  #ifdef CORE_WS
+  emulators.append(new WonderSwan);
+  emulators.append(new WonderSwanColor);
+  emulators.append(new PocketChallengeV2);
+  #endif
+
+  #ifdef CORE_CV
+  emulators.append(new ColecoVision);
+  #endif
+
+  #ifdef CORE_MSX
+  emulators.append(new MSX);
+  emulators.append(new MSX2);
+  #endif
+
+  #ifdef CORE_PCE
+  emulators.append(new PCEngine);
+  emulators.append(new PCEngineCD);
+  emulators.append(new SuperGrafx);
+  emulators.append(new SuperGrafxCD);
+  #endif
+
   #ifdef CORE_FC
   emulators.append(new Famicom);
   emulators.append(new FamicomDiskSystem);
@@ -137,7 +184,16 @@ auto Emulator::construct() -> void {
 
   #ifdef CORE_N64
   emulators.append(new Nintendo64);
-//emulators.append(new Nintendo64DD);
+  emulators.append(new Nintendo64DD);
+  #endif
+
+  #ifdef CORE_GB
+  emulators.append(new GameBoy);
+  emulators.append(new GameBoyColor);
+  #endif
+
+  #ifdef CORE_GBA
+  emulators.append(new GameBoyAdvance);
   #endif
 
   #ifdef CORE_SG
@@ -146,6 +202,7 @@ auto Emulator::construct() -> void {
 
   #ifdef CORE_MS
   emulators.append(new MasterSystem);
+  emulators.append(new GameGear);
   #endif
 
   #ifdef CORE_MD
@@ -159,51 +216,23 @@ auto Emulator::construct() -> void {
   emulators.append(new Saturn);
   #endif
 
-  #ifdef CORE_PS1
-  emulators.append(new PlayStation);
-  #endif
-
-  #ifdef CORE_PCE
-  emulators.append(new PCEngine);
-  emulators.append(new PCEngineCD);
-  emulators.append(new SuperGrafx);
-  #endif
-
   #ifdef CORE_NG
   emulators.append(new NeoGeoAES);
   emulators.append(new NeoGeoMVS);
-  #endif
-
-  #ifdef CORE_MSX
-  emulators.append(new MSX);
-  emulators.append(new MSX2);
-  #endif
-
-  #ifdef CORE_CV
-  emulators.append(new ColecoVision);
-  #endif
-
-  #ifdef CORE_GB
-  emulators.append(new GameBoy);
-  emulators.append(new GameBoyColor);
-  #endif
-
-  #ifdef CORE_GBA
-  emulators.append(new GameBoyAdvance);
-  #endif
-
-  #ifdef CORE_MS
-  emulators.append(new GameGear);
-  #endif
-
-  #ifdef CORE_WS
-  emulators.append(new WonderSwan);
-  emulators.append(new WonderSwanColor);
-  emulators.append(new PocketChallengeV2);
   #endif
 
   #ifdef CORE_NGP
   emulators.append(new NeoGeoPocket);
   emulators.append(new NeoGeoPocketColor);
   #endif
+
+  #ifdef CORE_PS1
+  emulators.append(new PlayStation);
+  #endif
+
+  #ifdef CORE_SPEC
+  emulators.append(new ZXSpectrum);
+  emulators.append(new ZXSpectrum128);
+  #endif
+
 }

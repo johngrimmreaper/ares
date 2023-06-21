@@ -23,6 +23,7 @@ auto VDP::DMA::run() -> bool {
 }
 
 auto VDP::DMA::load() -> void {
+  if(delay > 0) { delay--; return; }
   auto address = mode.bit(0) << 23 | source << 1;
   auto data = bus.read(1, 1, address);
   vdp.writeDataPort(data);
@@ -76,6 +77,7 @@ auto VDP::DMA::power(bool reset) -> void {
   mode = 0;
   source = 0;
   length = 0;
+  data = 0;
   wait = 1;
   read = 0;
   enable = 0;

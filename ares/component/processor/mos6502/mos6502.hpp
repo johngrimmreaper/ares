@@ -31,7 +31,12 @@ struct MOS6502 {
   using fp = auto (MOS6502::*)(n8) -> n8;
   auto algorithmADC(n8) -> n8;
   auto algorithmAND(n8) -> n8;
+  auto algorithmANC(n8) -> n8;
+  auto algorithmARR(n8) -> n8;
   auto algorithmASL(n8) -> n8;
+  auto algorithmATX(n8) -> n8;
+  auto algorithmALR(n8) -> n8;
+  auto algorithmAXS(n8) -> n8;
   auto algorithmBIT(n8) -> n8;
   auto algorithmCMP(n8) -> n8;
   auto algorithmCPX(n8) -> n8;
@@ -45,6 +50,7 @@ struct MOS6502 {
   auto algorithmROL(n8) -> n8;
   auto algorithmROR(n8) -> n8;
   auto algorithmSBC(n8) -> n8;
+  auto algorithmSLO(n8) -> n8;
 
   //instruction.cpp
   auto interrupt() -> void;
@@ -66,10 +72,16 @@ struct MOS6502 {
   auto instructionIndirectXRead(fp alu, n8& data) -> void;
   auto instructionIndirectXWrite(n8& data) -> void;
   auto instructionIndirectYRead(fp alu, n8& data) -> void;
+  auto instructionIndirectYRead(fp, n8& data, n8& data2) -> void;
   auto instructionIndirectYWrite(n8& data) -> void;
   auto instructionJumpAbsolute() -> void;
   auto instructionJumpIndirect() -> void;
   auto instructionNoOperation() -> void;
+  auto instructionNoOperationAbsolute() -> void;
+  auto instructionNoOperationAbsolute(n8 index) -> void;
+  auto instructionNoOperationImmediate() -> void;
+  auto instructionNoOperationZeroPage() -> void;
+  auto instructionNoOperationZeroPage(n8 index) -> void;
   auto instructionPull(n8& data) -> void;
   auto instructionPullP() -> void;
   auto instructionPush(n8& data) -> void;

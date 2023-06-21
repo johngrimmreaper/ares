@@ -7,11 +7,12 @@ auto CPU::serialize(serializer& s) -> void {
   s(dma.enable);
   s(dma.direction);
   s(keypad.matrix);
+  s(keypad.lastPolledMatrix);
   s(io.cartridgeEnable);
+  s(io.cartridgeRomWidth);
+  s(io.cartridgeRomWait);
   s(io.interruptBase);
   s(io.interruptEnable);
   s(io.interruptStatus);
-  s(io.serialData);
-  s(io.serialBaudRate);
-  s(io.serialEnable);
+  s(io.nmiOnLowBattery);
 }

@@ -1,5 +1,11 @@
 #include <pce/pce.hpp>
 
+#define VCE VCEPerformance
+#define VDC VDCPerformance
+#define VDP VDPPerformance
+#define VPC VPCPerformance
+#define vdp vdpPerformanceImpl
+
 namespace ares::PCEngine {
 
 VDP vdp;
@@ -47,7 +53,7 @@ auto VDP::main() -> void {
     vdc1.vsync();
   }
 
-  step(512);
+  step(renderingCycle);
 
   vdc0.hclock(); if(Model::SuperGrafx())
   vdc1.hclock();
@@ -60,9 +66,9 @@ auto VDP::main() -> void {
       for(u32 x : range(vce.width())) {
         u32 color = vce.io.grayscale << 9 | vce.cram.read(vdc0.output[x]);
         switch(clock) {
-        case 4: *line++ = color;
-        case 3: *line++ = color;
-        case 2: *line++ = color;
+        case 4: *line++ = color; [[fallthrough]];
+        case 3: *line++ = color; [[fallthrough]];
+        case 2: *line++ = color; [[fallthrough]];
         case 1: *line++ = color;
         }
       }
@@ -73,9 +79,9 @@ auto VDP::main() -> void {
       for(u32 x : range(vce.width())) {
         u32 color = vce.io.grayscale << 9 | vce.cram.read(vpc.output[x]);
         switch(clock) {
-        case 4: *line++ = color;
-        case 3: *line++ = color;
-        case 2: *line++ = color;
+        case 4: *line++ = color; [[fallthrough]];
+        case 3: *line++ = color; [[fallthrough]];
+        case 2: *line++ = color; [[fallthrough]];
         case 1: *line++ = color;
         }
       }
@@ -113,6 +119,16 @@ auto VDP::power() -> void {
   vdc0.power(); if(Model::SuperGrafx())
   vdc1.power(); if(Model::SuperGrafx())
   vpc.power();
+
+  renderingCycle = 512;
+  string game = system.game();
+  if(game == "Kore ga Pro Yakyuu '89") renderingCycle = 128;
+  if(game == "Kore ga Pro Yakyuu '90") renderingCycle = 128;
+  if(game == "TV Sports Baseball") renderingCycle = 128;
+  if(game == "TV Sports Football") renderingCycle = 128;
+  if(game == "TV Sports Hockey") renderingCycle = 128;
+  if(game == "Valkyrie no Densetsu") renderingCycle = 128;
+  if(game == "Victory Run") renderingCycle = 32;
 }
 
 }

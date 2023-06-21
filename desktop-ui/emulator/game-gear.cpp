@@ -9,8 +9,7 @@ GameGear::GameGear() {
   manufacturer = "Sega";
   name = "Game Gear";
 
-//note: disabled because the BIOS is not yet working for Game Gear
-//firmware.append({"BIOS", "World"});
+  firmware.append({"BIOS", "World"});
 
   { InputPort port{"Game Gear"};
 
@@ -19,8 +18,8 @@ GameGear::GameGear() {
     device.digital("Down",  virtualPorts[0].pad.down);
     device.digital("Left",  virtualPorts[0].pad.left);
     device.digital("Right", virtualPorts[0].pad.right);
-    device.digital("1",     virtualPorts[0].pad.a);
-    device.digital("2",     virtualPorts[0].pad.b);
+    device.digital("1",     virtualPorts[0].pad.south);
+    device.digital("2",     virtualPorts[0].pad.east);
     device.digital("Start", virtualPorts[0].pad.start);
     port.append(device); }
 
@@ -32,11 +31,12 @@ auto GameGear::load() -> bool {
   game = mia::Medium::create("Game Gear");
   if(!game->load(Emulator::load(game, configuration.game))) return false;
 
-  system = mia::System::create("Game Gear");
-  if(!system->load()) return false;
-//if(!system->load(firmware[0].location)) return false;
+  auto region = Emulator::region();
 
-  if(!ares::MasterSystem::load(root, "[Sega] Game Gear")) return false;
+  system = mia::System::create("Game Gear");
+  if(!system->load(firmware[0].location)) return false;
+
+  if(!ares::MasterSystem::load(root, {"[Sega] Game Gear (", region, ")"})) return false;
 
   if(auto port = root->find<ares::Node::Port>("Cartridge Slot")) {
     port->allocate();

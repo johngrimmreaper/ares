@@ -21,6 +21,17 @@ auto Program::create() -> void {
   driverSettings.inputRefresh();
 
   if(startGameLoad) {
+    if(startSystem) {
+      for(auto &emulator: emulators) {
+        if(emulator->name == startSystem) {
+          if(load(emulator, startGameLoad)) {
+            if(startFullScreen) videoFullScreenToggle();
+          }
+          return;
+        }
+      }
+    }
+
     if(auto emulator = identify(startGameLoad)) {
       if(load(emulator, startGameLoad)) {
         if(startFullScreen) videoFullScreenToggle();
@@ -40,7 +51,7 @@ auto Program::main() -> void {
   inputManager.pollHotkeys();
   bool defocused = driverSettings.inputDefocusPause.checked() && !ruby::video.fullScreen() && !presentation.focused();
   if(emulator && defocused) message.text = "Paused";
-  if(!emulator || paused || defocused) {
+  if(!emulator || (paused && !program.requestFrameAdvance) || defocused) {
     ruby::audio.clear();
     usleep(20 * 1000);
     return;
@@ -48,6 +59,7 @@ auto Program::main() -> void {
 
   rewindRun();
 
+  program.requestFrameAdvance = false;
   if(!runAhead || fastForwarding || rewinding) {
     emulator->root->run();
   } else {

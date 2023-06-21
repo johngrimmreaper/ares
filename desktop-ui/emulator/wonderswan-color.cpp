@@ -13,16 +13,16 @@ WonderSwanColor::WonderSwanColor() {
   { InputPort port{"WonderSwan Color"};
 
   { InputDevice device{"Controls"};
-    device.digital("Y1",    virtualPorts[0].pad.l1);
-    device.digital("Y2",    virtualPorts[0].pad.l2);
-    device.digital("Y3",    virtualPorts[0].pad.r1);
-    device.digital("Y4",    virtualPorts[0].pad.r2);
+    device.digital("Y1",    virtualPorts[0].pad.l_bumper);
+    device.digital("Y2",    virtualPorts[0].pad.l_trigger);
+    device.digital("Y3",    virtualPorts[0].pad.r_bumper);
+    device.digital("Y4",    virtualPorts[0].pad.r_trigger);
     device.digital("X1",    virtualPorts[0].pad.up);
     device.digital("X2",    virtualPorts[0].pad.right);
     device.digital("X3",    virtualPorts[0].pad.down);
     device.digital("X4",    virtualPorts[0].pad.left);
-    device.digital("B",     virtualPorts[0].pad.a);
-    device.digital("A",     virtualPorts[0].pad.b);
+    device.digital("B",     virtualPorts[0].pad.south);
+    device.digital("A",     virtualPorts[0].pad.east);
     device.digital("Start", virtualPorts[0].pad.start);
     port.append(device); }
 
@@ -46,6 +46,15 @@ auto WonderSwanColor::load(Menu menu) -> void {
       group.append(item);
     }
   }
+
+  if(auto headphones = root->find<ares::Node::Setting::Boolean>("Headphones")) {
+    MenuCheckItem headphoneItem{&menu};
+    headphoneItem.setText("Headphones").setChecked(headphones->value()).onToggle([=] {
+      if(auto headphones = root->find<ares::Node::Setting::Boolean>("Headphones")) {
+        headphones->setValue(headphoneItem.checked());
+      }
+    });
+  }
 }
 
 auto WonderSwanColor::load() -> bool {
@@ -54,6 +63,8 @@ auto WonderSwanColor::load() -> bool {
 
   system = mia::System::create("WonderSwan Color");
   if(!system->load()) return false;
+
+  ares::WonderSwan::option("Pixel Accuracy", settings.video.pixelAccuracy);
 
   if(!ares::WonderSwan::load(root, "[Bandai] WonderSwan Color")) return false;
 

@@ -112,6 +112,11 @@ auto MOS6502::instructionIndirectYRead(fp alu, n8& data) -> void {
 L data = ALU(read(absolute + Y));
 }
 
+auto MOS6502::instructionIndirectYRead(fp alu, n8& data, n8& data2) -> void {
+  instructionIndirectYRead(alu, data);
+  data2 = data;
+}
+
 auto MOS6502::instructionIndirectYWrite(n8& data) -> void {
   auto zeroPage = operand();
   n16 absolute = load(zeroPage + 0);
@@ -137,6 +142,34 @@ L pc |= read(absolute) << 8;
 
 auto MOS6502::instructionNoOperation() -> void {
 L idle();
+}
+
+auto MOS6502::instructionNoOperationAbsolute() -> void {
+  n16 absolute = operand();
+  absolute |= operand() << 8;
+L read(absolute);
+}
+
+auto MOS6502::instructionNoOperationAbsolute(n8 index) -> void {
+  n16 absolute = operand();
+  absolute |= operand() << 8;
+  idlePageCrossed(absolute, absolute + index);
+L read(absolute + index);
+}
+
+auto MOS6502::instructionNoOperationImmediate() -> void {
+L operand();
+}
+
+auto MOS6502::instructionNoOperationZeroPage() -> void {
+  auto zeroPage = operand();
+L load(zeroPage);
+}
+
+auto MOS6502::instructionNoOperationZeroPage(n8 index) -> void {
+  auto zeroPage = operand();
+  load(zeroPage);
+L load(zeroPage + index);
 }
 
 auto MOS6502::instructionPull(n8& data) -> void {

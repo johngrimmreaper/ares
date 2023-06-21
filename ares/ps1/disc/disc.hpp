@@ -51,6 +51,7 @@ struct Disc : Thread, Memory::Interface {
 
   //command.cpp
   auto status() -> u8;
+  auto mode() -> u8;
   auto command(u8 operation) -> void;
   auto commandTest() -> void;
   auto commandInvalid() -> void;
@@ -60,6 +61,7 @@ struct Disc : Thread, Memory::Interface {
   auto commandFastForward() -> void;
   auto commandRewind() -> void;
   auto commandReadWithRetry() -> void;
+  auto commandMotorOn() -> void;
   auto commandStop() -> void;
   auto commandPause() -> void;
   auto commandInitialize() -> void;
@@ -67,6 +69,7 @@ struct Disc : Thread, Memory::Interface {
   auto commandUnmute() -> void;
   auto commandSetFilter() -> void;
   auto commandSetMode() -> void;
+  auto commandGetParam() -> void;
   auto commandGetLocationReading() -> void;
   auto commandGetLocationPlaying() -> void;
   auto commandSetSession() -> void;
@@ -74,9 +77,12 @@ struct Disc : Thread, Memory::Interface {
   auto commandGetTrackStart() -> void;
   auto commandSeekData() -> void;
   auto commandSeekCDDA() -> void;
+  auto commandTestStartReadSCEX() -> void;
+  auto commandTestStopReadSCEX() -> void;
   auto commandTestControllerDate() -> void;
   auto commandGetID() -> void;
   auto commandReadWithoutRetry() -> void;
+  auto commandReadToc() -> void;
   auto commandUnimplemented(u8, maybe<u8> = nothing) -> void;
 
   //serialization.cpp

@@ -4,15 +4,16 @@ namespace ares::Nintendo64 {
 
 CPU cpu;
 #include "context.cpp"
-#include "icache.cpp"
 #include "dcache.cpp"
 #include "tlb.cpp"
 #include "memory.cpp"
 #include "exceptions.cpp"
+#include "algorithms.cpp"
 #include "interpreter.cpp"
 #include "interpreter-ipu.cpp"
 #include "interpreter-scc.cpp"
 #include "interpreter-fpu.cpp"
+#include "interpreter-cop2.cpp"
 #include "recompiler.cpp"
 #include "debugger.cpp"
 #include "serialization.cpp"
@@ -45,18 +46,27 @@ auto CPU::synchronize() -> void {
    ai.clock -= clocks;
   rsp.clock -= clocks;
   rdp.clock -= clocks;
+  pif.clock -= clocks;
   while( vi.clock < 0)  vi.main();
   while( ai.clock < 0)  ai.main();
   while(rsp.clock < 0) rsp.main();
   while(rdp.clock < 0) rdp.main();
+  while(pif.clock < 0) pif.main();
 
   queue.step(clocks, [](u32 event) {
     switch(event) {
-    case Queue::RSP_DMA:       return rsp.dmaTransfer();
-    case Queue::PI_DMA_Read:   return pi.dmaRead();
-    case Queue::PI_DMA_Write:  return pi.dmaWrite();
+    case Queue::RSP_DMA:       return rsp.dmaTransferStep();
+    case Queue::PI_DMA_Read:   return pi.dmaFinished();
+    case Queue::PI_DMA_Write:  return pi.dmaFinished();
+    case Queue::PI_BUS_Write:  return pi.writeFinished();
     case Queue::SI_DMA_Read:   return si.dmaRead();
     case Queue::SI_DMA_Write:  return si.dmaWrite();
+    case Queue::SI_BUS_Write:  return si.writeFinished();
+    case Queue::RTC_Tick:      return cartridge.rtc.tick();
+    case Queue::DD_Clock_Tick:  return dd.rtcTickClock();
+    case Queue::DD_MECHA_Response:  return dd.mechaResponse();
+    case Queue::DD_BM_Request:  return dd.bmRequest();
+    case Queue::DD_Motor_Mode:  return dd.motorChange();
     }
   });
 
@@ -75,37 +85,43 @@ auto CPU::instruction() -> void {
       return exception.interrupt();
     }
   }
+  if (scc.nmiPending) {
+    debugger.nmi();
+    step(1);
+    return exception.nmi();
+  }
 
   if constexpr(Accuracy::CPU::Recompiler) {
-    auto address = devirtualize(ipu.pc)(0);
-    auto block = recompiler.block(address);
-    block->execute(*this);
+    if (auto address = devirtualize(ipu.pc)) {
+      auto block = recompiler.block(*address);
+      block->execute(*this);
+    }
   }
 
   if constexpr(Accuracy::CPU::Interpreter) {
     pipeline.address = ipu.pc;
-    pipeline.instruction = fetch(ipu.pc);
+    auto data = fetch(ipu.pc);
+    if (!data) return;
+    pipeline.instruction = *data;
     debugger.instruction();
     decoderEXECUTE();
     instructionEpilogue();
   }
 }
 
-auto CPU::instructionEpilogue() -> bool {
+auto CPU::instructionEpilogue() -> s32 {
   if constexpr(Accuracy::CPU::Recompiler) {
     icache.step(ipu.pc);  //simulates timings without performing actual icache loads
   }
 
   ipu.r[0].u64 = 0;
 
-  if(--scc.random.index < scc.wired.index) {
-    scc.random.index = 31;
-  }
-
   switch(branch.state) {
   case Branch::Step: ipu.pc += 4; return 0;
-  case Branch::Take: ipu.pc += 4; branch.delaySlot(); return 0;
-  case Branch::DelaySlot: ipu.pc = branch.pc; branch.reset(); return 1;
+  case Branch::Take: ipu.pc += 4; branch.delaySlot(true); return 0;
+  case Branch::NotTaken: ipu.pc += 4; branch.delaySlot(false); return 0;
+  case Branch::DelaySlotTaken: ipu.pc = branch.pc; branch.reset(); return 1;
+  case Branch::DelaySlotNotTaken: ipu.pc += 4; branch.reset(); return 0;
   case Branch::Exception: branch.reset(); return 1;
   case Branch::Discard: ipu.pc += 8; branch.reset(); return 1;
   }
@@ -124,22 +140,23 @@ auto CPU::power(bool reset) -> void {
   for(auto& segment : context.segment) segment = Context::Segment::Unused;
   icache.power(reset);
   dcache.power(reset);
-  for(auto& entry : tlb.entry) entry = {};
+  for(auto& entry : tlb.entry) entry = {}, entry.synchronize();
   tlb.physicalAddress = 0;
   for(auto& r : ipu.r) r.u64 = 0;
   ipu.lo.u64 = 0;
   ipu.hi.u64 = 0;
-  ipu.r[29].u64 = u32(0xa400'1ff0);  //stack pointer
-  ipu.pc = u32(0xbfc0'0000);
+  ipu.r[29].u64 = 0xffff'ffff'a400'1ff0ull;  //stack pointer
+  ipu.pc = 0xffff'ffff'bfc0'0000ull;
   scc = {};
   for(auto& r : fpu.r) r.u64 = 0;
   fpu.csr = {};
-  fesetround(FE_TONEAREST);
+  cop2 = {};
+  fenv.setRound(float_env::toNearest);
   context.setMode();
 
   if constexpr(Accuracy::CPU::Recompiler) {
-    auto buffer = ares::Memory::FixedAllocator::get().acquire(512_MiB);
-    recompiler.allocator.resize(512_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
+    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
+    recompiler.allocator.resize(64_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
     recompiler.reset();
   }
 }

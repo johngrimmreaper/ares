@@ -17,9 +17,6 @@ extern const unsigned char Vector[256];
 extern const unsigned char SH2BootM[2048];
 extern const unsigned char SH2BootS[1024];
 }
-namespace MSX {
-extern const unsigned char BIOS[32768];
-}
 namespace MSX2 {
 extern const unsigned char BIOS[32768];
 extern const unsigned char Sub[16384];
@@ -47,7 +44,7 @@ extern const unsigned char ST010[53248];
 extern const unsigned char ST011[53248];
 extern const unsigned char ST018[163840];
 extern const unsigned char S21FX[122];
-extern const unsigned char Boards[31896];
+extern const unsigned char Boards[33212];
 }
 namespace WonderSwan {
 extern const unsigned char Boot[4096];
@@ -57,5 +54,12 @@ extern const unsigned char Boot[8192];
 }
 namespace PocketChallengeV2 {
 extern const unsigned char Boot[4096];
+}
+namespace ZXSpectrum {
+extern const unsigned char BIOS[16384];
+}
+namespace ZXSpectrum128 {
+extern const unsigned char BIOS[16384];
+extern const unsigned char Sub[16384];
 }
 }

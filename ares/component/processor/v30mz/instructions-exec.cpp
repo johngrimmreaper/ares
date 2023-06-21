@@ -100,7 +100,7 @@ auto V30MZ::instructionReturnFarImm() -> void {
 }
 
 auto V30MZ::instructionReturnInt() -> void {
-  wait(9);
+  wait(7);
   PC = pop();
   PS = pop();
   PSW = pop();
@@ -109,18 +109,21 @@ auto V30MZ::instructionReturnInt() -> void {
 }
 
 auto V30MZ::instructionInt3() -> void {
-  wait(8);
-  interrupt(3);
+  wait(9);
+  interrupt(3, InterruptSource::CPU);
 }
 
 auto V30MZ::instructionIntImm() -> void {
-  wait(9);
-  interrupt(fetch<Byte>());
+  wait(10);
+  interrupt(fetch<Byte>(), InterruptSource::CPU);
 }
 
 auto V30MZ::instructionInto() -> void {
-  wait(5);
-  interrupt(4);
+  wait(6);
+  if(PSW.V) {
+    wait(7);
+    interrupt(4, InterruptSource::CPU);
+  }
 }
 
 auto V30MZ::instructionEnter() -> void {
@@ -149,7 +152,9 @@ auto V30MZ::instructionLeave() -> void {
 }
 
 auto V30MZ::instructionPushReg(u16& reg) -> void {
-  push(reg);
+  // Emulate the 8086/80186 "PUSH SP" bug.
+  if(&reg == &SP) push(reg - 2);
+  else push(reg);
 }
 
 auto V30MZ::instructionPushSeg(u16& seg) -> void {

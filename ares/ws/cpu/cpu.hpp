@@ -7,6 +7,7 @@ struct CPU : V30MZ, Thread, IO {
     //debugger.cpp
     auto load(Node::Object) -> void;
     auto unload(Node::Object) -> void;
+    auto ports() -> string;
     auto instruction() -> void;
     auto interrupt(n3) -> void;
 
@@ -37,7 +38,8 @@ struct CPU : V30MZ, Thread, IO {
 
   auto main() -> void;
   auto step(u32 clocks) -> void override;
-
+  auto width(n20 address) -> u32 override;
+  auto speed(n20 address) -> n32 override;
   auto read(n20 address) -> n8 override;
   auto write(n20 address, n8 data) -> void override;
   auto in(n16 port) -> n8 override;
@@ -51,6 +53,7 @@ struct CPU : V30MZ, Thread, IO {
 
   //interrupt.cpp
   auto poll() -> void;
+  auto irqLevel(n3, bool) -> void;
   auto raise(n3) -> void;
   auto lower(n3) -> void;
 
@@ -75,18 +78,21 @@ struct CPU : V30MZ, Thread, IO {
 
     //keypad.cpp
     auto read() -> n4;
+    auto poll() -> void;
+    auto power() -> void;
 
     n3 matrix;
+    n3 lastPolledMatrix;
   } keypad{*this};
 
   struct IO {
     n1 cartridgeEnable;
+    n1 cartridgeRomWidth; // 0 = 8-bit; 1 = 16-bit
+    n1 cartridgeRomWait; // 0 = 3 cycles; 1 = 1 cycle
     n8 interruptBase;
     n8 interruptEnable;
     n8 interruptStatus;
-    n8 serialData;
-    n1 serialBaudRate;  //0 = 9600; 1 = 38400
-    n1 serialEnable;
+    n1 nmiOnLowBattery;
   } io;
 };
 

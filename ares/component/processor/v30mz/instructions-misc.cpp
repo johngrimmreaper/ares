@@ -21,7 +21,7 @@ auto V30MZ::instructionLock() -> void {
 }
 
 auto V30MZ::instructionWait() -> void {
-  wait(1);
+  wait(10);
 }
 
 auto V30MZ::instructionHalt() -> void {
@@ -31,6 +31,15 @@ auto V30MZ::instructionHalt() -> void {
 
 auto V30MZ::instructionNop() -> void {
   wait(1);
+}
+
+auto V30MZ::instructionUndefined() -> void {
+  wait(1);
+}
+
+auto V30MZ::instructionUndefined1() -> void {
+  wait(1);
+  fetch<Byte>();
 }
 
 template<u32 size> auto V30MZ::instructionIn() -> void {
@@ -53,8 +62,13 @@ template<u32 size> auto V30MZ::instructionOutDW() -> void {
   out<size>(DW, getAccumulator<size>());
 }
 
-auto V30MZ::instructionTranslate(u8 clocks) -> void {
-  wait(clocks);
+auto V30MZ::instructionSetALCarry() -> void {
+  wait(8);
+  AL = PSW.CY ? 0xFF : 0x00;
+}
+
+auto V30MZ::instructionTranslate() -> void {
+  wait(4);
   AL = read<Byte>(segment(DS0), BW + AL);
 }
 
@@ -64,5 +78,5 @@ auto V30MZ::instructionBound() -> void {
   auto lo = getMemory<Word>(0);
   auto hi = getMemory<Word>(2);
   auto reg = getRegister<Word>();
-  if(reg < lo || reg > hi) interrupt(5);
+  if(reg < lo || reg > hi) interrupt(5, InterruptSource::CPU);
 }

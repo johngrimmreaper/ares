@@ -58,13 +58,13 @@ auto GPU::Render::texel(Point p) const -> u16 {
   if(textureDepth == 0) {  //4bpp
     u16 index = gpu.vram2D[ty + by & 511][tx / 4 + bx & 1023];
     u16 entry = index >> (tx & 3) * 4 & 15;
-    return gpu.vram2D[py][px + entry & 1023];
+    return gpu.vram2D[py & 511][px + entry & 1023];
   }
 
   if(textureDepth == 1) {  //8bpp
     u16 index = gpu.vram2D[ty + by & 511][tx / 2 + bx & 1023];
     u16 entry = index >> (tx & 1) * 8 & 255;
-    return gpu.vram2D[py][px + entry & 1023];
+    return gpu.vram2D[py & 511][px + entry & 1023];
   }
 
   if(textureDepth == 2) {  //16bpp
@@ -142,7 +142,7 @@ auto GPU::Render::pixel(Point point, Color rgb, Point uv) -> void {
     above = dither(point, above);
   }
 
-  u16 input = gpu.vram2D[point.y][point.x];
+  u16 input = gpu.vram2D[point.y & 511][point.x & 1023];
   Color below = Color::from16(input);
 
   if constexpr(Flags & Alpha) {
@@ -150,7 +150,7 @@ auto GPU::Render::pixel(Point point, Color rgb, Point uv) -> void {
   }
 
   if(input >> 15 & checkMaskBit) return;
-  gpu.vram2D[point.y][point.x] = above.to16() | maskBit << 15;
+  gpu.vram2D[point.y & 511][point.x & 1023  ] = above.to16() | maskBit << 15;
 }
 
 template<u32 Flags>
@@ -271,7 +271,7 @@ auto GPU::Render::triangle() -> void {
 
     for(vp.x = vmin.x; vp.x <= vmax.x; vp.x++) {
       if((p0.x + bias[0] | p1.x + bias[1] | p2.x + bias[2]) >= 0) {
-        pixel<Flags | Dithering>(vp, {pr.x, pg.x, pb.x}, {pu.x, pv.x});
+        pixel<Flags | Dithering>(vp, Color::fromRGB(pr.x, pg.x, pb.x), {pu.x, pv.x});
         pixels++;
       }
 

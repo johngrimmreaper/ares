@@ -26,9 +26,13 @@ auto Bus::read(n20 address) -> n8 {
     return system.bootROM.read(address);
   }
   switch(address.bit(16,19)) { default:
-  case 0x0: return iram.read(address);
+  case 0x0:
+    if(address.bit(14,15) && !system.color()) return 0x90;
+    return iram.read(address);
   case 0x1: return cartridge.readRAM(address);
-  case 0x2 ... 0xf: return cartridge.readROM(address);
+  case 0x2 ... 0xf:
+    if(!cpu.io.cartridgeRomWidth) address &= ~(0x1);
+    return cartridge.readROM(address);
   }
 }
 
@@ -37,9 +41,13 @@ auto Bus::write(n20 address, n8 data) -> void {
     return system.bootROM.write(address, data);
   }
   switch(address.bit(16,19)) { default:
-  case 0x0: return iram.write(address, data);
+  case 0x0:
+    if(address.bit(14,15) && !system.color()) return;
+    return iram.write(address, data);
   case 0x1: return cartridge.writeRAM(address, data);
-  case 0x2 ... 0xf: return cartridge.writeROM(address, data);
+  case 0x2 ... 0xf:
+    if(!cpu.io.cartridgeRomWidth) address &= ~(0x1);
+    return cartridge.writeROM(address, data);
   }
 }
 

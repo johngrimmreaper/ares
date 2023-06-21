@@ -1,8 +1,11 @@
 #include <sfc/sfc.hpp>
 
+#define PPU PPUPerformance
+#define ppu ppuPerformanceImpl
+
 namespace ares::SuperFamicom {
 
-PPU ppu;
+PPU ppuPerformanceImpl;
 #include "io.cpp"
 #include "window.cpp"
 #include "mosaic.cpp"
@@ -14,7 +17,6 @@ PPU ppu;
 #include "color.cpp"
 #include "debugger.cpp"
 #include "serialization.cpp"
-#include "../ppu/counter/serialization.cpp"
 
 auto PPU::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("PPU");
@@ -129,15 +131,18 @@ auto PPU::power(bool reset) -> void {
   latch = {};
   io = {};
   mode7 = {};
-  window.power();
-  mosaic.power();
-  bg1.power();
-  bg2.power();
-  bg3.power();
-  bg4.power();
-  obj.power();
-  dac.power();
-
+  
+  if(!reset) {
+    window.power();
+    mosaic.power();
+    bg1.power();
+    bg2.power();
+    bg3.power();
+    bg4.power();
+    obj.power();
+    dac.power();
+  }
+  
   updateVideoMode();
 
   string title;
@@ -145,7 +150,7 @@ auto PPU::power(bool reset) -> void {
     auto byte = bus.read(0xffc0 + index, 0x00);
     if(byte == 0x00) break;
     if(byte == 0xff) break;
-    title.append(byte);
+    title.append((char)byte);
   }
   title.strip();
 
@@ -154,7 +159,7 @@ auto PPU::power(bool reset) -> void {
   if(title == "AIR STRIKE PATROL" || title == "DESERT FIGHTER") renderingCycle = 32;
   if(title == "FIREPOWER 2000" || title == "SUPER SWIV") renderingCycle = 32;
   if(title == "NHL '94" || title == "NHL PROHOCKEY'94") renderingCycle = 32;
-  if(title == "Suguro Quest++") renderingCycle = 128;
+  if(title == "Sugoro Quest++") renderingCycle = 128;
 }
 
 }

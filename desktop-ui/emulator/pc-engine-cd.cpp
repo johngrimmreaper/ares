@@ -23,10 +23,25 @@ PCEngineCD::PCEngineCD() {
     device.digital("Down",   virtualPorts[id].pad.down);
     device.digital("Left",   virtualPorts[id].pad.left);
     device.digital("Right",  virtualPorts[id].pad.right);
-    device.digital("II",     virtualPorts[id].pad.a);
-    device.digital("I",      virtualPorts[id].pad.b);
+    device.digital("II",     virtualPorts[id].pad.south);
+    device.digital("I",      virtualPorts[id].pad.east);
     device.digital("Select", virtualPorts[id].pad.select);
     device.digital("Run",    virtualPorts[id].pad.start);
+    port.append(device); }
+
+    { InputDevice device{"Avenue Pad 6"};
+    device.digital("Up",    virtualPorts[id].pad.up);
+    device.digital("Down",  virtualPorts[id].pad.down);
+    device.digital("Left",  virtualPorts[id].pad.left);
+    device.digital("Right", virtualPorts[id].pad.right);
+    device.digital("III",   virtualPorts[id].pad.west);
+    device.digital("II",    virtualPorts[id].pad.south);
+    device.digital("I",     virtualPorts[id].pad.east);
+    device.digital("IV",    virtualPorts[id].pad.l_bumper);
+    device.digital("V",     virtualPorts[id].pad.north);
+    device.digital("VI",    virtualPorts[id].pad.r_bumper);
+    device.digital("Select",virtualPorts[id].pad.select);
+    device.digital("Run",   virtualPorts[id].pad.start);
     port.append(device); }
 
     ports.append(port);
@@ -50,6 +65,8 @@ auto PCEngineCD::load() -> bool {
 
   system = mia::System::create("PC Engine");
   if(!system->load()) return false;
+
+  ares::PCEngine::option("Pixel Accuracy", settings.video.pixelAccuracy);
 
   auto name = region == "NTSC-J" ? "PC Engine" : "TurboGrafx 16";
   if(!ares::PCEngine::load(root, {"[NEC] ", name, " (", region, ")"})) return false;

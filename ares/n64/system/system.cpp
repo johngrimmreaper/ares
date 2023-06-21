@@ -6,6 +6,9 @@ auto enumerate() -> vector<string> {
   return {
     "[Nintendo] Nintendo 64 (NTSC)",
     "[Nintendo] Nintendo 64 (PAL)",
+    "[Nintendo] Nintendo 64DD (NTSC-U)",
+    "[Nintendo] Nintendo 64DD (NTSC-J)",
+    "[Nintendo] Nintendo 64DD (NTSC-DEV)",
   };
 }
 
@@ -16,10 +19,12 @@ auto load(Node::System& node, string name) -> bool {
 
 auto option(string name, string value) -> bool {
   #if defined(VULKAN)
+  if(name == "Enable GPU acceleration") vulkan.enable = value.boolean();
   if(name == "Quality" && value == "SD" ) vulkan.internalUpscale = 1;
   if(name == "Quality" && value == "HD" ) vulkan.internalUpscale = 2;
   if(name == "Quality" && value == "UHD") vulkan.internalUpscale = 4;
   if(name == "Supersampling") vulkan.supersampleScanout = value.boolean();
+  if(name == "Disable Video Interface Processing") vulkan.disableVideoInterfaceProcessing = value.boolean();
   if(vulkan.internalUpscale == 1) vulkan.supersampleScanout = false;
   vulkan.outputUpscale = vulkan.supersampleScanout ? 1 : vulkan.internalUpscale;
   #endif
@@ -31,6 +36,10 @@ Queue queue;
 #include "serialization.cpp"
 
 auto System::game() -> string {
+  if(dd.node && !cartridge.node) {
+    return dd.title();
+  }
+
   if(cartridge.node) {
     return cartridge.title();
   }
@@ -41,16 +50,21 @@ auto System::game() -> string {
 auto System::run() -> void {
   while(!vi.refreshed) cpu.main();
   vi.refreshed = false;
-  si.run();
 }
 
 auto System::load(Node::System& root, string name) -> bool {
   if(node) unload();
 
   information = {};
-  if(name.find("Nintendo 64")) {
+  if(name.match("[Nintendo] Nintendo 64 (*)")) {
     information.name = "Nintendo 64";
+    information.dd = 0;
   }
+  if(name.match("[Nintendo] Nintendo 64DD (*)")) {
+    information.name = "Nintendo 64";
+    information.dd = 1;
+  }
+
   if(name.find("NTSC")) {
     information.region = Region::NTSC;
   }
@@ -79,12 +93,13 @@ auto System::load(Node::System& root, string name) -> bool {
   vi.load(node);
   ai.load(node);
   pi.load(node);
+  pif.load(node);
   ri.load(node);
   si.load(node);
   cpu.load(node);
-  rdp.load(node);
   rsp.load(node);
-  dd.load(node);
+  rdp.load(node);
+  if(_DD()) dd.load(node);
   #if defined(VULKAN)
   vulkan.load(node);
   #endif
@@ -94,6 +109,7 @@ auto System::load(Node::System& root, string name) -> bool {
 auto System::unload() -> void {
   if(!node) return;
   save();
+  if(vi.screen) vi.screen->quit(); //stop video thread
   #if defined(VULKAN)
   vulkan.unload();
   #endif
@@ -107,12 +123,13 @@ auto System::unload() -> void {
   vi.unload();
   ai.unload();
   pi.unload();
+  pif.unload();
   ri.unload();
   si.unload();
   cpu.unload();
-  rdp.unload();
   rsp.unload();
-  dd.unload();
+  rdp.unload();
+  if(_DD()) dd.unload();
   pak.reset();
   node.reset();
 }
@@ -124,6 +141,7 @@ auto System::save() -> void {
   controllerPort2.save();
   controllerPort3.save();
   controllerPort4.save();
+  if(_DD()) dd.save();
 }
 
 auto System::power(bool reset) -> void {
@@ -135,16 +153,18 @@ auto System::power(bool reset) -> void {
   queue.reset();
   cartridge.power(reset);
   rdram.power(reset);
-  dd.power(reset);
+  if(_DD()) dd.power(reset);
   mi.power(reset);
   vi.power(reset);
   ai.power(reset);
   pi.power(reset);
+  pif.power(reset);
+  cic.power(reset);
   ri.power(reset);
   si.power(reset);
   cpu.power(reset);
-  rdp.power(reset);
   rsp.power(reset);
+  rdp.power(reset);
 }
 
 }

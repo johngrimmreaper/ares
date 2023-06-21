@@ -3,14 +3,26 @@
 
 namespace ares {
 
-#define SP R[15]
+#define SP   R[15]
+#define R    regs.R
+#define PC   regs.PC
+#define PR   regs.PR
+#define GBR  regs.GBR
+#define VBR  regs.VBR
+#define MAC  regs.MAC
+#define MACL regs.MACL
+#define MACH regs.MACH
+#define CCR  regs.CCR
+#define SR   regs.SR
+#define PPC  regs.PPC
+#define PPM  regs.PPM
+#define ET   regs.ET
+#define ID   regs.ID
 
 #include "sh7604/sh7604.cpp"
 #include "exceptions.cpp"
 #include "instruction.cpp"
 #include "instructions.cpp"
-//#include "cached.cpp"
-#include "recompiler.cpp"
 #include "serialization.cpp"
 #include "disassembler.cpp"
 
@@ -30,13 +42,15 @@ auto SH2::power(bool reset) -> void {
   SR.M = undefined;
   PPC = 0;
   PPM = Branch::Step;
+  ET = 0;
   ID = 0;
   exceptions = !reset ? ResetCold : ResetWarm;
+  cyclesUntilSync = 0;
 
   cache = {*this};
   intc = {*this};
   dmac = {*this};
-  sci = {*this};
+  sci = {*this, reset ? sci.link : maybe<SH2&>()};
   wdt = {};
   ubc = {};
   frt = {*this};
@@ -47,10 +61,29 @@ auto SH2::power(bool reset) -> void {
   cache.power();
 
   if constexpr(Accuracy::Recompiler) {
-    auto buffer = ares::Memory::FixedAllocator::get().acquire(512_MiB);
-    recompiler.allocator.resize(512_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
+    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
+    recompiler.allocator.resize(64_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
     recompiler.reset();
   }
 }
+
+#undef SP
+#undef R
+#undef PC
+#undef PR
+#undef GBR
+#undef VBR
+#undef MAC
+#undef MACL
+#undef MACH
+#undef CCR
+#undef SR
+#undef PPC
+#undef PPM
+#undef ET
+#undef ID
+
+//#include "cached.cpp"
+#include "recompiler.cpp"
 
 }

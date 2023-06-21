@@ -53,7 +53,7 @@ auto RSP::instruction() -> void {
   }
 }
 
-auto RSP::instructionEpilogue() -> bool {
+auto RSP::instructionEpilogue() -> s32 {
   if constexpr(Accuracy::RSP::Recompiler) {
     step(3);
   }
@@ -61,10 +61,9 @@ auto RSP::instructionEpilogue() -> bool {
   ipu.r[0].u32 = 0;
 
   switch(branch.state) {
-  case Branch::Step: ipu.pc += 4; return 0;
-  case Branch::Take: ipu.pc += 4; branch.delaySlot(); return 0;
+  case Branch::Step: ipu.pc += 4; return status.halted;
+  case Branch::Take: ipu.pc += 4; branch.delaySlot(); return status.halted;
   case Branch::DelaySlot: ipu.pc = branch.pc; branch.reset(); return 1;
-  case Branch::Halt: ipu.pc += 4; return 1;
   }
 
   unreachable;
@@ -116,9 +115,13 @@ auto RSP::power(bool reset) -> void {
   }
 
   if constexpr(Accuracy::RSP::Recompiler) {
-    auto buffer = ares::Memory::FixedAllocator::get().acquire(512_MiB);
-    recompiler.allocator.resize(512_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
+    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
+    recompiler.allocator.resize(64_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
     recompiler.reset();
+  }
+
+  if constexpr(Accuracy::RSP::SISD) {
+    platform->status("RSP vectorization disabled (no SSE 4.1 support)");
   }
 }
 

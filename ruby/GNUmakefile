@@ -1,6 +1,9 @@
 ifeq ($(ruby),)
   ifeq ($(platform),windows)
-    ruby += video.wgl video.direct3d video.directdraw video.gdi
+    ruby += video.direct3d9 video.gdi
+    ifeq ($(arch),amd64)
+      ruby += video.wgl
+    endif
     ruby += audio.wasapi audio.xaudio2 audio.directsound audio.waveout #audio.asio
     ruby += input.windows
   else ifeq ($(platform),macos)
@@ -8,30 +11,28 @@ ifeq ($(ruby),)
     ruby += audio.openal
     ruby += input.quartz #input.carbon
   else ifeq ($(platform),linux)
-    pkg_check1 = $(if $(shell test -e /usr/lib/lib$1.so && echo 1),$2)
-    pkg_check2 = $(if $(shell test -e /usr/lib/$(shell uname -m)-linux-gnu/lib$1.so && echo 1),$2)
-    pkg_check = $(call pkg_check1,$1,$2) $(call pkg_check2,$1,$2)
+    pkg_check = $(if $(shell pkg-config $1 && echo 1),$2)
     ruby += video.glx video.glx2 video.xshm
-    ruby += $(call pkg_check,Xv,video.xvideo)
+    ruby += $(call pkg_check,xv,video.xvideo)
     ruby += audio.oss audio.alsa
     ruby += $(call pkg_check,openal,audio.openal)
-    ruby += $(call pkg_check,pulse,audio.pulseaudio)
-    ruby += $(call pkg_check,pulse-simple,audio.pulseaudiosimple)
+    ruby += $(call pkg_check,libpulse,audio.pulseaudio)
+    ruby += $(call pkg_check,libpulse-simple,audio.pulseaudiosimple)
     ruby += $(call pkg_check,ao,audio.ao)
     ruby += input.xlib
-    ruby += $(call pkg_check,udev,input.udev)
-    ruby += $(call pkg_check,SDL2,input.sdl)
+    ruby += $(call pkg_check,libudev,input.udev)
+    ruby += $(call pkg_check,sdl2,input.sdl)
   else ifeq ($(platform),bsd)
-    pkg_check = $(if $(shell test -e /usr/local/lib/lib$1.so && echo 1),$2)
+    pkg_check = $(if $(shell pkg-config $1 && echo 1),$2)
     ruby += video.glx video.glx2 video.xshm
-    ruby += $(call pkg_check,Xv,video.xvideo)
+    ruby += $(call pkg_check,xv,video.xvideo)
     ruby += audio.oss
     ruby += $(call pkg_check,openal,audio.openal)
-    ruby += $(call pkg_check,pulse,audio.pulseaudio)
-    ruby += $(call pkg_check,pulse-simple,audio.pulseaudiosimple)
+    ruby += $(call pkg_check,libpulse,audio.pulseaudio)
+    ruby += $(call pkg_check,libpulse-simple,audio.pulseaudiosimple)
     ruby += $(call pkg_check,ao,audio.ao)
     ruby += input.uhid input.xlib
-    ruby += $(call pkg_check,SDL2,input.sdl)
+    ruby += $(call pkg_check,sdl2,input.sdl)
   endif
 endif
 
@@ -47,8 +48,7 @@ ruby.flags += $(if $(findstring input.sdl,$(ruby)),$(shell sdl2-config --cflags)
 ruby.options :=
 
 ruby.options += $(if $(findstring video.cgl,$(ruby)),-framework OpenGL)
-ruby.options += $(if $(findstring video.direct3d,$(ruby)),-ld3d9)
-ruby.options += $(if $(findstring video.directdraw,$(ruby)),-lddraw)
+ruby.options += $(if $(findstring video.direct3d9,$(ruby)),-ld3d9)
 ruby.options += $(if $(findstring video.glx,$(ruby)),-lGL)
 ruby.options += $(if $(findstring video.wgl,$(ruby)),-lopengl32)
 ruby.options += $(if $(findstring video.xvideo,$(ruby)),-lXv)

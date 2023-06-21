@@ -8,7 +8,7 @@ auto CPU::read(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
 
   //cartridge program ROM
   if(address <= 0x0fffff) {
-    return cartridge.prom[address >> 1];
+    return cartridge.readP(upper, lower, address, data);
   }
 
   //work RAM
@@ -18,8 +18,7 @@ auto CPU::read(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
 
   //cartridge program ROM (banked)
   if(address <= 0x2fffff) {
-    address = 0x100000 | n20(address);
-    return cartridge.prom[address >> 1];
+    return cartridge.readP(upper, lower, address, data);
   }
 
   //I/O registers
@@ -60,9 +59,9 @@ auto CPU::read(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
 }
 
 auto CPU::write(n1 upper, n1 lower, n24 address, n16 data) -> void {
-  //cartridge program ROM (read-only)
+  //cartridge program ROM
   if(address <= 0x0fffff) {
-    return;
+    return cartridge.writeP(upper, lower, address, data);
   }
 
   //work RAM
@@ -72,9 +71,9 @@ auto CPU::write(n1 upper, n1 lower, n24 address, n16 data) -> void {
     return;
   }
 
-  //cartridge program ROM (banked) (read-only)
+  //cartridge program ROM (banked)
   if(address <= 0x2fffff) {
-    return;
+    return cartridge.writeP(upper, lower, address, data);
   }
 
   //I/O registers
@@ -120,13 +119,13 @@ auto CPU::readIO(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
 
   //REG_DIPSW
   if((address & 0xfe0080) == 0x300000 && lower) {
-    data.bit(0)   = 0;  //settings mode
-    data.bit(1)   = 0;  //0 = 1 chute; 1 = 2 chutes
-    data.bit(2)   = 0;  //0 = normal controller; 1 = mahjong keyboard
-    data.bit(3,4) = 0;  //communication ID code
-    data.bit(5)   = 0;  //enable multiplayer
-    data.bit(6)   = 0;  //freeplay
-    data.bit(7)   = 0;  //freeze
+    data.bit(0)   = 1;  //settings mode
+    data.bit(1)   = 1;  //0 = 1 chute; 1 = 2 chutes (TODO: Verify)
+    data.bit(2)   = 1;  //1 = normal controller; 0 = mahjong keyboard
+    data.bit(3,4) = 1;  //communication ID code
+    data.bit(5)   = 1;  //enable multiplayer
+    data.bit(6)   = 1;  //freeplay
+    data.bit(7)   = 1;  //freeze
   }
 
   //REG_SYSTYPE
@@ -142,11 +141,11 @@ auto CPU::readIO(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
 
   //REG_STATUS_A
   if((address & 0xfe0000) == 0x320000 && lower) {
-    data.bit(0) = 0;  //coin 1
-    data.bit(1) = 0;  //coin 2
+    data.bit(0) = Model::NeoGeoMVS();  //coin 1 (MVS: active low, AES: always 0)
+    data.bit(1) = Model::NeoGeoMVS();  //coin 2 (MVS: active low, AES: always 0)
     data.bit(2) = 1;  //service button
-    data.bit(3) = 0;  //coin 3
-    data.bit(4) = 0;  //coin 4
+    data.bit(3) = Model::NeoGeoMVS();  //coin 3 (MVS: active low, AES: always 0)
+    data.bit(4) = Model::NeoGeoMVS();  //coin 3 (MVS: active low, AES: always 0)
     data.bit(5) = 0;  //0 = 4-slot; 1 = 6-slot
     data.bit(6) = 0;  //RTC time pulse
     data.bit(7) = 0;  //RTC data bit

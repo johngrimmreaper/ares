@@ -1,8 +1,9 @@
-struct MSX2 : Emulator {
+struct MSX2 : MSX {
   MSX2();
   auto load() -> bool override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
+  auto input(ares::Node::Input::Input) -> void override;
 };
 
 MSX2::MSX2() {
@@ -17,8 +18,8 @@ MSX2::MSX2() {
     device.digital("Down",  virtualPorts[id].pad.down);
     device.digital("Left",  virtualPorts[id].pad.left);
     device.digital("Right", virtualPorts[id].pad.right);
-    device.digital("A",     virtualPorts[id].pad.a);
-    device.digital("B",     virtualPorts[id].pad.b);
+    device.digital("A",     virtualPorts[id].pad.east);
+    device.digital("B",     virtualPorts[id].pad.south);
     port.append(device); }
 
     ports.append(port);
@@ -50,6 +51,11 @@ auto MSX2::load() -> bool {
     port->connect();
   }
 
+  if(auto port = root->find<ares::Node::Port>("Keyboard")) {
+    port->allocate("Japanese");
+    port->connect();
+  }
+
   return true;
 }
 
@@ -65,3 +71,9 @@ auto MSX2::pak(ares::Node::Object node) -> shared_pointer<vfs::directory> {
   if(node->name() == "MSX2 Cartridge") return game->pak;
   return {};
 }
+
+auto MSX2::input(ares::Node::Input::Input input) -> void {
+  MSX::input(input);
+}
+
+

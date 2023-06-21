@@ -14,11 +14,15 @@ struct Presentation : Window {
     Menu systemMenu{&menuBar};
     Menu settingsMenu{&menuBar};
       Menu videoSizeMenu{&settingsMenu};
+        Group videoSizeGroup;
       Menu videoOutputMenu{&settingsMenu};
-        MenuRadioItem videoOutputCenter{&videoOutputMenu};
+        MenuRadioItem videoOutputPixelPerfect{&videoOutputMenu};
+        MenuRadioItem videoOutputFixedScale{&videoOutputMenu};
+        MenuRadioItem videoOutputIntegerScale{&videoOutputMenu};
         MenuRadioItem videoOutputScale{&videoOutputMenu};
         MenuRadioItem videoOutputStretch{&videoOutputMenu};
-        Group videoOutputGroup{&videoOutputCenter, &videoOutputScale, &videoOutputStretch};
+        Group videoOutputGroup{&videoOutputPixelPerfect, &videoOutputFixedScale, &videoOutputIntegerScale,
+                               &videoOutputScale, &videoOutputStretch};
         MenuSeparator videoOutputSeparator{&videoOutputMenu};
         MenuCheckItem videoAspectCorrection{&videoOutputMenu};
         MenuCheckItem videoAdaptiveSizing{&videoOutputMenu};
@@ -40,7 +44,6 @@ struct Presentation : Window {
       MenuItem audioSettingsAction{&settingsMenu};
       MenuItem inputSettingsAction{&settingsMenu};
       MenuItem hotkeySettingsAction{&settingsMenu};
-      MenuItem emulatorSettingsAction{&settingsMenu};
       MenuItem optionSettingsAction{&settingsMenu};
       MenuItem firmwareSettingsAction{&settingsMenu};
       MenuItem pathSettingsAction{&settingsMenu};
@@ -51,6 +54,8 @@ struct Presentation : Window {
       MenuItem captureScreenshot{&toolsMenu};
       MenuSeparator toolsMenuSeparatorA{&toolsMenu};
       MenuCheckItem pauseEmulation{&toolsMenu};
+      MenuItem frameAdvance{&toolsMenu};
+      MenuItem reloadGame{&toolsMenu};
       MenuSeparator toolsMenuSeparatorB{&toolsMenu};
       MenuItem manifestViewerAction{&toolsMenu};
       #if !defined(PLATFORM_MACOS)
