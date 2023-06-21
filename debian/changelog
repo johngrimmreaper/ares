@@ -11,7 +11,7 @@ ares (132-1) UNRELEASED; urgency=medium
 ares (131-1) UNRELEASED; urgency=medium
 
   * Non-maintainer upload.
-  * Updated to 131
+  * Updated to 131 (Closes: #1028143)
   * Refreshed all patches - some needed manual work
   * Removal of MD on 32 bit and N64 in general still needed
   * Mentioned Atari in docs
