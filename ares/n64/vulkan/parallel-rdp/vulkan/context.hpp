@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -28,6 +28,10 @@
 #include <memory>
 #include <functional>
 
+#ifdef GRANITE_VULKAN_FOSSILIZE
+#include "cli/fossilize_feature_filter.hpp"
+#endif
+
 namespace Util
 {
 class TimelineTraceFile;
@@ -43,29 +47,15 @@ namespace Vulkan
 {
 struct DeviceFeatures
 {
-	bool supports_physical_device_properties2 = false;
-	bool supports_external = false;
-	bool supports_dedicated = false;
-	bool supports_image_format_list = false;
 	bool supports_debug_utils = false;
 	bool supports_mirror_clamp_to_edge = false;
-	bool supports_google_display_timing = false;
 	bool supports_nv_device_diagnostic_checkpoints = false;
-	bool supports_vulkan_11_instance = false;
-	bool supports_vulkan_11_device = false;
 	bool supports_external_memory_host = false;
 	bool supports_surface_capabilities2 = false;
 	bool supports_full_screen_exclusive = false;
-	bool supports_update_template = false;
-	bool supports_maintenance_1 = false;
-	bool supports_maintenance_2 = false;
-	bool supports_maintenance_3 = false;
 	bool supports_descriptor_indexing = false;
 	bool supports_conservative_rasterization = false;
-	bool supports_bind_memory2 = false;
-	bool supports_get_memory_requirements2 = false;
 	bool supports_draw_indirect_count = false;
-	bool supports_draw_parameters = false;
 	bool supports_driver_properties = false;
 	bool supports_calibrated_timestamps = false;
 	bool supports_memory_budget = false;
@@ -74,31 +64,56 @@ struct DeviceFeatures
 	bool supports_video_queue = false;
 	bool supports_video_decode_queue = false;
 	bool supports_video_decode_h264 = false;
+	bool supports_pipeline_creation_cache_control = false;
+	bool supports_format_feature_flags2 = false;
+	bool supports_external = false;
+	bool supports_image_format_list = false;
+	bool supports_shader_float_control = false;
+	bool supports_tooling_info = false;
+	bool supports_hdr_metadata = false;
+	bool supports_swapchain_colorspace = false;
+	bool supports_surface_maintenance1 = false;
+
+	// Vulkan 1.1 core
+	VkPhysicalDeviceFeatures enabled_features = {};
+	VkPhysicalDeviceMultiviewFeatures multiview_features = {};
+	VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
+	VkPhysicalDeviceSamplerYcbcrConversionFeatures sampler_ycbcr_conversion_features = {};
+	VkPhysicalDeviceMultiviewProperties multiview_properties = {};
 	VkPhysicalDeviceSubgroupProperties subgroup_properties = {};
+
+	// KHR
+	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timeline_semaphore_features = {};
+	VkPhysicalDevicePerformanceQueryFeaturesKHR performance_query_features = {};
+	VkPhysicalDeviceDriverPropertiesKHR driver_properties = {};
+	VkPhysicalDeviceSynchronization2FeaturesKHR sync2_features = {};
+	VkPhysicalDevicePresentIdFeaturesKHR present_id_features = {};
+	VkPhysicalDevicePresentWaitFeaturesKHR present_wait_features = {};
 	VkPhysicalDevice8BitStorageFeaturesKHR storage_8bit_features = {};
 	VkPhysicalDevice16BitStorageFeaturesKHR storage_16bit_features = {};
 	VkPhysicalDeviceFloat16Int8FeaturesKHR float16_int8_features = {};
-	VkPhysicalDeviceFeatures enabled_features = {};
+	VkPhysicalDeviceFloatControlsPropertiesKHR float_control_properties = {};
+	VkPhysicalDeviceIDProperties id_properties = {};
+
+	// EXT
 	VkPhysicalDeviceExternalMemoryHostPropertiesEXT host_memory_properties = {};
-	VkPhysicalDeviceMultiviewFeaturesKHR multiview_features = {};
 	VkPhysicalDeviceSubgroupSizeControlFeaturesEXT subgroup_size_control_features = {};
 	VkPhysicalDeviceSubgroupSizeControlPropertiesEXT subgroup_size_control_properties = {};
-	VkPhysicalDeviceComputeShaderDerivativesFeaturesNV compute_shader_derivative_features = {};
 	VkPhysicalDeviceHostQueryResetFeaturesEXT host_query_reset_features = {};
 	VkPhysicalDeviceShaderDemoteToHelperInvocationFeaturesEXT demote_to_helper_invocation_features = {};
 	VkPhysicalDeviceScalarBlockLayoutFeaturesEXT scalar_block_features = {};
 	VkPhysicalDeviceUniformBufferStandardLayoutFeaturesKHR ubo_std430_features = {};
-	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timeline_semaphore_features = {};
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptor_indexing_features = {};
 	VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_properties = {};
 	VkPhysicalDeviceConservativeRasterizationPropertiesEXT conservative_rasterization_properties = {};
-	VkPhysicalDevicePerformanceQueryFeaturesKHR performance_query_features = {};
-	VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR sampler_ycbcr_conversion_features = {};
-	VkPhysicalDeviceDriverPropertiesKHR driver_properties = {};
 	VkPhysicalDeviceMemoryPriorityFeaturesEXT memory_priority_features = {};
 	VkPhysicalDeviceASTCDecodeFeaturesEXT astc_decode_features = {};
 	VkPhysicalDeviceTextureCompressionASTCHDRFeaturesEXT astc_hdr_features = {};
-	VkPhysicalDeviceSynchronization2FeaturesKHR sync2_features = {};
+	VkPhysicalDevicePipelineCreationCacheControlFeaturesEXT pipeline_creation_cache_control_features = {};
+	VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT swapchain_maintenance1_features = {};
+
+	// Vendor
+	VkPhysicalDeviceComputeShaderDerivativesFeaturesNV compute_shader_derivative_features = {};
 };
 
 enum VendorID
@@ -112,7 +127,8 @@ enum VendorID
 
 enum ContextCreationFlagBits
 {
-	CONTEXT_CREATION_DISABLE_BINDLESS_BIT = 1 << 0
+	CONTEXT_CREATION_DISABLE_BINDLESS_BIT = 1 << 0,
+	CONTEXT_CREATION_ENABLE_ADVANCED_WSI_BIT = 1 << 1
 };
 using ContextCreationFlags = uint32_t;
 
@@ -125,14 +141,22 @@ struct QueueInfo
 };
 
 class Context
+	: public Util::IntrusivePtrEnabled<Context, std::default_delete<Context>, HandleCounter>
+#ifdef GRANITE_VULKAN_FOSSILIZE
+	, public Fossilize::DeviceQueryInterface
+#endif
 {
 public:
+	// Call before initializing instances. Pointer must remain valid until instance and device creation completes.
+	// API_VERSION must be at least 1.1.
+	// By default, a Vulkan 1.1 instance is created.
+	void set_application_info(const VkApplicationInfo *app_info);
+
 	bool init_instance_and_device(const char **instance_ext, uint32_t instance_ext_count, const char **device_ext, uint32_t device_ext_count,
 	                              ContextCreationFlags flags = 0);
 	bool init_from_instance_and_device(VkInstance instance, VkPhysicalDevice gpu, VkDevice device, VkQueue queue, uint32_t queue_family);
 	bool init_device_from_instance(VkInstance instance, VkPhysicalDevice gpu, VkSurfaceKHR surface, const char **required_device_extensions,
-	                               unsigned num_required_device_extensions, const char **required_device_layers,
-	                               unsigned num_required_device_layers, const VkPhysicalDeviceFeatures *required_features,
+	                               unsigned num_required_device_extensions, const VkPhysicalDeviceFeatures *required_features,
 	                               ContextCreationFlags flags = 0);
 
 	Context() = default;
@@ -188,7 +212,7 @@ public:
 		return ext;
 	}
 
-	static const VkApplicationInfo &get_application_info(bool supports_vulkan_11);
+	const VkApplicationInfo &get_application_info() const;
 
 	void notify_validation_error(const char *msg);
 	void set_notification_callback(std::function<void (const char *)> func);
@@ -225,6 +249,18 @@ public:
 		return handles;
 	}
 
+#ifdef GRANITE_VULKAN_FOSSILIZE
+	const Fossilize::FeatureFilter &get_feature_filter() const
+	{
+		return feature_filter;
+	}
+#endif
+
+	const VkPhysicalDeviceFeatures2 &get_physical_device_features() const
+	{
+		return pdf2;
+	}
+
 private:
 	VkDevice device = VK_NULL_HANDLE;
 	VkInstance instance = VK_NULL_HANDLE;
@@ -234,27 +270,36 @@ private:
 
 	VkPhysicalDeviceProperties gpu_props = {};
 	VkPhysicalDeviceMemoryProperties mem_props = {};
+	const VkApplicationInfo *user_application_info = nullptr;
 
 	QueueInfo queue_info;
 	unsigned num_thread_indices = 1;
 
-	bool create_instance(const char **instance_ext, uint32_t instance_ext_count);
+	bool create_instance(const char **instance_ext, uint32_t instance_ext_count, ContextCreationFlags flags);
 	bool create_device(VkPhysicalDevice gpu, VkSurfaceKHR surface, const char **required_device_extensions,
-	                   unsigned num_required_device_extensions, const char **required_device_layers,
-	                   unsigned num_required_device_layers, const VkPhysicalDeviceFeatures *required_features,
+	                   unsigned num_required_device_extensions, const VkPhysicalDeviceFeatures *required_features,
 	                   ContextCreationFlags flags);
 
 	bool owned_instance = false;
 	bool owned_device = false;
 	DeviceFeatures ext;
+	VkPhysicalDeviceFeatures2 pdf2;
 
 #ifdef VULKAN_DEBUG
 	VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
+	bool force_no_validation = false;
 #endif
 	std::function<void (const char *)> message_callback;
 
 	void destroy();
 	void check_descriptor_indexing_features();
-	bool force_no_validation = false;
+
+#ifdef GRANITE_VULKAN_FOSSILIZE
+	Fossilize::FeatureFilter feature_filter;
+	bool format_is_supported(VkFormat format, VkFormatFeatureFlags features) override;
+	bool descriptor_set_layout_is_supported(const VkDescriptorSetLayoutCreateInfo *set_layout) override;
+#endif
 };
+
+using ContextHandle = Util::IntrusivePtr<Context>;
 }

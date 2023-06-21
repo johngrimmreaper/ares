@@ -1,11 +1,12 @@
-#if defined(PROFILE_PERFORMANCE)
-#include "../ppu-performance/ppu.cpp"
-#else
 #include <sfc/sfc.hpp>
 
 namespace ares::SuperFamicom {
 
-PPU ppu;
+PPUBase ppu;
+PPU ppuImpl;
+
+#define ppu ppuImpl
+
 #include "main.cpp"
 #include "io.cpp"
 #include "mosaic.cpp"
@@ -19,6 +20,14 @@ PPU ppu;
 #include "debugger.cpp"
 #include "serialization.cpp"
 #include "counter/serialization.cpp"
+
+auto PPUBase::setAccurate(bool value) -> void {
+  accurate = value;
+  if(value)
+    implementation = &ppuImpl;
+  else
+    implementation = &ppuPerformanceImpl;
+}
 
 auto PPU::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("PPU");
@@ -120,8 +129,10 @@ auto PPU::power(bool reset) -> void {
     object.size = 0;
   }
 
-  random.array({cgram, sizeof(cgram)});
-  for(auto& word : cgram) word &= 0x7fff;
+  if(!reset) {
+    random.array({cgram, sizeof(cgram)});
+    for(auto& word : cgram) word &= 0x7fff;
+  }
 
   latch.vram = random();
   latch.oam = random();
@@ -194,7 +205,7 @@ auto PPU::power(bool reset) -> void {
 
   //$2133  SETINI
   io.extbg = random();
-  io.pseudoHires = random();
+  if(!reset) io.pseudoHires = random();
   io.overscan = false;
   io.interlace = false;
 
@@ -204,6 +215,7 @@ auto PPU::power(bool reset) -> void {
   //$213d  OPVCT
   io.vcounter = 0;
 
+if(!reset) {
   mosaic.power();
   bg1.power();
   bg2.power();
@@ -212,9 +224,9 @@ auto PPU::power(bool reset) -> void {
   obj.power();
   window.power();
   dac.power();
+}
 
   updateVideoMode();
 }
 
 }
-#endif

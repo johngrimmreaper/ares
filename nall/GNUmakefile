@@ -39,18 +39,35 @@ endif
 # common commands
 ifeq ($(shell echo ^^),^)
   # cmd
-  delete  = $(info Deleting $1 ...) @del /q $(subst /,\,$1)
-  rdelete = $(info Deleting $1 ...) @del /s /q $(subst /,\,$1) && if exist $(subst /,\,$1) (rmdir /s /q $(subst /,\,$1))
+  fixpath = $(subst /,\\,$1)
+  mkdir   = @if not exist $(call fixpath,$1) (mkdir $(call fixpath,$1))
+  copy    = @copy $(call fixpath,$1) $(call fixpath,$2)
+  rcopy   = @xcopy /e /q /y $(call fixpath,$1) $(call fixpath,$2)
+  delete  = $(info Deleting $1 ...) @del /q $(call fixpath,$1)
+  rdelete = $(info Deleting $1 ...) @if exist $(call fixpath,$1) (rmdir /s /q $(call fixpath,$1))
+  which   = $(shell where $1 2> NUL)
 else
   # sh
+  mkdir   = @mkdir -p $1
+  copy    = @cp $1 $2
+  rcopy   = @cp -R $1 $2
   delete  = $(info Deleting $1 ...) @rm -f $1
   rdelete = $(info Deleting $1 ...) @rm -rf $1
+  which   = $(shell which $1 2> /dev/null)
 endif
 
-compiler.c      = $(compiler) -x c -std=c11
-compiler.cpp    = $(compiler) -x c++ -std=c++17 -fno-operator-names
-compiler.objc   = $(compiler) -x objective-c -std=c11
-compiler.objcpp = $(compiler) -x objective-c++ -std=c++17 -fno-operator-names
+ifeq ($(ccache), true)
+  compiler.c      = ccache $(compiler) -x c -std=c11
+  compiler.cpp    = ccache $(compiler) -x c++ -std=c++17 -fno-operator-names
+  compiler.objc   = ccache $(compiler) -x objective-c -std=c11
+  compiler.objcpp = ccache $(compiler) -x objective-c++ -std=c++17 -fno-operator-names
+else
+  compiler.c      = $(compiler) -x c -std=c11
+  compiler.cpp    = $(compiler) -x c++ -std=c++17 -fno-operator-names
+  compiler.objc   = $(compiler) -x objective-c -std=c11
+  compiler.objcpp = $(compiler) -x objective-c++ -std=c++17 -fno-operator-names
+endif
+
 
 flags.c      = -x c -std=c11
 flags.cpp    = -x c++ -std=c++17 -fno-operator-names
@@ -60,18 +77,50 @@ flags.deps   = -MMD -MP -MF $(@:.o=.d)
 
 # compiler detection
 ifeq ($(compiler),)
-  ifeq ($(platform),windows)
-    compiler := g++
-    compiler.cpp = $(compiler) -x c++ -std=gnu++17 -fno-operator-names
-    flags.cpp = -x c++ -std=gnu++17 -fno-operator-names
-  else ifeq ($(platform),macos)
-    compiler := clang++
-  else ifeq ($(platform),linux)
-    compiler := g++
-  else ifeq ($(platform),bsd)
+  # prefer clang
+  ifneq ($(call which,clang++),)
     compiler := clang++
   else
     compiler := g++
+  endif
+endif
+
+machine_str := $(shell $(compiler) -dumpmachine)
+ifneq ($(filter amd64-% x86_64-%,$(machine_str)),)
+  machine := amd64
+else ifneq ($(filter arm64-% aarch64-%,$(machine_str)),)
+  machine := arm64
+else ifneq ($(filter powerpc64-% powerpc64le-%,$(machine_str)),)
+  machine := ppc64
+endif
+
+# detect clang with msvc target
+ifeq ($(msvc),)
+  ifneq ($(filter %-msvc,$(machine_str)),)
+    msvc := true
+  endif
+endif
+
+# explicit architecture flags to allow for cross-compilation on macos
+ifeq ($(platform),macos)
+  ifeq ($(arch),amd64)
+    flags += -arch x86_64
+    options += -arch x86_64
+  else ifeq ($(arch),arm64)
+    flags += -arch arm64
+    options += -arch arm64
+  endif
+  ifneq ($(machine),$(arch))
+    local = false
+  endif
+endif
+
+# architecture detection
+ifeq ($(arch),)
+  ifneq ($(machine),)
+    arch := $(machine)
+  else
+    $(error unknown arch, please specify manually.)
   endif
 endif
 
@@ -80,19 +129,19 @@ ifeq ($(build),debug)
   symbols = true
   flags += -Og -DBUILD_DEBUG
 else ifeq ($(build),stable)
-  lto = true
   flags += -O1 -DBUILD_STABLE
 else ifeq ($(build),minified)
-  lto = true
   flags += -Os -DBUILD_MINIFIED
 else ifeq ($(build),release)
-  lto = true
   flags += -O2 -DBUILD_RELEASE
 else ifeq ($(build),optimized)
-  lto = true
   flags += -O3 -fomit-frame-pointer -DBUILD_OPTIMIZED
 else
   $(error unrecognized build type.)
+endif
+
+ifeq ($(local),true)
+  flags += -DBUILD_LOCAL
 endif
 
 # debugging information
@@ -100,20 +149,26 @@ ifeq ($(symbols),true)
   flags += -g
   ifeq ($(platform),windows)
     ifeq ($(findstring clang++,$(compiler)),clang++)
-      flags   += -gcodeview
-      options += -Wl,-pdb=
+      ifeq ($(symformat),dwarf)
+        flags += -gdwarf
+      else  
+        flags += -gcodeview
+      endif
+      ifeq ($(msvc),true)
+        options += -Wl,-debug
+      else
+        options += -Wl,-pdb=
+      endif
     endif
   endif
 endif
 
 # link-time optimization
 ifeq ($(lto),true)
-  flags   += -flto
-  options += -fwhole-program
   ifneq ($(findstring clang++,$(compiler)),clang++)
-    flags   += -fwhole-program -fno-fat-lto-objects
-    options += -flto=jobserver
+    flags   += -flto=auto -fno-fat-lto-objects
   else
+    flags   += -flto
     options += -flto=thin
   endif
 endif
@@ -130,6 +185,10 @@ endif
 # clang settings
 ifeq ($(findstring clang++,$(compiler)),clang++)
   flags += -fno-strict-aliasing -fwrapv
+  ifeq ($(arch),arm64)
+    # work around bad interaction with alignas(n) when n >= 4096
+    flags += -mno-global-merge
+  endif
 # gcc settings
 else ifeq ($(findstring g++,$(compiler)),g++)
   flags += -fno-strict-aliasing -fwrapv -Wno-trigraphs
@@ -137,11 +196,29 @@ endif
 
 # windows settings
 ifeq ($(platform),windows)
-  options += -mthreads -lpthread -lws2_32 -lole32
+  extension := .exe
+  # target Windows 7
+  flags += -D_WIN32_WINNT=0x0601
+  ifeq ($(msvc),true)
+    flags += -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS
+  endif
+  options += -mthreads -lws2_32 -lole32 -lshell32
   options += $(if $(findstring clang++,$(compiler)),-fuse-ld=lld)
-  options += $(if $(findstring g++,$(compiler)),-static -static-libgcc -static-libstdc++)
-  options += $(if $(findstring true,$(console)),-mconsole,-mwindows)
-  windres := windres
+  options += -static
+  ifeq ($(console),true)
+    flags += -DSUBSYTEM_CONSOLE
+    options += -mconsole
+  else
+    flags += -DSUBSYTEM_WINDOWS
+    options += -mwindows
+  endif
+  ifeq ($(windres),)
+    ifeq ($(msvc),true)
+      windres := llvm-rc
+    else
+      windres := windres
+    endif
+  endif
 endif
 
 # macos settings
@@ -150,10 +227,6 @@ ifeq ($(platform),macos)
   options += -lc++ -lobjc -mmacosx-version-min=10.9
   # allow mprotect() on dynamic recompiler code blocks
   options += -Wl,-segprot,__DATA,rwx,rw
-  ifneq ($(local),true)
-    flags   += -arch x86_64
-    options += -arch x86_64
-  endif
 endif
 
 # linux settings
@@ -198,6 +271,12 @@ nall.verbose:
 %.o: $<
 	$(info Compiling $(subst ../,,$<) ...)
 	@$(call compile)
+
+$(object.path):
+	$(call mkdir,$(object.path))
+
+$(output.path):
+	$(call mkdir,$(output.path))
 
 # function compile([arguments])
 compile = \
@@ -275,3 +354,8 @@ ifeq ($(platform),windows)
 else
   prefix := $(HOME)/.local
 endif
+
+# objects
+nall.objects := $(object.path)/nall.o
+
+$(object.path)/nall.o: $(nall.path)/nall.cpp

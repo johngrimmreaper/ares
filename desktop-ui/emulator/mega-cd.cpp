@@ -23,9 +23,9 @@ MegaCD::MegaCD() {
     device.digital("Down",  virtualPorts[id].pad.down);
     device.digital("Left",  virtualPorts[id].pad.left);
     device.digital("Right", virtualPorts[id].pad.right);
-    device.digital("A",     virtualPorts[id].pad.a);
-    device.digital("B",     virtualPorts[id].pad.b);
-    device.digital("C",     virtualPorts[id].pad.c);
+    device.digital("A",     virtualPorts[id].pad.west);
+    device.digital("B",     virtualPorts[id].pad.south);
+    device.digital("C",     virtualPorts[id].pad.east);
     device.digital("Start", virtualPorts[id].pad.start);
     port.append(device); }
 
@@ -34,12 +34,12 @@ MegaCD::MegaCD() {
     device.digital("Down",  virtualPorts[id].pad.down);
     device.digital("Left",  virtualPorts[id].pad.left);
     device.digital("Right", virtualPorts[id].pad.right);
-    device.digital("A",     virtualPorts[id].pad.a);
-    device.digital("B",     virtualPorts[id].pad.b);
-    device.digital("C",     virtualPorts[id].pad.c);
-    device.digital("X",     virtualPorts[id].pad.x);
-    device.digital("Y",     virtualPorts[id].pad.y);
-    device.digital("Z",     virtualPorts[id].pad.z);
+    device.digital("A",     virtualPorts[id].pad.west);
+    device.digital("B",     virtualPorts[id].pad.south);
+    device.digital("C",     virtualPorts[id].pad.east);
+    device.digital("X",     virtualPorts[id].pad.l_bumper);
+    device.digital("Y",     virtualPorts[id].pad.north);
+    device.digital("Z",     virtualPorts[id].pad.r_bumper);
     device.digital("Mode",  virtualPorts[id].pad.select);
     device.digital("Start", virtualPorts[id].pad.start);
     port.append(device); }
@@ -74,8 +74,15 @@ auto MegaCD::load() -> bool {
   }
 
   if(auto port = root->find<ares::Node::Port>("Controller Port 2")) {
-    port->allocate("Control Pad");
-    port->connect();
+    if(game->pak->attribute("serial").beginsWith("GM T-162055")) {
+      // CORPSE KILLER (U) -- GM T-162055-00
+      // CORPSE KILLER (E) -- GM T-162055-50
+      // Gamepad in controller port 2 breaks input polling, so leave it disconnected.
+      // No supported lightgun devices are currently emulated (Sega Menacer, ALG GameGun).
+    } else {
+      port->allocate("Control Pad");
+      port->connect();
+    }
   }
 
   return true;

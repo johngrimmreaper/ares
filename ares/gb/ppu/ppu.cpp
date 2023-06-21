@@ -81,7 +81,7 @@ auto PPU::unload() -> void {
 }
 
 auto PPU::main() -> void {
-  if(!status.displayEnable) {
+  if(!status.displayEnable || cpu.r.stop) {
     step(456 * 154);
     if(screen) screen->frame();
     scheduler.exit(Event::Frame);
@@ -89,9 +89,6 @@ auto PPU::main() -> void {
   }
 
   status.lx = 0;
-
-  latch.windowDisplayEnable = status.windowDisplayEnable;
-  latch.wx = status.wx;
 
   if(status.ly == 0) {
     latch.wy = 0;
@@ -111,6 +108,9 @@ auto PPU::main() -> void {
     mode(2);
     scanline();
     step(80);
+
+    latch.windowDisplayEnable = status.windowDisplayEnable;
+    latch.wx = status.wx;
 
     if(status.ly >= status.wy && status.wx < 7) latch.wy++;
 

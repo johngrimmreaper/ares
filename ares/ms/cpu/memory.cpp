@@ -5,16 +5,20 @@ auto CPU::mdr() const -> n8 {
 auto CPU::read(n16 address) -> n8 {
   n8 data = mdr();
   if(address >= 0xc000 && bus.ramEnable) data = ram.read(address);
-  if(bus.biosEnable) data = bios.read(address, data);
-  if(bus.cartridgeEnable) data = cartridge.read(address, data);
+  if(Device::MasterSystem() && bus.biosEnable) data = bios.read(address, data);
+  if(Device::GameGear() && bus.biosEnable && address < 0x400) data = bios.read(address, data);
+  if(Device::MasterSystem() && bus.cartridgeEnable) data = cartridge.read(address, data);
+  if(Device::GameGear() && (address >= 0x400 || !bus.biosEnable)) data = cartridge.read(address, data);
   return bus.mdr = data;
 }
 
 auto CPU::write(n16 address, n8 data) -> void {
   bus.mdr = data;
   if(address >= 0xc000 && bus.ramEnable) ram.write(address, data);
-  if(bus.biosEnable) bios.write(address, data);
-  if(bus.cartridgeEnable) cartridge.write(address, data);
+  if(Device::MasterSystem() && bus.biosEnable) bios.write(address, data);
+  if(Device::GameGear() && bus.biosEnable && address < 0x400) bios.write(address, data);
+  if(Device::MasterSystem() && bus.cartridgeEnable) cartridge.write(address, data);
+  if(Device::GameGear() && (address >= 0x400 || !bus.biosEnable)) cartridge.write(address, data);
 }
 
 //note: the Japanese Mark III / Master System supposedly decodes a0-a7 fully for I/O.
@@ -24,7 +28,7 @@ auto CPU::in(n16 address) -> n8 {
   n8 data = mdr();
   if(0);
 
- else if((address & 0xff) == 0x00 && Display::LCD()) {
+ else if((address & 0xff) == 0x00 && Mode::GameGear()) {
     platform->input(system.controls.start);
     data.bit(0) = 0;
     data.bit(1) = 0;
@@ -36,7 +40,7 @@ auto CPU::in(n16 address) -> n8 {
     data.bit(7) = !system.controls.start->value();
   }
 
-  else if((address & 0xff) == 0x01 && Display::LCD()) {
+  else if((address & 0xff) == 0x01 && Mode::GameGear()) {
     data.bit(0) = sio.dataDirection.bit(0) ? 1 : sio.parallelData.bit(0);
     data.bit(1) = sio.dataDirection.bit(1) ? 1 : sio.parallelData.bit(1);
     data.bit(2) = sio.dataDirection.bit(2) ? 1 : sio.parallelData.bit(2);
@@ -47,20 +51,20 @@ auto CPU::in(n16 address) -> n8 {
     data.bit(7) =                                sio.parallelData.bit(7);
   }
 
-  else if((address & 0xff) == 0x02 && Display::LCD()) {
+  else if((address & 0xff) == 0x02 && Mode::GameGear()) {
     data.bit(0,6) = sio.dataDirection;
     data.bit(7)   = sio.nmiEnable;
   }
 
-  else if((address & 0xff) == 0x03 && Display::LCD()) {
+  else if((address & 0xff) == 0x03 && Mode::GameGear()) {
     data = sio.transmitData;
   }
 
-  else if((address & 0xff) == 0x04 && Display::LCD()) {
+  else if((address & 0xff) == 0x04 && Mode::GameGear()) {
     data = sio.receiveData;
   }
 
-  else if((address & 0xff) == 0x05 && Display::LCD()) {
+  else if((address & 0xff) == 0x05 && Mode::GameGear()) {
     data.bit(0)   = sio.transmitFull;
     data.bit(1)   = sio.receiveFull;
     data.bit(2)   = sio.framingError;
@@ -204,7 +208,8 @@ auto CPU::out(n16 address, n8 data) -> void {
     psg.balance(data);
   }
 
-  else if((address & 0xc1) == 0x00) {
+  // Fully decoded on Game Gear
+  if((address & 0xff) == 0x3e || (Device::MasterSystem() && (address & 0xc1) == 0x00)) {
     bus.ioEnable        = !data.bit(2);
     bus.biosEnable      = !data.bit(3);
     bus.ramEnable       = !data.bit(4);
@@ -213,7 +218,7 @@ auto CPU::out(n16 address, n8 data) -> void {
     bus.expansionEnable = !data.bit(7);
   }
 
-  else if((address & 0xc1) == 0x01 && Display::CRT()) {
+  else if((address & 0xc1) == 0x01) {
     auto thLevel1 = controllerPort1.thLevel;
     auto thLevel2 = controllerPort2.thLevel;
 
@@ -235,6 +240,17 @@ auto CPU::out(n16 address, n8 data) -> void {
 
     if(!thLevel1 && controllerPort1.thLevel) vdp.hcounterLatch();
     if(!thLevel2 && controllerPort2.thLevel) vdp.hcounterLatch();
+
+    n4 writeData;
+    writeData.bit(0,1) = data.bit(0,1); // Port 1 TR and TH direction
+    writeData.bit(2) = data.bit(4);
+    writeData.bit(3) = data.bit(5);
+    controllerPort1.write(writeData);
+
+    writeData.bit(0,1) = data.bit(2,3); // Port 2 TR and TH direction
+    writeData.bit(2) = data.bit(6);
+    writeData.bit(3) = data.bit(7);
+    controllerPort2.write(writeData);
   }
 
   else if((address & 0xc0) == 0x40) {

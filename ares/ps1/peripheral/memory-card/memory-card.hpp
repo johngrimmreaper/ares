@@ -4,6 +4,7 @@ struct MemoryCard : PeripheralDevice {
 
   MemoryCard(Node::Port);
   ~MemoryCard();
+  auto save() -> void override;
   auto reset() -> void override;
   auto acknowledge() -> bool override;
   auto bus(u8 data) -> u8 override;
@@ -11,6 +12,8 @@ struct MemoryCard : PeripheralDevice {
   auto identify(u8 data) -> u8;
   auto read(u8 data) -> u8;
   auto write(u8 data) -> u8;
+
+  auto format() -> void;
 
   enum class State : u32 {
     Idle,

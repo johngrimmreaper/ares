@@ -5,16 +5,12 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
-#ifdef LIBCO_MPROTECT
-  #include <unistd.h>
-  #include <sys/mman.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static thread_local unsigned long co_active_buffer[64];
+static thread_local uintptr_t co_active_buffer[64];
 static thread_local cothread_t co_active_handle = 0;
 static void (*co_swap)(cothread_t, cothread_t) = 0;
 
@@ -48,16 +44,45 @@ static const uint32_t co_swap_function[1024] = {
   0x6d49340c,  /* ldp d12,d13,[x0,144] */
   0x6d0a3c2e,  /* stp d14,d15,[x1,160] */
   0x6d4a3c0e,  /* ldp d14,d15,[x0,160] */
+#if defined(_WIN32) && !defined(LIBCO_NO_TIB)
+  0xa940c650,  /* ldp x16,x17,[x18, 8] */
+  0xa90b4430,  /* stp x16,x17,[x1,176] */
+  0xa94b4410,  /* ldp x16,x17,[x0,176] */
+  0xa900c650,  /* stp x16,x17,[x18, 8] */
+#endif
   0xd61f03c0,  /* br x30               */
 };
 
+#ifdef _WIN32
+  #include <windows.h>
+
+  static void co_init() {
+    #ifdef LIBCO_MPROTECT
+    DWORD old_privileges;
+    VirtualProtect((void*)co_swap_function, sizeof co_swap_function, PAGE_EXECUTE_READ, &old_privileges);
+    #endif
+  }
+#else
+#ifdef LIBCO_MPROTECT
+  #include <unistd.h>
+  #include <sys/mman.h>
+#endif
+
 static void co_init() {
   #ifdef LIBCO_MPROTECT
-  unsigned long addr = (unsigned long)co_swap_function;
-  unsigned long base = addr - (addr % sysconf(_SC_PAGESIZE));
-  unsigned long size = (addr - base) + sizeof co_swap_function;
+  uintptr_t addr = (uintptr_t)co_swap_function;
+  uintptr_t base = addr - (addr % sysconf(_SC_PAGESIZE));
+  uintptr_t size = (addr - base) + sizeof co_swap_function;
   mprotect((void*)base, size, PROT_READ | PROT_EXEC);
   #endif
+}
+#endif
+
+static void co_entrypoint(cothread_t handle) {
+  uintptr_t* buffer = (uintptr_t*)handle;
+  void (*entrypoint)(void) = (void (*)(void))buffer[2];
+  entrypoint();
+  abort();  /* called only if cothread_t entrypoint returns */
 }
 
 cothread_t co_active() {
@@ -66,19 +91,24 @@ cothread_t co_active() {
 }
 
 cothread_t co_derive(void* memory, unsigned int size, void (*entrypoint)(void)) {
-  unsigned long* handle;
+  uintptr_t* handle;
   if(!co_swap) {
     co_init();
     co_swap = (void (*)(cothread_t, cothread_t))co_swap_function;
   }
   if(!co_active_handle) co_active_handle = &co_active_buffer;
 
-  if(handle = (unsigned long*)memory) {
+  if(handle = (uintptr_t*)memory) {
     unsigned int offset = (size & ~15);
-    unsigned long* p = (unsigned long*)((unsigned char*)handle + offset);
-    handle[0]  = (unsigned long)p;           /* x16 (stack pointer) */
-    handle[1]  = (unsigned long)entrypoint;  /* x30 (link register) */
-    handle[12] = (unsigned long)p;           /* x29 (frame pointer) */
+    uintptr_t* p = (uintptr_t*)((unsigned char*)handle + offset);
+    handle[0]  = (uintptr_t)p;              /* x16 (stack pointer) */
+    handle[1]  = (uintptr_t)co_entrypoint;  /* x30 (link register) */
+    handle[2]  = (uintptr_t)entrypoint;     /* x19 (entry point) */
+    handle[12] = (uintptr_t)p;              /* x29 (frame pointer) */
+#if defined(_WIN32) && !defined(LIBCO_NO_TIB)
+    handle[22] = (uintptr_t)handle + size;  /* stack base */
+    handle[23] = (uintptr_t)handle;         /* stack limit */
+#endif
   }
 
   return handle;

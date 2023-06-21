@@ -1,6 +1,7 @@
 struct GameBoy : Emulator {
   GameBoy();
   auto load() -> bool override;
+  auto load(Menu) -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 };
@@ -16,14 +17,10 @@ GameBoy::GameBoy() {
     device.digital("Down",    virtualPorts[0].pad.down);
     device.digital("Left",    virtualPorts[0].pad.left);
     device.digital("Right",   virtualPorts[0].pad.right);
-    device.digital("B",       virtualPorts[0].pad.a);
-    device.digital("A",       virtualPorts[0].pad.b);
+    device.digital("B",       virtualPorts[0].pad.south);
+    device.digital("A",       virtualPorts[0].pad.east);
     device.digital("Select",  virtualPorts[0].pad.select);
     device.digital("Start",   virtualPorts[0].pad.start);
-    device.analog ("A-Up",    virtualPorts[0].pad.lup);
-    device.analog ("A-Down",  virtualPorts[0].pad.ldown);
-    device.analog ("A-Left",  virtualPorts[0].pad.lleft);
-    device.analog ("A-Right", virtualPorts[0].pad.lright);
     device.rumble ("Rumble",  virtualPorts[0].pad.rumble);
     port.append(device); }
 
@@ -50,6 +47,33 @@ auto GameBoy::load() -> bool {
   }
 
   return true;
+}
+
+auto GameBoy::load(Menu menu) -> void {
+    Menu colorEmulationMenu{&menu};
+    colorEmulationMenu.setText("Color Emulation").setIcon(Icon::Device::Display);
+    if(auto options = root->find<ares::Node::Setting::String>("PPU/Screen/Color Emulation")) {
+      Group group;
+      for(auto& setting : options->readAllowedValues()) {
+        MenuRadioItem item{&colorEmulationMenu};
+        item.setText(setting);
+        item.onActivate([=] {
+          if(auto settings = root->find<ares::Node::Setting::String>("PPU/Screen/Color Emulation")) {
+            settings->setValue(setting);
+          }
+        });
+        group.append(item);
+      }
+    }
+
+    if(auto headphones = root->find<ares::Node::Setting::Boolean>("Headphones")) {
+        MenuCheckItem headphoneItem{&menu};
+        headphoneItem.setText("Headphones").setChecked(headphones->value()).onToggle([=] {
+            if(auto headphones = root->find<ares::Node::Setting::Boolean>("Headphones")) {
+                headphones->setValue(headphoneItem.checked());
+            }
+        });
+    }
 }
 
 auto GameBoy::save() -> bool {

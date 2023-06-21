@@ -3,6 +3,7 @@
 namespace ares::WonderSwan {
 
 PPU ppu;
+#include "debugger.cpp"
 #include "io.cpp"
 #include "memory.cpp"
 #include "window.cpp"
@@ -12,6 +13,10 @@ PPU ppu;
 #include "timer.cpp"
 #include "color.cpp"
 #include "serialization.cpp"
+
+auto PPU::setAccurate(bool value) -> void {
+  accurate = value;
+}
 
 auto PPU::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("PPU");
@@ -160,9 +165,13 @@ auto PPU::load(Node::Object parent) -> void {
 
   updateOrientation();
   updateIcons();
+
+  debugger.load(node);
 }
 
 auto PPU::unload() -> void {
+  debugger.unload(node);
+
   icon = {};
   showIcons.reset();
   orientation.reset();
@@ -174,10 +183,12 @@ auto PPU::unload() -> void {
   node.reset();
 }
 
+//vtotal+1 = scanlines per frame
+//vtotal<143 inhibits vblank and repeats the screen image until vcounter=144
+//todo: unknown how votal<143 interferes with vcompare interrupts
 auto PPU::main() -> void {
-  if(io.vcounter == 142) {
-    sprite.frame();
-  }
+  if(io.vcounter == io.vcompare) cpu.raise(CPU::Interrupt::LineCompare);
+  if(htimer.step()) cpu.raise(CPU::Interrupt::HblankTimer);
 
   if(io.vcounter < 144) {
     n8 y = io.vcounter % (io.vtotal + 1);
@@ -190,27 +201,20 @@ auto PPU::main() -> void {
       screen2.pixel(x, y);
       sprite.pixel(x, y);
       dac.pixel(x, y);
-      step(1);
+      if(accurate) step(1);
     }
-    step(32);
+    step((accurate ? 0 : 224) + 32);
+  } else if (io.vcounter == 144) {
+    cpu.raise(CPU::Interrupt::Vblank);
+    if(vtimer.step()) cpu.raise(CPU::Interrupt::VblankTimer);
+
+    sprite.oamSyncScanline();
   } else {
     step(256);
   }
-  scanline();
-  if(htimer.step()) cpu.raise(CPU::Interrupt::HblankTimer);
-}
 
-//vtotal+1 = scanlines per frame
-//vtotal<143 inhibits vblank and repeats the screen image until vcounter=144
-//todo: unknown how votal<143 interferes with vcompare interrupts
-auto PPU::scanline() -> void {
   io.vcounter++;
   if(io.vcounter >= max(144, io.vtotal + 1)) return frame();
-  if(io.vcounter == io.vcompare) cpu.raise(CPU::Interrupt::LineCompare);
-  if(io.vcounter == 144) {
-    cpu.raise(CPU::Interrupt::Vblank);
-    if(vtimer.step()) cpu.raise(CPU::Interrupt::VblankTimer);
-  }
 }
 
 auto PPU::frame() -> void {

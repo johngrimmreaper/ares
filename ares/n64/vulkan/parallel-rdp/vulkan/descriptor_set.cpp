@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 Hans-Kristian Arntzen
+/* Copyright (c) 2017-2022 Hans-Kristian Arntzen
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -20,11 +20,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define NOMINMAX
 #include "descriptor_set.hpp"
 #include "device.hpp"
 #include <vector>
 
-using namespace std;
 using namespace Util;
 
 namespace Vulkan
@@ -54,7 +54,7 @@ DescriptorSetAllocator::DescriptorSetAllocator(Hash hash, Device *device_, const
 	VkDescriptorSetLayoutCreateInfo info = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT flags = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
 	VkSampler vk_immutable_samplers[VULKAN_NUM_BINDINGS] = {};
-	vector<VkDescriptorSetLayoutBinding> bindings;
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
 	VkDescriptorBindingFlagsEXT binding_flags = 0;
 
 	if (bindless)
@@ -65,10 +65,8 @@ DescriptorSetAllocator::DescriptorSetAllocator(Hash hash, Device *device_, const
 		flags.bindingCount = 1;
 		flags.pBindingFlags = &binding_flags;
 		binding_flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT |
-		                VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
-
-		if (device->get_device_features().descriptor_indexing_features.descriptorBindingVariableDescriptorCount)
-			binding_flags |= VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+		                VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT |
+		                VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
 	}
 
 	for (unsigned i = 0; i < VULKAN_NUM_BINDINGS; i++)
@@ -83,8 +81,6 @@ DescriptorSetAllocator::DescriptorSetAllocator(Hash hash, Device *device_, const
 		{
 			array_size = VULKAN_NUM_BINDINGS_BINDLESS_VARYING;
 			pool_array_size = array_size;
-			if (!device->get_device_features().descriptor_indexing_features.descriptorBindingVariableDescriptorCount)
-				LOGW("Device does not support variable descriptor count.\n");
 		}
 		else
 			pool_array_size = array_size * VULKAN_NUM_SETS_PER_POOL;
@@ -101,10 +97,17 @@ DescriptorSetAllocator::DescriptorSetAllocator(Hash hash, Device *device_, const
 			types++;
 		}
 
-		if (layout.sampled_buffer_mask & (1u << i))
+		if (layout.sampled_texel_buffer_mask & (1u << i))
 		{
 			bindings.push_back({ i, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, array_size, stages, nullptr });
 			pool_size.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, pool_array_size });
+			types++;
+		}
+
+		if (layout.storage_texel_buffer_mask & (1u << i))
+		{
+			bindings.push_back({ i, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, array_size, stages, nullptr });
+			pool_size.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, pool_array_size });
 			types++;
 		}
 
@@ -199,12 +202,9 @@ VkDescriptorSet DescriptorSetAllocator::allocate_bindless_set(VkDescriptorPool p
 			{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT };
 
 	uint32_t num_desc = num_descriptors;
-	if (device->get_device_features().descriptor_indexing_features.descriptorBindingVariableDescriptorCount)
-	{
-		count_info.descriptorSetCount = 1;
-		count_info.pDescriptorCounts = &num_desc;
-		info.pNext = &count_info;
-	}
+	count_info.descriptorSetCount = 1;
+	count_info.pDescriptorCounts = &num_desc;
+	info.pNext = &count_info;
 
 	VkDescriptorSet desc_set = VK_NULL_HANDLE;
 	if (table.vkAllocateDescriptorSets(device->get_device(), &info, &desc_set) != VK_SUCCESS)
@@ -231,12 +231,7 @@ VkDescriptorPool DescriptorSetAllocator::allocate_bindless_pool(unsigned num_set
 		return VK_NULL_HANDLE;
 	}
 
-	// If implementation does not support variable descriptor count, allocate maximum.
-	if (device->get_device_features().descriptor_indexing_features.descriptorBindingVariableDescriptorCount)
-		size.descriptorCount = num_descriptors;
-	else
-		info.maxSets = 1;
-
+	size.descriptorCount = num_descriptors;
 	info.pPoolSizes = &size;
 
 	if (table.vkCreateDescriptorPool(device->get_device(), &info, nullptr, &pool) != VK_SUCCESS)
@@ -257,7 +252,7 @@ void DescriptorSetAllocator::begin_frame()
 	}
 }
 
-pair<VkDescriptorSet, bool> DescriptorSetAllocator::find(unsigned thread_index, Hash hash)
+std::pair<VkDescriptorSet, bool> DescriptorSetAllocator::find(unsigned thread_index, Hash hash)
 {
 	VK_ASSERT(!bindless);
 
@@ -293,7 +288,7 @@ pair<VkDescriptorSet, bool> DescriptorSetAllocator::find(unsigned thread_index, 
 
 	VkDescriptorSet sets[VULKAN_NUM_SETS_PER_POOL];
 	VkDescriptorSetLayout layouts[VULKAN_NUM_SETS_PER_POOL];
-	fill(begin(layouts), end(layouts), set_layout);
+	std::fill(std::begin(layouts), std::end(layouts), set_layout);
 
 	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	alloc.descriptorPool = pool;
@@ -432,6 +427,11 @@ unsigned BindlessAllocator::push(const ImageView &view)
 void BindlessAllocator::begin()
 {
 	views.clear();
+}
+
+void BindlessAllocator::reset()
+{
+	descriptor_pool.reset();
 }
 
 unsigned BindlessAllocator::get_next_offset() const

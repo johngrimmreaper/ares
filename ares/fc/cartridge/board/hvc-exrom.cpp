@@ -67,8 +67,6 @@ struct HVC_ExROM : Interface {  //MMC5
 
     auto clockLength() -> void {
       if(envelope.loopMode == 0) {
-        //clocked at twice the rate of the APU pulse channels
-        if(lengthCounter) lengthCounter--;
         if(lengthCounter) lengthCounter--;
       }
     }
@@ -155,12 +153,17 @@ struct HVC_ExROM : Interface {  //MMC5
   }
 
   auto main() -> void override {
-    //scanline() resets this; if no scanlines detected, enter video blanking period
-    if(cycleCounter >= 200) blank();  //113-114 normal; ~2500 across Vblank period
-    else cycleCounter++;
+    if(cycleCounter && --cycleCounter == 0) inFrame = 0;
+    if(timerCounter && --timerCounter == 0) timerLine = 1;
 
-    if(timerCounter && --timerCounter == 0) {
-      timerLine = 1;
+    frameDivider -= 2;
+    if(frameDivider <= 0) {
+      //length counter clocked at twice the rate of the APU pulse channels
+      pulse1.clockLength();
+      pulse1.envelope.clock();
+      pulse2.clockLength();
+      pulse2.envelope.clock();
+      frameDivider += APU::FrameCounter::NtscPeriod;
     }
 
     i32 output = 0;
@@ -169,16 +172,9 @@ struct HVC_ExROM : Interface {  //MMC5
     stream->frame(sclamp<16>(-output) / 32768.0);
 
     cpu.irqLine((irqLine & irqEnable) || (pcm.irqLine & pcm.irqEnable) || timerLine);
-
-    tick();
-  }
-
-  auto blank() -> void {
-    inFrame = 0;
   }
 
   auto scanline() -> void {
-    cycleCounter = 0;
     hcounter = 0;
 
     if(!inFrame) {
@@ -186,18 +182,20 @@ struct HVC_ExROM : Interface {  //MMC5
       irqLine = 0;
       vcounter = 0;
     } else {
-      if(vcounter == irqCoincidence) irqLine = 1;
       vcounter++;
+      if(vcounter == irqCoincidence) irqLine = 1;
     }
   }
 
-  auto accessPRG(bool write, n32 address, n8 data = 0x00) -> n8 {
+  auto programRamAddress(n32 address) -> n32 {
+    if(revision == Revision::ETROM) return ramSelect << 13 | (n13)address;
+    return ramBank << 13 | (n13)address;
+  }
+
+  auto programRomAddress(n32 address) -> n32 {
     n8 bank;
 
-    if((address & 0xe000) == 0x6000) {
-      bank = ramSelect << 2 | ramBank;
-      address &= 0x1fff;
-    } else if(programMode == 0) {
+    if(programMode == 0) {
       bank = programBank[3] & ~3;
       address &= 0x7fff;
     } else if(programMode == 1) {
@@ -218,25 +216,7 @@ struct HVC_ExROM : Interface {  //MMC5
       address &= 0x1fff;
     }
 
-    n1 rom = bank.bit(7);
-    bank.bit(7) = 0;
-
-    if(!write) {
-      if(rom) {
-        return programROM.read(bank << 13 | address);
-      } else {
-        return programRAM.read(bank << 13 | address);
-      }
-    } else {
-      if(rom) {
-        programROM.write(bank << 13 | address, data);
-      } else {
-        if(ramWriteProtect[0] == 2 && ramWriteProtect[1] == 1) {
-          programRAM.write(bank << 13 | address, data);
-        }
-      }
-      return 0x00;
-    }
+    return bank << 13 | address;
   }
 
   auto readPRG(n32 address, n8 data) -> n8 override {
@@ -252,35 +232,43 @@ struct HVC_ExROM : Interface {  //MMC5
       return data;
     }
 
-    if(address >= 0x6000) {
-      data = accessPRG(0, address);
+    if((address & 0xe000) == 0x6000) {
+      if(programRAM) return programRAM.read(programRamAddress(address));
+      return data;
+    }
+
+    if(address >= 0x8000) {
+      n32 programAddress = programRomAddress(address);
+      if(programAddress.bit(20)) {
+        data = programROM.read(programAddress);
+      } else {
+        if(revision == Revision::ETROM) programAddress &= 0x1fff;
+        if(programRAM) data = programRAM.read(programAddress);
+      }
       if(pcm.mode == 1 && (address & 0xc000) == 0x8000) pcm.dac = data;
       return data;
     }
 
     switch(address) {
-    case 0x5010: {
-      n8 data;
+    case 0x5010:
+      data = 0;
       data.bit(0) = pcm.mode;
       data.bit(7) = pcm.irqLine & pcm.irqEnable;
       pcm.irqLine = 0;
-      return data;
-    }
+      break;
 
-    case 0x5015: {
-      n8 data;
+    case 0x5015:
+      data = 0;
       data.bit(0) = (bool)pulse1.lengthCounter;
       data.bit(1) = (bool)pulse2.lengthCounter;
-      return data;
-    }
+      break;
 
-    case 0x5204: {
-      n8 data;
+    case 0x5204:
+      data = 0;
       data.bit(6) = inFrame;
       data.bit(7) = irqLine;
       irqLine = 0;
-      return data;
-    }
+      break;
 
     case 0x5205:
       return multiplier * multiplicand >> 0;
@@ -288,24 +276,22 @@ struct HVC_ExROM : Interface {  //MMC5
     case 0x5206:
       return multiplier * multiplicand >> 8;
 
-    case 0x5208: {
+    case 0x5208:
       if(chipRevision != ChipRevision::MMC5A) break;
-      n8 data;
+      data = 0;
       data.bit(6) = cl3.line;
       data.bit(7) = sl3.line;
-      return data;
-    }
+      break;
 
-    case 0x5209: {
+    case 0x5209:
       if(chipRevision != ChipRevision::MMC5A) break;
-      n8 data;
+      data = 0;
       data.bit(7) = timerLine;
       timerLine = 0;
-      return data;
-    }
+      break;
     }
 
-    return 0x00;
+    return data;
   }
 
   auto writePRG(n32 address, n8 data) -> void override {
@@ -323,8 +309,20 @@ struct HVC_ExROM : Interface {  //MMC5
       return;
     }
 
-    if(address >= 0x6000) {
-      accessPRG(1, address, data);
+    if((address & 0xe000) == 0x6000) {
+      if(programRAM && ramWriteProtect[0] == 2 && ramWriteProtect[1] == 1) {
+        programRAM.write(programRamAddress(address), data);
+      }
+      return;
+    }
+
+    if(address >= 0x8000) {
+      n32 programAddress = programRomAddress(address);
+      if(programAddress.bit(20)) return;
+      if(revision == Revision::ETROM) programAddress &= 0x1fff;
+      if(programRAM && ramWriteProtect[0] == 2 && ramWriteProtect[1] == 1) {
+        programRAM.write(programAddress, data);
+      }
       return;
     }
 
@@ -335,7 +333,7 @@ struct HVC_ExROM : Interface {  //MMC5
 
     case 0x2001:
       //if background + sprites are disabled; enter video blanking period
-      if(!data.bit(3,4)) blank();
+      if(!data.bit(3,4)) inFrame = 0;
       break;
 
     case 0x5000:
@@ -639,16 +637,18 @@ struct HVC_ExROM : Interface {  //MMC5
   }
 
   auto readCHR(n32 address, n8 data) -> n8 override {
-    characterAccess[0] = characterAccess[1];
-    characterAccess[1] = characterAccess[2];
-    characterAccess[2] = characterAccess[3];
-    characterAccess[3] = address;
+    cycleCounter = 3;
 
     //detect two unused nametable fetches at end of each scanline
-    if(characterAccess[0].bit(13) == 0
-    && characterAccess[1].bit(13) == 1
-    && characterAccess[2].bit(13) == 1
-    && characterAccess[3].bit(13) == 1) scanline();
+    if(address & 0x2000) {
+      if(characterAccess != address) {
+        characterMatch = 0;
+      } else {
+        characterMatch++;
+        if(characterMatch >= 2) scanline();
+      }
+      characterAccess = address;
+    }
 
     if(inFrame == false) {
       vsplitFetch = 0;
@@ -701,6 +701,7 @@ struct HVC_ExROM : Interface {  //MMC5
     for(auto& byte : exram) byte = 0xff;
     programMode = 3;
     programBank[3] = 0xff;
+    frameDivider = 1;
   }
 
   auto serialize(serializer& s) -> void override {
@@ -735,12 +736,14 @@ struct HVC_ExROM : Interface {  //MMC5
     s(multiplier);
     s(timerCounter);
     s(timerLine);
+    s(frameDivider);
     s(cycleCounter);
     s(irqLine);
     s(inFrame);
     s(vcounter);
     s(hcounter);
     s(characterAccess);
+    s(characterMatch);
     s(characterActive);
     s(sprite8x16);
     s(exbank);
@@ -793,13 +796,15 @@ struct HVC_ExROM : Interface {  //MMC5
 
   //status registers
 
-  n8  cycleCounter;
+  i32 frameDivider;
+  n2  cycleCounter;
   n1  irqLine;
   n1  inFrame;
 
   n16 vcounter;
   n16 hcounter;
-  n16 characterAccess[4];
+  n16 characterAccess;
+  n8  characterMatch;
   n1  characterActive;
   n1  sprite8x16;
 

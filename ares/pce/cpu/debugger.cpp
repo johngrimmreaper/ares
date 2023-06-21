@@ -10,6 +10,7 @@ auto CPU::Debugger::load(Node::Object parent) -> void {
 
   tracer.instruction = parent->append<Node::Debugger::Tracer::Instruction>("Instruction", "CPU");
   tracer.instruction->setAddressBits(24);
+  tracer.instruction->setDepth(8);
 
   tracer.interrupt = parent->append<Node::Debugger::Tracer::Notification>("Interrupt", "CPU");
 }
@@ -20,7 +21,7 @@ auto CPU::Debugger::instruction() -> void {
     auto address = (n13)cpu.r.pc;
     if(tracer.instruction->address(bank << 16 | address)) {
       tracer.instruction->notify(cpu.disassembleInstruction(), cpu.disassembleContext(), {
-        "V:", pad(vdp.io.vcounter, 3L), " ", "H:", pad(vdp.io.hcounter, 4L)
+        "V:", pad(vdp.vcounter(), 3L), " ", "H:", pad(vdp.hcounter(), 4L)
       });
     }
   }

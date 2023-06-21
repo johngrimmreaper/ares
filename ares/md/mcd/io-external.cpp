@@ -22,7 +22,11 @@ auto MCD::readExternalIO(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
   }
 
   if(address == 0xa12004) {
-    debug(unusual, "[MCD::readExternalIO] address=0xa12004");
+    data.bit( 0, 7) = Unmapped;
+    data.bit( 8,10) = cdc.transfer.destination;
+    data.bit(11,13) = Unmapped;
+    data.bit(14)    = cdc.transfer.ready;
+    data.bit(15)    = cdc.transfer.completed;
   }
 
   if(address == 0xa12006) {
@@ -67,10 +71,23 @@ auto MCD::writeExternalIO(n1 upper, n1 lower, n24 address, n16 data) -> void {
 
   if(address == 0xa12000) {
     if(lower) {
-      if(io.run && !data.bit(0)) power(true);
-      io.run     = data.bit(0);
-      io.request = data.bit(1);
-      io.halt    = !io.run || io.request;
+      // The Mega-CD has a documented method of performing a forced reset
+      // on the gate array in software via the following code sequence:
+      //   MOVE.W #$FF00, $A12002
+      //   MOVE.W #$03, $A12001
+      //   MOVE.W #$02, $A12001
+      //   MOVE.W #$00, $A12001
+      // Try to detect the modal changes caused by executing this sequence. (Is this too strict?)
+      if(io.request && !io.run && !data.bit(1,0)
+      && io.pramProtect == 0xff && io.pramBank == 0 && io.wramSwitchRequest) {
+        // TODO: reset subcpu-controlled gate array registers (needs confirmation)
+        // Notice: the subcpu bus is not released at this time.
+      } else {
+        if(io.run && !data.bit(0)) resetCpu();
+        io.run     = data.bit(0);
+        io.request = data.bit(1);
+        io.halt    = !io.run || io.request;
+      }
     }
     if(upper) {
       if(data.bit(8)) external.irq.raise();
@@ -111,9 +128,9 @@ auto MCD::writeExternalIO(n1 upper, n1 lower, n24 address, n16 data) -> void {
   }
 
   if(address == 0xa1200e) {
-    if(upper) {  //unconfirmed
-      communication.cfm = data.byte(1);
-    }
+    // 8-bit register mapped into 16-bit gate array
+    // All writes go to the high byte (special case)
+    communication.cfm = data.byte(1);
   }
 
   if(address >= 0xa12010 && address <= 0xa1201f) {

@@ -15,39 +15,52 @@ Presentation::Presentation() {
 
   settingsMenu.setText("Settings");
   videoSizeMenu.setText("Size").setIcon(Icon::Emblem::Image);
-  //determine the largest multiplier that can be used by the largest monitor found
-  u32 monitorHeight = 1;
-  for(u32 monitor : range(Monitor::count())) {
-    monitorHeight = max(monitorHeight, Monitor::workspace(monitor).height());
-  }
+
   //generate size menu
-  u32 multipliers = max(1, monitorHeight / 240);
-  for(u32 multiplier : range(2, multipliers + 1)) {
-    MenuItem item{&videoSizeMenu};
-    item.setText({multiplier, "x (", 240 * multiplier, "p)"});
+  u32 multipliers = 5;
+  for(u32 multiplier : range(1, multipliers + 1)) {
+    MenuRadioItem item{&videoSizeMenu};
+    item.setText({multiplier, "x"});
     item.onActivate([=] {
       settings.video.multiplier = multiplier;
       resizeWindow();
     });
+
+    videoSizeGroup.append(item);
   }
+
+  for(auto& item : videoSizeGroup.objects<MenuRadioItem>()) {
+    if(item.text() == string{settings.video.multiplier, "x"}) item.setChecked();
+  }
+
   videoSizeMenu.append(MenuSeparator());
   MenuItem centerWindow{&videoSizeMenu};
   centerWindow.setText("Center Window").setIcon(Icon::Place::Settings).onActivate([&] {
     setAlignment(Alignment::Center);
   });
   videoOutputMenu.setText("Output").setIcon(Icon::Emblem::Image);
-  videoOutputCenter.setText("Center").onActivate([&] {
-    settings.video.output = "Center";
+  videoOutputPixelPerfect.setText("Pixel Perfect").onActivate([&] {
+    settings.video.output = "Perfect";
   });
-  videoOutputScale.setText("Scale").onActivate([&] {
+  videoOutputFixedScale.setText("Scale (Fixed)").onActivate([&] {
+    settings.video.output = "Fixed";
+  });
+  videoOutputIntegerScale.setText("Scale (Integer)").onActivate([&] {
+    settings.video.output = "Integer";
+  });
+  videoOutputScale.setText("Scale (Best Fit)").onActivate([&] {
     settings.video.output = "Scale";
   });
   videoOutputStretch.setText("Stretch").onActivate([&] {
     settings.video.output = "Stretch";
   });
-  if(settings.video.output == "Center") videoOutputCenter.setChecked();
-  if(settings.video.output == "Scale") videoOutputScale.setChecked();
-  if(settings.video.output == "Stretch") videoOutputStretch.setChecked();
+
+  if(settings.video.output == "Perfect" ) videoOutputPixelPerfect.setChecked();
+  if(settings.video.output == "Fixed"   ) videoOutputFixedScale.setChecked();
+  if(settings.video.output == "Integer" ) videoOutputIntegerScale.setChecked();
+  if(settings.video.output == "Scale"   ) videoOutputScale.setChecked();
+  if(settings.video.output == "Stretch" ) videoOutputStretch.setChecked();
+
   videoAspectCorrection.setText("Aspect Correction").setChecked(settings.video.aspectCorrection).onToggle([&] {
     settings.video.aspectCorrection = videoAspectCorrection.checked();
     if(settings.video.adaptiveSizing) resizeWindow();
@@ -103,9 +116,6 @@ Presentation::Presentation() {
   hotkeySettingsAction.setText("Hotkeys" ELLIPSIS).setIcon(Icon::Device::Keyboard).onActivate([&] {
     settingsWindow.show("Hotkeys");
   });
-  emulatorSettingsAction.setText("Emulators" ELLIPSIS).setIcon(Icon::Place::Server).onActivate([&] {
-    settingsWindow.show("Emulators");
-  });
   optionSettingsAction.setText("Options" ELLIPSIS).setIcon(Icon::Action::Settings).onActivate([&] {
     settingsWindow.show("Options");
   });
@@ -139,6 +149,13 @@ Presentation::Presentation() {
   });
   pauseEmulation.setText("Pause Emulation").onToggle([&] {
     program.pause(!program.paused);
+  });
+  reloadGame.setText("Reload Game").setIcon(Icon::Action::Refresh).onActivate([&] {
+    program.load(emulator, emulator->game->location);
+  });
+  frameAdvance.setText("Frame Advance").setIcon(Icon::Media::Play).onActivate([&] {
+    if (!program.paused) program.pause(true);
+    program.requestFrameAdvance = true;
   });
   manifestViewerAction.setText("Manifest").setIcon(Icon::Emblem::Binary).onActivate([&] {
     toolsWindow.show("Manifest");
@@ -239,9 +256,10 @@ Presentation::Presentation() {
 
 auto Presentation::resizeWindow() -> void {
   if(fullScreen()) setFullScreen(false);
-  if(maximized()) setMaximized(false);
+  if(maximized()) return;
+  if(settings.video.output == "Fixed") return;
 
-  u32 multiplier = max(2, settings.video.multiplier);
+  u32 multiplier = settings.video.multiplier;
   u32 viewportWidth = 320 * multiplier;
   u32 viewportHeight = 240 * multiplier;
 
@@ -252,15 +270,28 @@ auto Presentation::resizeWindow() -> void {
     if(settings.video.aspectCorrection) videoWidth = videoWidth * node->aspectX() / node->aspectY();
     if(node->rotation() == 90 || node->rotation() == 270) swap(videoWidth, videoHeight);
 
-    u32 multiplierX = viewportWidth / videoWidth;
-    u32 multiplierY = viewportHeight / videoHeight;
-    u32 multiplier = max(1, min(multiplierX, multiplierY));
-
     viewportWidth = videoWidth * multiplier;
     viewportHeight = videoHeight * multiplier;
   }
 
   u32 statusHeight = showStatusBarSetting.checked() ? StatusHeight : 0;
+
+  // Prevent the window frame from going out of bounds
+  u32 monitorHeight = 1;
+  u32 monitorWidth = 1;
+  for(u32 monitor : range(Monitor::count())) {
+    monitorHeight = max(monitorHeight, Monitor::workspace(monitor).height());
+  }
+  for(u32 monitor : range(Monitor::count())) {
+    monitorWidth = max(monitorWidth, Monitor::workspace(monitor).width());
+  }
+
+  if(viewportWidth > monitorWidth || viewportHeight > monitorHeight) {
+    // setMaximized causes odd window glitches and is not supported on macOS, avoid!
+    // 100px buffer to account for possible taskbars
+    setGeometry(Alignment::Center, {monitorWidth, monitorHeight - statusHeight - 100});
+    return;
+  }
 
   if(settings.video.autoCentering) {
     setGeometry(Alignment::Center, {viewportWidth, viewportHeight + statusHeight});
@@ -268,7 +299,7 @@ auto Presentation::resizeWindow() -> void {
     setSize({viewportWidth, viewportHeight + statusHeight});
   }
 
-  setMinimumSize({256, 240 + statusHeight});
+  setMinimumSize({160, 144 + statusHeight});
 }
 
 auto Presentation::loadEmulators() -> void {
@@ -302,7 +333,7 @@ auto Presentation::loadEmulators() -> void {
       auto system = entry.split(";", 1L)(0);
       auto location = entry.split(";", 1L)(1);
       item.setIconForFile(location);
-      item.setText(Location::base(location).trimRight("/"));
+      item.setText({Location::base(location).trimRight("/"), " (", system, ")"});
       item.onActivate([=] {
         for(auto& emulator : emulators) {
           if(emulator->name == system) {
@@ -331,48 +362,31 @@ auto Presentation::loadEmulators() -> void {
   loadMenu.append(MenuSeparator());
 
   //build emulator load list
-  u32 enabled = 0;
   for(auto& emulator : emulators) {
-    if(!emulator->configuration.visible) continue;
-    enabled++;
-
     MenuItem item;
     item.setIcon(Icon::Place::Server);
     item.setText({emulator->name, ELLIPSIS});
-    item.setVisible(emulator->configuration.visible);
     item.onActivate([=] {
       program.load(emulator);
     });
-    if(settings.general.groupEmulators) {
-      Menu menu;
-      for(auto& action : loadMenu.actions()) {
-        if(auto group = action.cast<Menu>()) {
-          if(group.text() == emulator->manufacturer) {
-            menu = group;
-            break;
-          }
+
+    Menu menu;
+    for(auto& action : loadMenu.actions()) {
+      if(auto group = action.cast<Menu>()) {
+        if(group.text() == emulator->manufacturer) {
+          menu = group;
+          break;
         }
       }
-      if(!menu) {
-        menu.setIcon(Icon::Emblem::Folder);
-        menu.setText(emulator->manufacturer);
-        loadMenu.append(menu);
-      }
-      menu.append(item);
-    } else {
-      loadMenu.append(item);
     }
+    if(!menu) {
+      menu.setIcon(Icon::Emblem::Folder);
+      menu.setText(emulator->manufacturer);
+      loadMenu.append(menu);
+    }
+    menu.append(item);
   }
-  if(enabled == 0) {
-    //if the user disables every system, give an indication for how to re-add systems to the load menu
-    MenuItem item{&loadMenu};
-    item.setIcon(Icon::Action::Add);
-    item.setText("Add Systems" ELLIPSIS);
-    item.onActivate([&] {
-      settingsWindow.show("Emulators");
-    });
-  }
-    
+
   #if !defined(PLATFORM_MACOS)
   loadMenu.append(MenuSeparator());
     
@@ -413,7 +427,12 @@ auto Presentation::loadEmulator() -> void {
 
     Group peripheralGroup;
     { MenuRadioItem peripheralItem{&portMenu};
+      peripheralItem.setAttribute<ares::Node::Port>("port", port);
       peripheralItem.setText("Nothing");
+      peripheralItem.onActivate([=] {
+        auto port = peripheralItem.attribute<ares::Node::Port>("port");
+        port->disconnect();
+      });
       peripheralGroup.append(peripheralItem);
     }
     for(auto peripheral : port->supported()) {
@@ -425,6 +444,7 @@ auto Presentation::loadEmulator() -> void {
       peripheralItem.setText(peripheral);
       peripheralItem.onActivate([=] {
         auto port = peripheralItem.attribute<ares::Node::Port>("port");
+        port->disconnect();
         port->allocate(peripheralItem.text());
         port->connect();
       });
@@ -513,11 +533,37 @@ auto Presentation::loadShaders() -> void {
     }
   }
 
-  if(settings.video.shader == "None") none.setChecked();
-  if(settings.video.shader == "Blur") blur.setChecked();
+  if(program.startShader) {
+    string existingShader = settings.video.shader;
+
+    if(!program.startShader.imatch("None") &&
+       !program.startShader.imatch("Blur")) {
+        settings.video.shader = {location, program.startShader, ".shader/"};
+    } else {
+        settings.video.shader = program.startShader;
+    }
+
+    if(inode::exists(settings.video.shader) ||
+       settings.video.shader.imatch("None") ||
+       settings.video.shader.imatch("Blur")) {
+        ruby::video.setShader(settings.video.shader);
+    } else {
+        hiro::MessageDialog()
+            .setTitle("Warning")
+            .setAlignment(hiro::Alignment::Center)
+            .setText({ "Requested shader not found: ", settings.video.shader , "\nUsing existing defined shader: ", existingShader })
+            .warning();
+        settings.video.shader = existingShader;
+    }
+  }
+
+  if(settings.video.shader.imatch("None")) {none.setChecked(); settings.video.shader = "None";}
+  if(settings.video.shader.imatch("Blur")) {blur.setChecked(); settings.video.shader = "Blur";}
   for(auto item : shaders.objects<MenuRadioItem>()) {
-    if(settings.video.shader == string{location, item.text(), ".shader/"}) {
+    string fullPath = {location, item.text(), ".shader/"};
+    if(settings.video.shader.imatch(fullPath)) {
       item.setChecked();
+      settings.video.shader = fullPath;
     }
   }
 }

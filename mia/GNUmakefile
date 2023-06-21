@@ -2,14 +2,14 @@ name := mia
 build := optimized
 threaded := true
 local := true
-flags += -I. -I.. -I../ares
-
-ifeq ($(local),true)
-  flags += -march=native
-endif
+flags += -I. -I.. -I../ares -I../thirdparty
 
 nall.path := ../nall
 include $(nall.path)/GNUmakefile
+
+thirdparty.path := ../thirdparty
+libchdr.path := $(thirdparty.path)/libchdr
+include $(thirdparty.path)/GNUmakefile
 
 hiro.path := ../hiro
 hiro.resource := resource/$(name).rc
@@ -25,9 +25,14 @@ $(object.path)/ares.o: $(ares.path)/ares/ares.cpp
 $(object.path)/mia.o: $(mia.path)/mia.cpp
 $(object.path)/resource.o: $(mia.path)/resource/resource.cpp
 
-all: $(hiro.objects) $(objects)
-	$(info Linking $(output.path)/$(name) ...)
-	+@$(compiler) -o $(output.path)/$(name) $(hiro.objects) $(objects) $(hiro.options) $(options)
+all.objects := $(libchdr.objects) $(nall.objects) $(hiro.objects) $(objects)
+all.options := $(libchdr.options) $(nall.options) $(hiro.options) $(options)
+
+$(all.objects): | $(object.path)
+
+all: $(all.objects) | $(output.path)
+	$(info Linking $(output.path)/$(name)$(extension) ...)
+	+@$(compiler) -o $(output.path)/$(name)$(extension) $(all.objects) $(all.options)
 ifeq ($(platform),macos)
 	rm -rf $(output.path)/$(name).app
 	mkdir -p $(output.path)/$(name).app/Contents/MacOS/
@@ -48,11 +53,11 @@ endif
 
 install: all
 ifeq ($(platform),windows)
-	mkdir -p $(prefix)/$(name)/
-	mkdir -p $(prefix)/$(name)/Database/
-	mkdir -p $(prefix)/$(name)/Firmware/
-	cp -R Database/* $(prefix)/$(name)/Database/
-	cp -R Firmware/* $(prefix)/$(name)/Firmware/
+	$(call mkdir,$(prefix)/$(name)/)
+	$(call mkdir,$(prefix)/$(name)/Database/)
+	$(call mkdir,$(prefix)/$(name)/Firmware/)
+	$(call rcopy,Database/*,$(prefix)/$(name)/Database/)
+	$(call rcopy,Firmware/*,$(prefix)/$(name)/Firmware/)
 else ifeq ($(shell id -un),root)
 	$(error "make install should not be run as root")
 else ifeq ($(platform),macos)

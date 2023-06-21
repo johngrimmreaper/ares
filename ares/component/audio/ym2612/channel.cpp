@@ -1,9 +1,6 @@
-auto YM2612::Channel::Operator::trigger(bool state) -> void {
+auto YM2612::Channel::Operator::updateKeyState(bool state) -> void {
   if(keyOn == state) return;  //no change
-
   keyOn = state;
-  envelope.state = Release;
-  updateEnvelope();
 
   if(keyOn) {
     //restart phase and envelope generators
@@ -13,42 +10,46 @@ auto YM2612::Channel::Operator::trigger(bool state) -> void {
     updateEnvelope();
 
     if(envelope.rate >= 62) {
-      //skip attack and possibly decay stages
+      //skip attack phase
       envelope.value = 0;
-      envelope.state = envelope.sustainLevel ? Decay : Sustain;
-      updateEnvelope();
     }
-  } else if(ssg.enable && ssg.attack != ssg.invert) {
-    //SSG-EG key-off
-    envelope.value = 0x200 - envelope.value;
+  } else {
+    envelope.state = Release;
+    updateEnvelope();
+
+    if(ssg.enable && ssg.attack != ssg.invert) {
+      //SSG-EG key-off
+      envelope.value = 0x200 - envelope.value;
+    }
   }
 
   updateLevel();
 }
 
 auto YM2612::Channel::Operator::runEnvelope() -> void {
-  u32 sustain = envelope.sustainLevel < 15 ? envelope.sustainLevel << 5 : 0x3f0;
+  updateKeyState(keyLine);
   if(ym2612.envelope.clock & (1 << envelope.divider) - 1) return;
 
   u32 value = ym2612.envelope.clock >> envelope.divider;
   u32 step = envelope.steps >> ((~value & 7) << 2) & 0xf;
-  if(ssg.enable) step <<= 2;  //SSG results in a 4x faster envelope
+  u32 sustain = envelope.sustainLevel < 15 ? envelope.sustainLevel << 5 : 0x1f << 5;
 
   if(envelope.state == Attack) {
-    u32 next = envelope.value + (~u16(envelope.value) * step >> 4) & 0x3ff;
-    if(next <= envelope.value) {
-      envelope.value = next;
-    } else {
-      envelope.value = 0;
-      envelope.state = envelope.value < sustain ? Decay : Sustain;
+    if(envelope.value == 0) {
+      envelope.state = Decay;
       updateEnvelope();
+    } else if(envelope.rate < 62) {
+      // will stop updating if attack rate is increased to upper threshold during attack phase (confirmed behavior)
+      envelope.value += ~u16(envelope.value) * step >> 4;
     }
-  } else if(!ssg.enable || envelope.value < 0x200) {
-    envelope.value = min(envelope.value + step, 0x3ff);
+  }
+  if(envelope.state != Attack) {
     if(envelope.state == Decay && envelope.value >= sustain) {
       envelope.state = Sustain;
       updateEnvelope();
     }
+    if(ssg.enable) step = envelope.value < 0x200 ? step << 2 : 0;  //SSG results in a 4x faster envelope
+    envelope.value = min(envelope.value + step, 0x3ff);
   }
 
   updateLevel();
@@ -59,18 +60,19 @@ auto YM2612::Channel::Operator::runPhase() -> void {
   if(!(ssg.enable && envelope.value >= 0x200)) return;  //SSG loop check
 
   if(!ssg.hold && !ssg.alternate) phase.value = 0;
-  if(!ssg.hold || ssg.attack == ssg.invert) ssg.invert ^= ssg.alternate;
+  if(!(ssg.hold && ssg.invert)) ssg.invert ^= ssg.alternate;
 
   if(envelope.state == Attack) {
     //do nothing; SSG is meant to skip the attack phase
   } else if(envelope.state != Release && !ssg.hold) {
     //if still looping, reset the envelope
     envelope.state = Attack;
-    if(envelope.attackRate >= 62) {
-      envelope.value = 0;
-      envelope.state = envelope.sustainLevel ? Decay : Sustain;
-    }
     updateEnvelope();
+
+    if(envelope.rate >= 62) {
+      //skip attack phase
+      envelope.value = 0;
+    }
   } else if(envelope.state == Release || (ssg.hold && ssg.attack == ssg.invert)) {
     //clear envelope once finished
     envelope.value = 0x3ff;
@@ -115,11 +117,9 @@ auto YM2612::Channel::Operator::updatePhase() -> void {
   u32 tuning = detune & 3 ? detunes[(detune & 3) - 1][ksr & 7] >> (3 - (ksr >> 3)) : 0;
 
   u32 lfo = ym2612.lfo.clock >> 2 & 0x1f;
-  u32 pm = 4 * vibratos[channel.vibrato][lfo & 15] * (-lfo >> 4);
-  u32 msb = 10;
-  while(msb > 4 && ~pitch.value & 1 << msb) msb--;
+  s32 pm = (pitch.value * vibratos[channel.vibrato][lfo & 15] >> 9) * (lfo > 15 ? -1 : 1);
 
-  phase.delta = pitch.value + (pm >> 10 - msb) << 6 >> 7 - octave.value;
+  phase.delta = pitch.value + pm << 6 >> 7 - octave.value;
   phase.delta = (!detune.bit(2) ? phase.delta + tuning : phase.delta - tuning) & 0x1ffff;
   phase.delta = (multiple ? phase.delta * multiple : phase.delta >> 1) & 0xfffff;
 }
@@ -147,6 +147,7 @@ auto YM2612::Channel::power() -> void {
 
   for(auto& op : operators) {
     op.keyOn = 0;
+    op.keyLine = 0;
     op.lfoEnable = 0;
     op.detune = 0;
     op.multiple = 0;

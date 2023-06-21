@@ -11,6 +11,19 @@ auto Disc::status() -> u8 {
   return data;
 }
 
+auto Disc::mode() -> u8 {
+  n8 mode;
+  mode.bit(0) = drive.mode.cdda;
+  mode.bit(1) = drive.mode.autoPause;
+  mode.bit(2) = drive.mode.report;
+  mode.bit(3) = drive.mode.xaFilter;
+  mode.bit(4) = drive.mode.ignore;
+  mode.bit(5) = drive.mode.sectorSize;
+  mode.bit(6) = drive.mode.xaADPCM;
+  mode.bit(7) = drive.mode.speed;
+  return mode;
+}
+
 auto Disc::command(u8 operation) -> void {
   fifo.response.flush();
   debugger.commandPrologue(operation);
@@ -23,6 +36,7 @@ auto Disc::command(u8 operation) -> void {
   case 0x04: commandFastForward(); break;
   case 0x05: commandRewind(); break;
   case 0x06: commandReadWithRetry(); break;
+  case 0x07: commandMotorOn(); break;
   case 0x08: commandStop(); break;
   case 0x09: commandPause(); break;
   case 0x0a: commandInitialize(); break;
@@ -30,6 +44,7 @@ auto Disc::command(u8 operation) -> void {
   case 0x0c: commandUnmute(); break;
   case 0x0d: commandSetFilter(); break;
   case 0x0e: commandSetMode(); break;
+  case 0x0f: commandGetParam(); break;
   case 0x10: commandGetLocationReading(); break;
   case 0x11: commandGetLocationPlaying(); break;
   case 0x12: commandSetSession(); break;
@@ -42,12 +57,14 @@ auto Disc::command(u8 operation) -> void {
   case 0x19: commandTest(); break;
   case 0x1a: commandGetID(); break;
   case 0x1b: commandReadWithoutRetry(); break;
+  case 0x1e: commandReadToc(); break;
   case 0x20 ... 0x4f: commandInvalid(); break;
   case 0x50 ... 0x57: commandInvalid(); break;  //secret unlock commands
   case 0x58 ... 0xff: commandInvalid(); break;
   default: commandUnimplemented(operation); break;
   }
 
+  fifo.parameter.flush();
   debugger.commandEpilogue(operation);
 }
 
@@ -58,6 +75,8 @@ auto Disc::commandTest() -> void {
   debugger.commandPrologue(operation, suboperation);
 
   switch(suboperation) {
+  case 0x04: commandTestStartReadSCEX(); break;
+  case 0x05: commandTestStopReadSCEX(); break;
   case 0x20: commandTestControllerDate(); break;
   default: commandUnimplemented(operation, suboperation); break;
   }
@@ -87,9 +106,9 @@ auto Disc::commandGetStatus() -> void {
 auto Disc::commandSetLocation() -> void {
   ssr.reading = 0;
 
-  u8 minute = CD::BCD::decode(fifo.parameter.read(0));
-  u8 second = CD::BCD::decode(fifo.parameter.read(0));
-  u8 frame  = CD::BCD::decode(fifo.parameter.read(0));
+  u8 minute = BCD::decode(fifo.parameter.read(0));
+  u8 second = BCD::decode(fifo.parameter.read(0));
+  u8 frame  = BCD::decode(fifo.parameter.read(0));
 
   drive.lba.request = CD::MSF(minute, second, frame).toLBA();
 
@@ -153,11 +172,32 @@ auto Disc::commandReadWithRetry() -> void {
   drive.seeking = 2 << drive.mode.speed;
   drive.lba.current = drive.lba.request;
   ssr.reading = 1;
-
+  ssr.playingCDDA = 0;
   fifo.response.write(status());
 
   irq.acknowledge.flag = 1;
   irq.poll();
+}
+
+//0x07
+auto Disc::commandMotorOn() -> void {
+  if(event.invocation == 0) {
+    event.invocation = 1;
+    event.counter = 50'000;
+
+    fifo.response.write(status());
+
+    irq.acknowledge.flag = 1;
+    irq.poll();
+    return;
+  }
+
+  if(event.invocation == 1) {
+    fifo.response.write(status());
+    irq.complete.flag = 1;
+    irq.poll();
+    return;
+  }
 }
 
 //0x08
@@ -188,7 +228,7 @@ auto Disc::commandStop() -> void {
 auto Disc::commandPause() -> void {
   if(event.invocation == 0) {
     event.invocation = 1;
-    event.counter = 1'000'000;
+    event.counter = 50'000;
 
     ssr.reading = 0;
 
@@ -292,6 +332,18 @@ auto Disc::commandSetMode() -> void {
   irq.poll();
 }
 
+//0x0f
+auto Disc::commandGetParam() -> void {
+  fifo.response.write(status());
+  fifo.response.write(mode());
+  fifo.response.write(0);
+  fifo.response.write(cdxa.filter.file);
+  fifo.response.write(cdxa.filter.channel);
+
+  irq.acknowledge.flag = 1;
+  irq.poll();
+}
+
 //0x10
 auto Disc::commandGetLocationReading() -> void {
   for(auto offset : range(8)) {
@@ -324,12 +376,12 @@ auto Disc::commandGetLocationPlaying() -> void {
 
   fifo.response.write(lbaTrackID);
   fifo.response.write(lbaIndexID);
-  fifo.response.write(CD::BCD::encode(relativeMinute));
-  fifo.response.write(CD::BCD::encode(relativeSecond));
-  fifo.response.write(CD::BCD::encode(relativeFrame));
-  fifo.response.write(CD::BCD::encode(absoluteMinute));
-  fifo.response.write(CD::BCD::encode(absoluteSecond));
-  fifo.response.write(CD::BCD::encode(absoluteFrame));
+  fifo.response.write(BCD::encode(relativeMinute));
+  fifo.response.write(BCD::encode(relativeSecond));
+  fifo.response.write(BCD::encode(relativeFrame));
+  fifo.response.write(BCD::encode(absoluteMinute));
+  fifo.response.write(BCD::encode(absoluteSecond));
+  fifo.response.write(BCD::encode(absoluteFrame));
 
   irq.acknowledge.flag = 1;
   irq.poll();
@@ -367,8 +419,8 @@ auto Disc::commandSetSession() -> void {
 //0x13
 auto Disc::commandGetFirstAndLastTrackNumbers() -> void {
   fifo.response.write(status());
-  fifo.response.write(CD::BCD::encode(session.firstTrack));
-  fifo.response.write(CD::BCD::encode(session.lastTrack));
+  fifo.response.write(BCD::encode(session.firstTrack));
+  fifo.response.write(BCD::encode(session.lastTrack));
 
   irq.acknowledge.flag = 1;
   irq.poll();
@@ -389,8 +441,8 @@ auto Disc::commandGetTrackStart() -> void {
   auto [minute, second, frame] = CD::MSF::fromLBA(150 + lba);
 
   fifo.response.write(status());
-  fifo.response.write(CD::BCD::encode(minute));
-  fifo.response.write(CD::BCD::encode(second));
+  fifo.response.write(BCD::encode(minute));
+  fifo.response.write(BCD::encode(second));
 
   irq.acknowledge.flag = 1;
   irq.poll();
@@ -398,22 +450,49 @@ auto Disc::commandGetTrackStart() -> void {
 
 //0x15
 auto Disc::commandSeekData() -> void {
-  drive.lba.current = drive.lba.request;
+  if(event.invocation == 0) {
+    event.invocation = 1;
+    event.counter = 50'000;     // TODO: Calculate seek time
 
-  fifo.response.write(status());
+    fifo.response.write(status());
 
-  irq.complete.flag = 1;
-  irq.poll();
+    irq.acknowledge.flag = 1;
+    irq.poll();
+    return;
+  }
+
+  if(event.invocation == 1) {
+    drive.lba.current = drive.lba.request;
+    ssr.playingCDDA = 0;
+
+    fifo.response.write(status());
+
+    irq.complete.flag = 1;
+    irq.poll();
+
+    return;
+  }
 }
 
 //0x16
 auto Disc::commandSeekCDDA() -> void {
-  drive.lba.current = drive.lba.request;
-  ssr.playingCDDA = 0;
+  // TODO: use subchannel data to seek rather than LBA
+  commandSeekData();
+}
 
+//0x19 0x04
+auto Disc::commandTestStartReadSCEX() -> void {
   fifo.response.write(status());
+  irq.acknowledge.flag = 1;
+  irq.poll();
+}
 
-  irq.complete.flag = 1;
+//0x19 0x05
+auto Disc::commandTestStopReadSCEX() -> void {
+  // Report no SCEX string found to appease mod-chip detection
+  fifo.response.write(0);
+  fifo.response.write(0);
+  irq.acknowledge.flag = 1;
   irq.poll();
 }
 
@@ -537,6 +616,28 @@ auto Disc::commandGetID() -> void {
 auto Disc::commandReadWithoutRetry() -> void {
   //retries will never occur under emulation
   return commandReadWithRetry();
+}
+
+//0x1e
+auto Disc::commandReadToc() -> void {
+  if(event.invocation == 0) {
+    event.invocation = 1;
+    event.counter = 475'000;
+
+    fifo.response.write(status());
+
+    irq.acknowledge.flag = 1;
+    irq.poll();
+    return;
+  }
+
+  if(event.invocation == 1) {
+    fifo.response.write(status());
+
+    irq.complete.flag = 1;
+    irq.poll();
+    return;
+  }
 }
 
 auto Disc::commandUnimplemented(u8 operation, maybe<u8> suboperation) -> void {

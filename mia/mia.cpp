@@ -45,10 +45,11 @@ auto construct() -> void {
   if(initialized) return;
   initialized = true;
 
+  media.append("Atari 2600");
   media.append("BS Memory");
   media.append("ColecoVision");
   media.append("Famicom");
-  media.append("Famicom Disk");
+  media.append("Famicom Disk System");
   media.append("Game Boy");
   media.append("Game Boy Color");
   media.append("Game Boy Advance");
@@ -76,6 +77,7 @@ auto construct() -> void {
   media.append("SuperGrafx");
   media.append("WonderSwan");
   media.append("WonderSwan Color");
+  media.append("ZX Spectrum");
 }
 
 auto identify(const string& filename) -> string {

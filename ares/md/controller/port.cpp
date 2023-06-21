@@ -11,7 +11,9 @@ auto ControllerPort::load(Node::Object parent) -> void {
   port->setType("Controller");
   port->setHotSwappable(true);
   port->setAllocate([&](auto name) { return allocate(name); });
-  port->setSupported({"Control Pad", "Fighting Pad"});
+  port->setDisconnect([&] { return disconnect(); });
+
+  port->setSupported({"Control Pad", "Fighting Pad", "Mega Mouse"});
 }
 
 auto ControllerPort::unload() -> void {
@@ -22,16 +24,25 @@ auto ControllerPort::unload() -> void {
 auto ControllerPort::allocate(string name) -> Node::Peripheral {
   if(name == "Control Pad" ) device = new ControlPad(port);
   if(name == "Fighting Pad") device = new FightingPad(port);
+  if(name == "Mega Mouse") device = new MegaMouse(port);
   if(device) return device->node;
   return {};
 }
 
 auto ControllerPort::power(bool reset) -> void {
   if(!reset) {
-    control = 0x00;
+    control        = 0x00;
+    dataLatch      = 0x7f;
+    serialControl  = 0x00;
+    serialTxBuffer = 0xff;
+    serialRxBuffer = 0x00;
   }
 }
 
 auto ControllerPort::serialize(serializer& s) -> void {
   s(control);
+  s(dataLatch);
+  s(serialControl);
+  s(serialTxBuffer);
+  s(serialRxBuffer);
 }

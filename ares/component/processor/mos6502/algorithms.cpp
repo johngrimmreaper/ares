@@ -1,19 +1,32 @@
 auto MOS6502::algorithmADC(n8 i) -> n8 {
-  i16 o;
+  i16 o = A + i + C;
   if(!BCD || !D) {
-    o = A + i + C;
+    C = o.bit(8);
+    Z = n8(o) == 0;
+    N = o.bit(7);
     V = ~(A ^ i) & (A ^ o) & 0x80;
   } else {
     idle();
+    Z = n8(o) == 0;
     o = (A & 0x0f) + (i & 0x0f) + (C << 0);
     if(o > 0x09) o += 0x06;
     C = o > 0x0f;
     o = (A & 0xf0) + (i & 0xf0) + (C << 4) + (o & 0x0f);
+    N = o.bit(7);
+    V = ~(A ^ i) & (A ^ o) & 0x80;
     if(o > 0x9f) o += 0x60;
+    C = o > 0xff;
   }
-  C = o.bit(8);
-  Z = n8(o) == 0;
+  return o;
+}
+
+auto MOS6502::algorithmALR(n8 i) -> n8 {
+  n8 o = A & i;
+  C = o.bit(0);
+  o >>= 1;
+  Z = o == 0;
   N = o.bit(7);
+
   return o;
 }
 
@@ -24,12 +37,52 @@ auto MOS6502::algorithmAND(n8 i) -> n8 {
   return o;
 }
 
+auto MOS6502::algorithmANC(n8 i) -> n8 {
+  n8 o = A & i;
+  Z = o == 0;
+  N = o.bit(7);
+  C = N;
+  return o;
+}
+
+auto MOS6502::algorithmARR(n8 i) -> n8 {
+  n8 o = A & i;
+  Z = o == 0;
+  N = o.bit(7);
+
+  bool c = C;
+  o = c << 7 | o >> 1;
+  Z = o == 0;
+  N = o.bit(7);
+  C = o.bit(6);
+  V = o.bit(6) ^ o.bit(5);
+
+  return o;
+}
+
 auto MOS6502::algorithmASL(n8 i) -> n8 {
   C = i.bit(7);
   i <<= 1;
   Z = i == 0;
   N = i.bit(7);
   return i;
+}
+
+auto MOS6502::algorithmATX(n8 i) -> n8 {
+  A |= 0xff; //TODO: OR value may differ on non-NES platforms
+  n8 o = A & i;
+  X = o;
+  Z = o == 0;
+  N = o.bit(7);
+  return o;
+}
+
+auto MOS6502::algorithmAXS(n8 i) -> n8 {
+  n9 o = (A & X) - i;
+  C = !o.bit(8);
+  Z = n8(o) == 0;
+  N = o.bit(7);
+  return o;
 }
 
 auto MOS6502::algorithmBIT(n8 i) -> n8 {
@@ -125,20 +178,35 @@ auto MOS6502::algorithmROR(n8 i) -> n8 {
 
 auto MOS6502::algorithmSBC(n8 i) -> n8 {
   i = ~i;
-  i16 o;
+  i16 o = A + i + C;
   if(!BCD || !D) {
-    o = A + i + C;
+    C = o.bit(8);
+    Z = n8(o) == 0;
+    N = o.bit(7);
     V = ~(A ^ i) & (A ^ o) & 0x80;
   } else {
     idle();
+    Z = n8(o) == 0;
     o = (A & 0x0f) + (i & 0x0f) + (C << 0);
     if(o <= 0x0f) o -= 0x06;
     C = o > 0x0f;
     o = (A & 0xf0) + (i & 0xf0) + (C << 4) + (o & 0x0f);
+    N = o.bit(7);
+    V = ~(A ^ i) & (A ^ o) & 0x80;
     if(o <= 0xff) o -= 0x60;
+    C = o > 0xff;
   }
-  C = o.bit(8);
-  Z = n8(o) == 0;
-  N = o.bit(7);
   return o;
+}
+
+auto MOS6502::algorithmSLO(n8 i) -> n8 {
+  C = i.bit(7);
+  i <<= 1;
+  Z = i == 0;
+  N = i.bit(7);
+
+  A |= i;
+  Z = A == 0;
+  N = A.bit(7);
+  return i;
 }

@@ -13,12 +13,23 @@ auto M32X::VDP::unload() -> void {
 auto M32X::VDP::power(bool reset) -> void {
   dram.fill(0);
   cram.fill(0);
+  mode = 0;
+  lines = 0;
+  priority = 0;
+  dotshift = 0;
+  autofillLength = 0;
+  autofillAddress = 0;
+  autofillData = 0;
+  framebufferAccess = 0;
+  framebufferActive = 0;
+  framebufferSelect = 0;
+  hblank = 0;
   vblank = 1;
   selectFramebuffer(framebufferSelect);
 }
 
 auto M32X::VDP::scanline(u32 pixels[1280], u32 y) -> void {
-  if(!Mega32X() || !pixels) return;
+  if(!Mega32X() || !pixels || y >= (lines ? 240 : 224)) return;
   if(mode == 1) return scanlineMode1(pixels, y);
   if(mode == 2) return scanlineMode2(pixels, y);
   if(mode == 3) return scanlineMode3(pixels, y);
@@ -44,10 +55,10 @@ auto M32X::VDP::scanlineMode3(u32 pixels[1280], u32 y) -> void {
   u16 address = fbram[y];
   for(u32 x = 0; x < 320;) {
     u16 word  = fbram[address++ & 0xffff];
-    u8 length = (word >> 8) + 1;
-    u8 color  = (word >> 0);
+    u8 length = word >> 8;
+    u8 color  = word >> 0;
     u16 pixel = cram[color];
-    for(u32 repeat : range(length)) {
+    for(u32 repeat : range(min(length+1, 320-x))) {
       plot(&pixels[x * 4], pixel);
       x++;
     }

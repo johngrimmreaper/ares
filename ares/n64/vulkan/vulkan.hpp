@@ -13,10 +13,13 @@ struct Vulkan {
   auto mapScanoutRead(const u8*& rgba, u32& width, u32& height) -> void;
   auto unmapScanoutRead() -> void;
   auto endScanout() -> void;
+  auto crashed() -> const char*;
 
   struct Implementation;
   Implementation* implementation = nullptr;
 
+  bool enable = true;
+  bool disableVideoInterfaceProcessing = false;
   u32  internalUpscale = 1;  //1, 2, 4, 8
   bool supersampleScanout = false;
   u32  outputUpscale = supersampleScanout ? 1 : internalUpscale;

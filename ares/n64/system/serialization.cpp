@@ -1,3 +1,5 @@
+static const string SerializerVersion = "v131";
+
 auto System::serialize(bool synchronize) -> serializer {
   serializer s;
 
@@ -46,6 +48,8 @@ auto System::serialize(serializer& s, bool synchronize) -> void {
   s(vi);
   s(ai);
   s(pi);
+  s(pif);
+  s(cic);
   s(ri);
   s(si);
   s(cpu);

@@ -89,7 +89,7 @@ auto CPU::instruction() -> void {
   }
 }
 
-auto CPU::instructionEpilogue() -> bool {
+auto CPU::instructionEpilogue() -> s32 {
   if constexpr(Accuracy::CPU::Recompiler) {
     icache.step(ipu.pc);  //simulates timings without performing actual icache loads
   }
@@ -257,8 +257,8 @@ auto CPU::power(bool reset) -> void {
   gte.sf = 0;
 
   if constexpr(Accuracy::CPU::Recompiler) {
-    auto buffer = ares::Memory::FixedAllocator::get().acquire(512_MiB);
-    recompiler.allocator.resize(512_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
+    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
+    recompiler.allocator.resize(64_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
     recompiler.reset();
   }
 }

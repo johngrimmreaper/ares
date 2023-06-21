@@ -1,5 +1,8 @@
-auto VDP::DAC::pixel(u32 x) -> void {
-  if(!pixels) return;
+template<bool _h40, bool draw> auto VDP::DAC::pixel(u32 x) -> void {
+  if(!draw) {
+    output<_h40>(0b101 << 9 | vdp.cram.color(vdp.io.backgroundColor));
+    return;
+  }
 
   Pixel g = {vdp.io.backgroundColor, 0, 1};
   Pixel a = vdp.layerA.pixel(x);
@@ -15,8 +18,8 @@ auto VDP::DAC::pixel(u32 x) -> void {
     s = {};
   }
 
-  auto& bg = a.above() || a.color && !b.above() ? a : b.color ? b : g;
-  auto& fg = s.above() || s.color && !b.above() && !a.above() ? s : bg;
+  auto& bg = a.above() || a.solid() && !b.above() ? a : b.solid() ? b : g;
+  auto& fg = s.above() || s.solid() && !b.above() && !a.above() ? s : bg;
 
   auto pixel = fg;
   auto mode  = 1;  //0 = shadow, 1 = normal, 2 = highlight
@@ -49,15 +52,15 @@ auto VDP::DAC::pixel(u32 x) -> void {
   }
 
   auto color = vdp.cram.color(pixel.color);
-  output(pixel.backdrop << 11 | mode << 9 | color);
+  output<_h40>(pixel.backdrop << 11 | mode << 9 | color);
 }
 
-auto VDP::DAC::output(n32 color) -> void {
+template<bool _h40> auto VDP::DAC::output(n32 color) -> void {
   *pixels++ = color;
   *pixels++ = color;
   *pixels++ = color;
   *pixels++ = color;
-  if(vdp.h40()) return;
+  if(_h40) return;
   *pixels++ = color;
 }
 

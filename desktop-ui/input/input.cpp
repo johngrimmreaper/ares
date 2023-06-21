@@ -112,15 +112,15 @@ auto InputDigital::bind(u32 binding, shared_pointer<HID::Device> device, u32 gro
     return bind(binding, assignment), true;
   }
 
-  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button && (
-    (oldValue >= -16384 && newValue < -16384) || (oldValue <= -16384 && newValue > -16384)
-  )) {
+  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button
+  && oldValue >= -16384 && newValue < -16384
+  ) {
     return bind(binding, {assignment, "/Lo"}), true;
   }
 
-  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button && (
-    (oldValue <= +16384 && newValue > +16384) || (oldValue >= +16384 && newValue < +16384)
-  )) {
+  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button
+  && oldValue <= +16384 && newValue > +16384
+  ) {
     return bind(binding, {assignment, "/Hi"}), true;
   }
 
@@ -137,6 +137,7 @@ auto InputDigital::value() -> s16 {
     auto& groupID = binding.groupID;
     auto& inputID = binding.inputID;
     auto& qualifier = binding.qualifier;
+    if (device->isKeyboard() && program.keyboardCaptured) continue;
     s16 value = device->group(groupID).input(inputID).value();
     s16 output = 0;
 
@@ -167,6 +168,45 @@ auto InputDigital::pressed() -> bool {
   return value() != 0;
 }
 
+
+auto InputHotkey::value() -> s16 {
+  s16 result = 0;
+
+  for(auto& binding : bindings) {
+    if(!binding.device) continue;  //unbound
+
+    auto& device = binding.device;
+    auto& groupID = binding.groupID;
+    auto& inputID = binding.inputID;
+    auto& qualifier = binding.qualifier;
+
+    s16 value = device->group(groupID).input(inputID).value();
+    s16 output = 0;
+
+    if(device->isKeyboard() && groupID == HID::Keyboard::GroupID::Button) {
+      output = value != 0;
+    }
+
+    if(device->isMouse() && groupID == HID::Mouse::GroupID::Button && ruby::input.acquired()) {
+      output = value != 0;
+    }
+
+    if(device->isJoypad() && groupID == HID::Joypad::GroupID::Button) {
+      output = value != 0;
+    }
+
+    if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button) {
+      if(qualifier == Qualifier::Lo) output = value < -16384;
+      if(qualifier == Qualifier::Hi) output = value > +16384;
+    }
+
+    result |= output;
+  }
+
+  return result;
+}
+
+
 //
 
 auto InputAnalog::bind(u32 binding, shared_pointer<HID::Device> device, u32 groupID, u32 inputID, s16 oldValue, s16 newValue) -> bool {
@@ -188,15 +228,15 @@ auto InputAnalog::bind(u32 binding, shared_pointer<HID::Device> device, u32 grou
     return bind(binding, assignment), true;
   }
 
-  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button && (
-    (oldValue >= -16384 && newValue < -16384) || (oldValue <= -16384 && newValue > -16384)
-  )) {
+  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button
+  && oldValue >= -16384 && newValue < -16384
+  ) {
     return bind(binding, {assignment, "/Lo"}), true;
   }
 
-  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button && (
-    (oldValue <= +16384 && newValue > +16384) || (oldValue >= +16384 && newValue < +16384)
-  )) {
+  if(device->isJoypad() && groupID != HID::Joypad::GroupID::Button
+  && oldValue <= +16384 && newValue > +16384
+  ) {
     return bind(binding, {assignment, "/Hi"}), true;
   }
 
@@ -213,6 +253,7 @@ auto InputAnalog::value() -> s16 {
     auto& groupID = binding.groupID;
     auto& inputID = binding.inputID;
     auto& qualifier = binding.qualifier;
+    if (device->isKeyboard() && program.keyboardCaptured) continue;    
     s16 value = device->group(groupID).input(inputID).value();
 
     if(device->isKeyboard() && groupID == HID::Keyboard::GroupID::Button) {
@@ -253,15 +294,15 @@ auto InputAbsolute::bind(u32 binding, shared_pointer<HID::Device> device, u32 gr
     return bind(binding, assignment), true;
   }
 
-  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis && (
-    (oldValue >= -16384 && newValue < -16384) || (oldValue <= -16384 && newValue > -16384)
-  )) {
+  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis
+  && oldValue >= -16384 && newValue < -16384
+  ) {
     return bind(binding, assignment), true;
   }
 
-  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis && (
-    (oldValue <= +16384 && newValue > +16384) || (oldValue >= +16384 && newValue < +16384)
-  )) {
+  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis
+  && oldValue <= +16384 && newValue > +16384
+  ) {
     return bind(binding, assignment), true;
   }
 
@@ -278,6 +319,7 @@ auto InputAbsolute::value() -> s16 {
     auto& groupID = binding.groupID;
     auto& inputID = binding.inputID;
     auto& qualifier = binding.qualifier;
+    if (device->isKeyboard() && program.keyboardCaptured) continue;
     s16 value = device->group(groupID).input(inputID).value();
 
     if(device->isMouse() && groupID == HID::Joypad::GroupID::Axis && ruby::input.acquired()) {
@@ -309,15 +351,15 @@ auto InputRelative::bind(u32 binding, shared_pointer<HID::Device> device, u32 gr
     return bind(binding, assignment), true;
   }
 
-  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis && (
-    (oldValue >= -16384 && newValue < -16384) || (oldValue <= -16384 && newValue > -16384)
-  )) {
+  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis
+  && oldValue >= -16384 && newValue < -16384
+  ) {
     return bind(binding, assignment), true;
   }
 
-  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis && (
-    (oldValue <= +16384 && newValue > +16384) || (oldValue >= +16384 && newValue < +16384)
-  )) {
+  if(device->isJoypad() && groupID == HID::Joypad::GroupID::Axis
+  && oldValue <= +16384 && newValue > +16384
+  ) {
     return bind(binding, assignment), true;
   }
 
@@ -334,6 +376,7 @@ auto InputRelative::value() -> s16 {
     auto& groupID = binding.groupID;
     auto& inputID = binding.inputID;
     auto& qualifier = binding.qualifier;
+    if (device->isKeyboard() && program.keyboardCaptured) continue;
     s16 value = device->group(groupID).input(inputID).value();
 
     if(device->isMouse() && groupID == HID::Joypad::GroupID::Axis && ruby::input.acquired()) {
@@ -382,34 +425,32 @@ auto InputRumble::rumble(bool enable) -> void {
 //
 
 VirtualPad::VirtualPad() {
-  InputDevice::name = "Xbox 360 Gamepad";
-  InputDevice::digital("Up",      up);
-  InputDevice::digital("Down",    down);
-  InputDevice::digital("Left",    left);
-  InputDevice::digital("Right",   right);
-  InputDevice::digital("Select",  select);
-  InputDevice::digital("Start",   start);
-  InputDevice::digital("A",       a);
-  InputDevice::digital("B",       b);
-  InputDevice::digital("C",       c);
-  InputDevice::digital("X",       x);
-  InputDevice::digital("Y",       y);
-  InputDevice::digital("Z",       z);
-  InputDevice::digital("L1",      l1);
-  InputDevice::digital("R1",      r1);
-  InputDevice::digital("L2",      l2);
-  InputDevice::digital("R2",      r2);
-  InputDevice::digital("LT",      lt);
-  InputDevice::digital("RT",      rt);
-  InputDevice::analog ("L-Up",    lup);
-  InputDevice::analog ("L-Down",  ldown);
-  InputDevice::analog ("L-Left",  lleft);
-  InputDevice::analog ("L-Right", lright);
-  InputDevice::analog ("R-Up",    rup);
-  InputDevice::analog ("R-Down",  rdown);
-  InputDevice::analog ("R-Left",  rleft);
-  InputDevice::analog ("R-Right", rright);
-  InputDevice::rumble ("Rumble",  rumble);
+  InputDevice::name = "Virtual Gamepad";
+  InputDevice::digital("Pad Up",          up);
+  InputDevice::digital("Pad Down",        down);
+  InputDevice::digital("Pad Left",        left);
+  InputDevice::digital("Pad Right",       right);
+  InputDevice::digital("Select",          select);
+  InputDevice::digital("Start",           start);
+  InputDevice::digital("A (South)",       south);
+  InputDevice::digital("B (East)",        east);
+  InputDevice::digital("X (West)",        west);
+  InputDevice::digital("Y (North)",       north);
+  InputDevice::digital("L-Bumper",        l_bumper);
+  InputDevice::digital("R-Bumper",        r_bumper);
+  InputDevice::digital("L-Trigger",       l_trigger);
+  InputDevice::digital("R-Trigger",       r_trigger);
+  InputDevice::digital("L-Stick (Click)", lstick_click);
+  InputDevice::digital("R-Stick (Click)", rstick_click);
+  InputDevice::analog ("L-Up",            lstick_up);
+  InputDevice::analog ("L-Down",          lstick_down);
+  InputDevice::analog ("L-Left",          lstick_left);
+  InputDevice::analog ("L-Right",         lstick_right);
+  InputDevice::analog ("R-Up",            rstick_up);
+  InputDevice::analog ("R-Down",          rstick_down);
+  InputDevice::analog ("R-Left",          rstick_left);
+  InputDevice::analog ("R-Right",         rstick_right);
+  InputDevice::rumble ("Rumble",          rumble);
 }
 
 //
@@ -421,6 +462,7 @@ VirtualMouse::VirtualMouse() {
   InputDevice::digital ("Left",   left);
   InputDevice::digital ("Middle", middle);
   InputDevice::digital ("Right",  right);
+  InputDevice::digital ("Extra",  extra);
 }
 
 //

@@ -1,5 +1,7 @@
-auto V30MZ::interrupt(u8 vector) -> void {
-  wait(32);
+auto V30MZ::interrupt(u8 vector, InterruptSource source) -> bool {
+  if(source == InterruptSource::INT) wait(32);
+  else if (source == InterruptSource::NMI) wait(26);
+  else wait(25);
 
   state.halt = 0;
   state.poll = 1;
@@ -17,16 +19,28 @@ auto V30MZ::interrupt(u8 vector) -> void {
   auto ps = read<Word>(0x0000, vector * 4 + 2);
 
   push(PSW);
-  push(PS);
-  push(PC);
 
   PSW.MD  = 1;
   PSW.IE  = 0;
   PSW.BRK = 0;
 
-  PC = pc;
+  push(PS);
   PS = ps;
+  push(PC);
+  PC = pc;
+
   flush();
+  return true;
+}
+
+auto V30MZ::interrupt(u8 vector) -> bool {
+  state.halt = false;
+  if(!PSW.IE) return false;
+  return interrupt(vector, InterruptSource::INT);
+}
+
+auto V30MZ::nonMaskableInterrupt() -> bool {
+  return interrupt(2, InterruptSource::NMI);
 }
 
 #define op(id, name, ...) case id: instruction##name(__VA_ARGS__); break;
@@ -52,7 +66,7 @@ auto V30MZ::instruction() -> void {
   op(0x0c, OrAccImm<Byte>)
   op(0x0d, OrAccImm<Word>)
   op(0x0e, PushSeg, PS)
-  op(0x0f, PopSeg, PS)
+  op(0x0f, Undefined)
   op(0x10, AdcMemReg<Byte>)
   op(0x11, AdcMemReg<Word>)
   op(0x12, AdcRegMem<Byte>)
@@ -136,11 +150,11 @@ auto V30MZ::instruction() -> void {
   op(0x60, PushAll)
   op(0x61, PopAll)
   op(0x62, Bound)
-//op(0x63, ...)
-//op(0x64, ...)  repnc
-//op(0x65, ...)  repc
-//op(0x66, ...)  fpo2
-//op(0x67, ...)  fpo2
+  op(0x63, Undefined)
+  op(0x64, Undefined)
+  op(0x65, Undefined)
+  op(0x66, Undefined)
+  op(0x67, Undefined)
   op(0x68, PushImm<Word>)
   op(0x69, MultiplySignedRegMemImm<Word>)
   op(0x6a, PushImm<Byte>)
@@ -156,13 +170,13 @@ auto V30MZ::instruction() -> void {
   op(0x74, JumpIf, PSW.Z == 1)
   op(0x75, JumpIf, PSW.Z == 0)
   op(0x76, JumpIf, PSW.Z == 1 || PSW.CY == 1)
-  op(0x77, JumpIf, PSW.Z != 1 && PSW.CY != 1)
+  op(0x77, JumpIf, PSW.Z == 0 && PSW.CY == 0)
   op(0x78, JumpIf, PSW.S == 1)
   op(0x79, JumpIf, PSW.S == 0)
   op(0x7a, JumpIf, PSW.P == 1)
   op(0x7b, JumpIf, PSW.P == 0)
-  op(0x7c, JumpIf, PSW.S != PSW.V && PSW.Z == 0)
-  op(0x7d, JumpIf, PSW.S == PSW.V || PSW.Z == 1)
+  op(0x7c, JumpIf, PSW.S != PSW.V)
+  op(0x7d, JumpIf, PSW.S == PSW.V)
   op(0x7e, JumpIf, PSW.S != PSW.V || PSW.Z == 1)
   op(0x7f, JumpIf, PSW.S == PSW.V && PSW.Z == 0)
   op(0x80, Group1MemImm<Byte>, 0)
@@ -251,16 +265,16 @@ auto V30MZ::instruction() -> void {
   op(0xd3, Group2MemImm<Word>, 3, (u8)CL)
   op(0xd4, AdjustAfterMultiply)
   op(0xd5, AdjustAfterDivide)
-  op(0xd6, Translate, 7)  //xlat (undocumented mirror)
-  op(0xd7, Translate, 4)  //xlat
-//op(0xd8, ...)  //fpo1
-//op(0xd9, ...)  //fpo1
-//op(0xda, ...)  //fpo1
-//op(0xdb, ...)  //fpo1
-//op(0xdc, ...)  //fpo1
-//op(0xdd, ...)  //fpo1
-//op(0xde, ...)  //fpo1
-//op(0xdf, ...)  //fpo1
+  op(0xd6, SetALCarry) //salc
+  op(0xd7, Translate)  //xlat
+  op(0xd8, Undefined1)
+  op(0xd9, Undefined1)
+  op(0xda, Undefined1)
+  op(0xdb, Undefined1)
+  op(0xdc, Undefined1)
+  op(0xdd, Undefined1)
+  op(0xde, Undefined1)
+  op(0xdf, Undefined1)
   op(0xe0, LoopWhile, 0)  //loopnz
   op(0xe1, LoopWhile, 1)  //loopz
   op(0xe2, Loop)
@@ -296,6 +310,7 @@ auto V30MZ::instruction() -> void {
   }
 
   if(!state.prefix) prefixes.flush();
+  if(PSW.BRK) interrupt(1, InterruptSource::SingleStep);
 }
 
 #undef op

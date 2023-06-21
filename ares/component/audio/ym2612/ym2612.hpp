@@ -36,7 +36,7 @@ protected:
   } dac;
 
   struct Envelope {
-    n32 clock = 0;
+    n12 clock = 0;
     n32 divider = 0;
   } envelope;
 
@@ -91,7 +91,7 @@ protected:
       Operator(Channel& channel) : channel(channel), ym2612(channel.ym2612) {}
 
       //channel.cpp
-      auto trigger(bool) -> void;
+      auto updateKeyState(bool) -> void;
 
       auto runEnvelope() -> void;
       auto runPhase() -> void;
@@ -105,6 +105,7 @@ protected:
       auto serialize(serializer&) -> void;
 
       n1 keyOn = 0;
+      n1 keyLine = 0;
       n1 lfoEnable = 0;
       n3 detune = 0;
       n4 multiple = 0;

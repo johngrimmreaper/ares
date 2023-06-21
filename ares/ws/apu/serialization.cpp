@@ -15,6 +15,7 @@ auto APU::serialize(serializer& s) -> void {
   s(io.headphonesConnected);
   s(io.masterVolume);
   s(state.sweepClock);
+  s(state.apuClock);
 }
 
 auto APU::DMA::serialize(serializer& s) -> void {
@@ -48,8 +49,10 @@ auto APU::Channel2::serialize(serializer& s) -> void {
   s(io.volumeRight);
   s(io.enable);
   s(io.voice);
-  s(io.voiceEnableLeft);
-  s(io.voiceEnableRight);
+  s(io.voiceEnableLeftHalf);
+  s(io.voiceEnableLeftFull);
+  s(io.voiceEnableRightHalf);
+  s(io.voiceEnableRightFull);
   s(state.period);
   s(state.sampleOffset);
   s(output.left);

@@ -4,13 +4,11 @@ auto SH2::jump(u32 pc) -> void {
 }
 
 auto SH2::branch(u32 pc) -> void {
-  if(inDelaySlot()) return illegalSlotInstruction();
   PPC = pc;
   PPM = Branch::Take;
 }
 
 auto SH2::delaySlot(u32 pc) -> void {
-  if(inDelaySlot()) return illegalSlotInstruction();
   PPC = pc;
   PPM = Branch::Slot;
 }
@@ -37,7 +35,7 @@ auto SH2::instruction() -> void {
     do {
       auto block = recompiler.block(PC - 4);
       block->execute(*this);
-    } while (CCR <= recompiler.min_cycles);
+    } while (CCR < cyclesUntilSync);
 
     step(CCR);
     CCR = 0;
@@ -45,7 +43,7 @@ auto SH2::instruction() -> void {
   }
 }
 
-auto SH2::instructionEpilogue() -> bool {
+auto SH2::instructionEpilogue() -> s32 {
   switch(PPM) {
   case Branch::Step: PC = PC + 2; return 0;
   case Branch::Slot: PC = PC + 2; PPM = Branch::Take; return 0;

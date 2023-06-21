@@ -11,11 +11,17 @@ LSPC lspc;
 auto LSPC::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("LSPC");
 
-  screen = node->append<Node::Video::Screen>("Screen", 320, 264);
+  screen = node->append<Node::Video::Screen>("Screen", 320, 256);
   screen->colors(1 << 17, {&LSPC::color, this});
-  screen->setSize(304, 240);
-  screen->setScale(2.0, 2.0);
+  screen->setSize(320, 256);
+  screen->setScale(1.0, 1.0);
   screen->setAspect(1.0, 1.0);
+
+  overscan = screen->append<Node::Setting::Boolean>("Overscan", true, [&](auto value) {
+    if(value == 0) screen->setSize(304, 224);
+    if(value == 1) screen->setSize(320, 256);
+  });
+  overscan->setDynamic(true);
 
   vram.allocate(68_KiB >> 1);
   pram.allocate(16_KiB >> 1);
@@ -46,6 +52,8 @@ auto LSPC::unload() -> void {
   debugger.unload(node);
   vram.reset();
   pram.reset();
+  overscan.reset();
+  screen->quit();
   node->remove(screen);
   screen.reset();
   node.reset();
@@ -86,13 +94,15 @@ auto LSPC::main() -> void {
     }
   }
 
-  if(io.vcounter >= 0 && io.vcounter <= 239 && io.hcounter == 56) {
-    render(io.vcounter);
+  // 8 lines of vblank, 16px top border, 16px bottom border
+  if(io.vcounter >= 24 && io.vcounter <= 247 && io.hcounter == 56) {
+    render(io.vcounter - 8);
   }
 }
 
 auto LSPC::frame() -> void {
-  screen->setViewport(8, 0, 304, 240);
+  if(overscan->value() == 0) screen->setViewport(8, 16, 304, 224);
+  if(overscan->value() == 1) screen->setViewport(0, 0, 320, 256);
   screen->frame();
   scheduler.exit(Event::Frame);
 }

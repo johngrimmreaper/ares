@@ -58,15 +58,15 @@ struct HVC_TxROM : Interface {  //MMC3
   auto main() -> void override {
     if(irqDelay) irqDelay--;
     cpu.irqLine(irqLine);
-    tick();
   }
 
   auto irqTest(n16 address) -> void {
     if(!(characterAddress & 0x1000) && (address & 0x1000)) {
       if(irqDelay == 0) {
         if(irqCounter == 0) {
-          irqCounter = irqLatch;
-        } else if(--irqCounter == 0) {
+          irqCounter = irqLatch + 1;
+        }
+        if(--irqCounter == 0) {
           if(irqEnable) irqLine = 1;
         }
       }
@@ -79,7 +79,7 @@ struct HVC_TxROM : Interface {  //MMC3
     if(address < 0x6000) return data;
 
     if(address < 0x8000) {
-      if(!ramEnable) return data;
+      if(!ramEnable || !programRAM) return data;
       return programRAM.read((n13)address);
     }
 
@@ -95,10 +95,11 @@ struct HVC_TxROM : Interface {  //MMC3
   }
 
   auto writePRG(n32 address, n8 data) -> void override {
+    if(address == 0x2006 && ++characterLatch) irqTest(data << 8);
     if(address < 0x6000) return;
 
     if(address < 0x8000) {
-      if(!ramEnable || !ramWritable) return;
+      if(!ramEnable || !ramWritable || !programRAM) return;
       return programRAM.write((n13)address, data);
     }
 
@@ -235,6 +236,7 @@ struct HVC_TxROM : Interface {  //MMC3
     s(irqEnable);
     s(irqDelay);
     s(irqLine);
+    s(characterLatch);
     s(characterAddress);
   }
 
@@ -251,5 +253,6 @@ struct HVC_TxROM : Interface {  //MMC3
   n1  irqEnable;
   n8  irqDelay;
   n1  irqLine;
+  n1  characterLatch;
   n16 characterAddress;
 };

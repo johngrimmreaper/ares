@@ -6,7 +6,7 @@ auto V30MZ::disassembleInstruction(u16 ps, u16 pc) -> string {
   string output, repeat, prefix;
 
   auto read = [&](u32 offset) -> n8 {
-    return V30MZ::read<Byte>(ps, pc + offset);
+    return this->read(ps * 16 + ((pc + offset) & 0xFFFF));
   };
 
   auto modRM = [&](u32 offset = 1) -> u32 {
@@ -379,7 +379,7 @@ auto V30MZ::disassembleInstruction(u16 ps, u16 pc) -> string {
   op(0xd3, group2(), memoryWord(), "cl");
   op(0xd4, "aam", immediateByte());
   op(0xd5, "aad", immediateByte());
-  op(0xd6, "xlat");  //undocumented mirror
+  op(0xd6, "salc");
   op(0xd7, "xlat");
 //op(0xd8);
 //op(0xd9);
@@ -394,9 +394,9 @@ auto V30MZ::disassembleInstruction(u16 ps, u16 pc) -> string {
   op(0xe2, "loop");
   op(0xe3, "jcwz", relativeByte());
   op(0xe4, "in", "al", immediateByte());
-  op(0xe5, "in", "aw", immediateWord());
+  op(0xe5, "in", "aw", immediateByte());
   op(0xe6, "out", immediateByte(), "al");
-  op(0xe7, "out", immediateWord(), "aw");
+  op(0xe7, "out", immediateByte(), "aw");
   op(0xe8, "call", relativeWord());
   op(0xe9, "jmp", relativeWord());
   op(0xea, "jmp", immediateLong());

@@ -1,21 +1,13 @@
 auto SI::dmaRead() -> void {
-  run();
-  for(u32 offset = 0; offset < 64; offset += 2) {
-    u16 data = bus.read<Half>(io.readAddress + offset);
-    bus.write<Half>(io.dramAddress + offset, data);
-  }
+  pif.dmaRead(io.readAddress, io.dramAddress);
   io.dmaBusy = 0;
   io.interrupt = 1;
   mi.raise(MI::IRQ::SI);
 }
 
 auto SI::dmaWrite() -> void {
-  for(u32 offset = 0; offset < 64; offset += 2) {
-    u16 data = bus.read<Half>(io.dramAddress + offset);
-    bus.write<Half>(io.writeAddress + offset, data);
-  }
+  pif.dmaWrite(io.writeAddress, io.dramAddress);
   io.dmaBusy = 0;
   io.interrupt = 1;
   mi.raise(MI::IRQ::SI);
-  run();
 }

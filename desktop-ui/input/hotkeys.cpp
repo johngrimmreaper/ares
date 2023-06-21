@@ -16,6 +16,12 @@ auto InputManager::createHotkeys() -> void {
     }
   }));
 
+  hotkeys.append(InputHotkey("Toggle Keyboard Capture").onPress([&] {
+    if(!emulator) return;
+    program.keyboardCaptured = !program.keyboardCaptured;
+    print("Keyboard capture: ", program.keyboardCaptured, "\n");
+  }));
+
   hotkeys.append(InputHotkey("Fast Forward").onPress([&] {
     if(!emulator || program.rewinding) return;
     program.fastForwarding = true;
@@ -33,6 +39,25 @@ auto InputManager::createHotkeys() -> void {
     ruby::audio.setDynamic(fastForwardAudioDynamic);
   }));
 
+  hotkeys.append(InputHotkey("Toggle Fast Forward").onPress([&] {
+    if(!emulator || program.rewinding) return;
+    program.fastForwarding = !program.fastForwarding;
+
+    if (program.fastForwarding) {
+      fastForwardVideoBlocking = ruby::video.blocking();
+      fastForwardAudioBlocking = ruby::audio.blocking();
+      fastForwardAudioDynamic  = ruby::audio.dynamic();
+      ruby::video.setBlocking(false);
+      ruby::audio.setBlocking(false);
+      ruby::audio.setDynamic(false);
+      return;
+    } 
+
+    ruby::video.setBlocking(fastForwardVideoBlocking);
+    ruby::audio.setBlocking(fastForwardAudioBlocking);
+    ruby::audio.setDynamic(fastForwardAudioDynamic);
+  }));
+
   hotkeys.append(InputHotkey("Rewind").onPress([&] {
     if(!emulator || program.fastForwarding) return;
     if(program.rewind.frequency == 0) {
@@ -44,6 +69,12 @@ auto InputManager::createHotkeys() -> void {
     if(!emulator) return;
     program.rewinding = false;
     program.rewindSetMode(Program::Rewind::Mode::Playing);
+  }));
+
+  hotkeys.append(InputHotkey("Frame Advance").onPress([&] {
+    if(!emulator) return;
+    if(!program.paused) program.pause(true);
+    program.requestFrameAdvance = true;
   }));
 
   hotkeys.append(InputHotkey("Capture Screenshot").onPress([&] {
@@ -80,6 +111,11 @@ auto InputManager::createHotkeys() -> void {
     program.pause(!program.paused);
   }));
 
+  hotkeys.append(InputHotkey("Reload Current Game").onPress([&] {
+    if(!emulator) return;
+    program.load(emulator, emulator->game->location);
+  }));
+
   hotkeys.append(InputHotkey("Quit Emulator").onPress([&] {
     program.quit();
   }));
@@ -87,7 +123,10 @@ auto InputManager::createHotkeys() -> void {
 
 auto InputManager::pollHotkeys() -> void {
   if(Application::modal()) return;
-  if(!presentation.focused() && !ruby::video.fullScreen()) return;
+
+  if(!driverSettings.inputDefocusAllow.checked()) {
+    if (!presentation.focused() && !ruby::video.fullScreen()) return;
+  }
 
   for(auto& hotkey : hotkeys) {
     auto state = hotkey.value();

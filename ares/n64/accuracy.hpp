@@ -7,7 +7,7 @@ struct Accuracy {
     static constexpr bool Recompiler = !Interpreter;
 
     //exceptions when the CPU accesses unaligned memory addresses
-    static constexpr bool AddressErrors = 0 | Reference;
+    static constexpr bool AddressErrors = 1 | Reference;
   };
 
   struct RSP {
@@ -15,11 +15,16 @@ struct Accuracy {
     static constexpr bool Recompiler = !Interpreter;
 
     //VU instructions
-    static constexpr bool SISD = 0 | Reference;
+    static constexpr bool SISD = 0 | Reference | !ARCHITECTURE_SUPPORTS_SSE4_1;
     static constexpr bool SIMD = !SISD;
   };
 
   struct RDRAM {
     static constexpr bool Broadcasting = 0;
+  };
+
+  struct PIF {
+    // Emulate a region-locked console
+    static constexpr bool RegionLock = false;
   };
 };

@@ -1,5 +1,6 @@
 namespace Board {
 
+#include "ave-nina-001.cpp"
 #include "bandai-74161.cpp"
 #include "bandai-fcg.cpp"
 #include "bandai-karaoke.cpp"
@@ -52,6 +53,7 @@ namespace Board {
 
 auto Interface::create(string board) -> Interface* {
   Interface* p = nullptr;
+  if(!p) p = AveNina001::create(board);
   if(!p) p = Bandai74161::create(board);
   if(!p) p = BandaiFCG::create(board);
   if(!p) p = BandaiKaraoke::create(board);
@@ -103,16 +105,6 @@ auto Interface::create(string board) -> Interface* {
   if(!p) p = TaitoX1017::create(board);
   if(!p) p = new Interface;
   return p;
-}
-
-auto Interface::main() -> void {
-  cartridge.step(cartridge.rate() * 4095);
-  tick();
-}
-
-auto Interface::tick() -> void {
-  cartridge.step(cartridge.rate());
-  cartridge.synchronize(cpu);
 }
 
 auto Interface::load(Memory::Readable<n8>& memory, string name) -> bool {

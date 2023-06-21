@@ -38,7 +38,7 @@ auto VDP::load(Node::Object parent) -> void {
   screen->colors(1 << 16, {&VDP::color, this});
   screen->setSize(1280, 480);
   screen->setScale(0.25, 0.5);
-  screen->setAspect(1.0, 1.0);
+  screen->setAspect(32, 35);
 
   overscan = screen->append<Node::Setting::Boolean>("Overscan", true, [&](auto value) {
     if(value == 0) screen->setSize(1280, 448);
@@ -74,10 +74,16 @@ auto VDP::pixels() -> u32* {
     output = screen->pixels().data() + (vcounter() - 8) * 2 * 1280;
   }
   if(overscan->value() == 1 && latch.overscan == 0) {
-    if(vcounter() >= 232) return nullptr;
-    output = screen->pixels().data() + (vcounter() + 8) * 2 * 1280;
+    if(vcounter() >= 0x1f8) { // top border
+      output = screen->pixels().data() + (vcounter() - 0x1f8) * 2 * 1280;
+    } else if(vcounter() >= 232) {
+      return nullptr;
+    } else {
+      output = screen->pixels().data() + (vcounter() + 8) * 2 * 1280;
+    }
   }
   if(overscan->value() == 1 && latch.overscan == 1) {
+    if(vcounter() >= 240) return nullptr;
     output = screen->pixels().data() + (vcounter() + 0) * 2 * 1280;
   }
   if(latch.interlace) output += field() * 1280;
@@ -103,6 +109,7 @@ auto VDP::power(bool reset) -> void {
   }
 
   vram.mode = 0;
+  vram.refreshing = 0;
   command = {};
   io = {};
   test = {};

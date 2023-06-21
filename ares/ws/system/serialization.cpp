@@ -1,3 +1,5 @@
+static const string SerializerVersion = "v132";
+
 auto System::serialize(bool synchronize) -> serializer {
   if(synchronize) scheduler.enter(Scheduler::Mode::Synchronize);
   serializer s;
@@ -47,4 +49,5 @@ auto System::serialize(serializer& s, bool synchronize) -> void {
   s(apu);
   s(cartridge);
   s(iram);
+  s(serial);
 }

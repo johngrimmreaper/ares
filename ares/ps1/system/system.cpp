@@ -87,6 +87,7 @@ auto System::load(Node::System& root, string name) -> bool {
 auto System::unload() -> void {
   if(!node) return;
   save();
+  if(gpu.screen) gpu.screen->quit(); //stop video thread
   memory.unload();
   cpu.unload();
   gpu.unload();
@@ -108,6 +109,8 @@ auto System::unload() -> void {
 
 auto System::save() -> void {
   if(!node) return;
+  memoryCardPort1.save();
+  memoryCardPort2.save();
 }
 
 auto System::power(bool reset) -> void {

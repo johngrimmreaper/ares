@@ -21,7 +21,6 @@ auto PPU::readIO(n16 address) -> n8 {
     break;
 
   case 0x0002:  //LINE_CUR
-    //todo: unknown if this is vcounter or vcounter%(vtotal+1)
     data = io.vcounter;
     break;
 
@@ -30,7 +29,7 @@ auto PPU::readIO(n16 address) -> n8 {
     break;
 
   case 0x0004:  //SPR_BASE
-    if(depth() == 2) {
+    if(grayscale()) {
       data.bit(0,4) = sprite.oamBase.bit(0,4);
     } else {
       data.bit(0,5) = sprite.oamBase.bit(0,5);
@@ -46,7 +45,7 @@ auto PPU::readIO(n16 address) -> n8 {
     break;
 
   case 0x0007:  //MAP_BASE
-    if(depth() == 2) {
+    if(grayscale()) {
       data.bit(0,2) = screen1.mapBase[1].bit(0,2);
       data.bit(4,6) = screen2.mapBase[1].bit(0,2);
     } else {
@@ -295,8 +294,6 @@ auto PPU::writeIO(n16 address, n8 data) -> void {
     break;
 
   case 0x00a2:  //TMR_CTRL
-    if(!htimer.enable && data.bit(0)) htimer.counter = htimer.frequency;
-    if(!vtimer.enable && data.bit(1)) vtimer.counter = vtimer.frequency;
     htimer.enable = data.bit(0);
     htimer.repeat = data.bit(1);
     vtimer.enable = data.bit(2);

@@ -23,11 +23,11 @@ FamicomDiskSystem::FamicomDiskSystem() {
     device.digital("Down",       virtualPorts[id].pad.down);
     device.digital("Left",       virtualPorts[id].pad.left);
     device.digital("Right",      virtualPorts[id].pad.right);
-    device.digital("B",          virtualPorts[id].pad.a);
-    device.digital("A",          virtualPorts[id].pad.b);
+    device.digital("B",          virtualPorts[id].pad.west);
+    device.digital("A",          virtualPorts[id].pad.south);
     device.digital("Select",     virtualPorts[id].pad.select);
     device.digital("Start",      virtualPorts[id].pad.start);
-    device.digital("Microphone", virtualPorts[id].pad.x);
+    device.digital("Microphone", virtualPorts[id].pad.north);
     port.append(device); }
 
     ports.append(port);
@@ -66,7 +66,7 @@ auto FamicomDiskSystem::load(Menu menu) -> void {
 }
 
 auto FamicomDiskSystem::load() -> bool {
-  game = mia::Medium::create("Famicom Disk");
+  game = mia::Medium::create("Famicom Disk System");
   if(!game->load(Emulator::load(game, configuration.game))) return false;
 
   bios = mia::Medium::create("Famicom");
@@ -115,7 +115,7 @@ auto FamicomDiskSystem::save() -> bool {
 auto FamicomDiskSystem::pak(ares::Node::Object node) -> shared_pointer<vfs::directory> {
   if(node->name() == "Famicom") return system->pak;
   if(node->name() == "Famicom Cartridge") return bios->pak;
-  if(node->name() == "Famicom Disk") return game->pak;
+  if(node->name() == "Famicom Disk System") return game->pak;
   return {};
 }
 

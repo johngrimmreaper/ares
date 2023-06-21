@@ -46,9 +46,26 @@ static const vector<string> commandNames = {
 
 auto RDP::render() -> void {
   #if defined(VULKAN)
-  if(vulkan.render()) return;
+  if(vulkan.enable && vulkan.render()) {
+    const char *msg = vulkan.crashed();
+    if(msg) crash(msg);
+    return;
+  }
   #endif
 
+  #if defined(MAME_RDP)
+  auto rdp = state->rdp();
+  rdp->set_current(command.current);
+  rdp->set_end(command.end);
+  rdp->set_status(command.source ? DP_STATUS_XBUS_DMA : 0);
+  try {
+    rdp->process_command_list();
+  } catch(emu_fatalerror &e) {
+    crash(e.what());
+  }
+  command.current = rdp->get_current();
+  return;
+  #else
   auto& memory = !command.source ? rdram.ram : rsp.dmem;
 
   auto fetch = [&]() -> u64 {
@@ -544,6 +561,7 @@ auto RDP::render() -> void {
 
     }
   }
+#endif
 }
 
 //0x00
@@ -608,7 +626,12 @@ auto RDP::syncTile() -> void {
 
 //0x29
 auto RDP::syncFull() -> void {
-  mi.raise(MI::IRQ::DP);
+  if(!command.crashed) {
+    mi.raise(MI::IRQ::DP);
+    command.bufferBusy = 0;
+    command.pipeBusy = 0;
+  }
+  command.startGclk = 0;
 }
 
 //0x2a

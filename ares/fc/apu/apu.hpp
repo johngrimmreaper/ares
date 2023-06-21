@@ -1,4 +1,4 @@
-struct APU : Thread {
+struct APU {
   Node::Object node;
   Node::Audio::Stream stream;
 
@@ -9,7 +9,6 @@ struct APU : Thread {
   auto unload() -> void;
 
   auto main() -> void;
-  auto tick() -> void;
   auto setIRQ() -> void;
 
   auto power(bool reset) -> void;
@@ -86,7 +85,7 @@ struct APU : Thread {
     n8  linearLength;
     n1  haltLengthCounter;
     n11 period;
-    n5  stepCounter;
+    n5  stepCounter = 16;
     n8  linearLengthCounter;
     n1  reloadLinear;
   } triangle;
@@ -154,8 +153,8 @@ struct APU : Thread {
   n5 enabledChannels;
 
 //unserialized:
-  i16 pulseDAC[32];
-  i16 dmcTriangleNoiseDAC[128][16][16];
+  u16 pulseDAC[32];
+  u16 dmcTriangleNoiseDAC[128][16][16];
 
   static const n8  lengthCounterTable[32];
   static const n16 dmcPeriodTableNTSC[16];

@@ -11,18 +11,23 @@ auto V30MZ::parity(u8 value) const -> bool {
 #define sign (size == Byte ? 0x80 : 0x8000)
 
 template<u32 size> auto V30MZ::ADC(u16 x, u16 y) -> u16 {
-  return ADD<size>(x, y + PSW.CY);
+  return ADD<size>(x, y, PSW.CY);
 }
 
 template<u32 size> auto V30MZ::ADD(u16 x, u16 y) -> u16 {
-  u16 result = (x + y) & mask;
-  PSW.CY = x + y > mask;
+  return ADD<size>(x, y, 0);
+}
+
+template<u32 size> auto V30MZ::ADD(u16 x, u16 y, u16 c) -> u16 {
+  u32 result = x + y + c;
+  PSW.CY = result > mask;
+  result &= mask;
   PSW.P  = parity(result);
-  PSW.AC = (u4)x + (u4)y >= 16;
+  PSW.AC = (u4)x + (u4)y + (u4)c >= 16;
   PSW.Z  = result == 0;
   PSW.S  = result & sign;
   PSW.V  = (result ^ x) & (result ^ y) & sign;
-  return result;
+  return result & mask;
 }
 
 template<u32 size> auto V30MZ::AND(u16 x, u16 y) -> u16 {
@@ -47,20 +52,20 @@ template<u32 size> auto V30MZ::DEC(u16 x) -> u16 {
 }
 
 template<u32 size> auto V30MZ::DIVI(s32 x, s32 y) -> u32 {
-  if(y == 0) return interrupt(0), x;
+  if(y == 0) return interrupt(0, InterruptSource::CPU), x;
   x = size == Byte ? (s16)x : (s32)x;
   y = size == Byte ? ( s8)y : (s16)y;
   s32 quotient  = x / y;
   s32 remainder = x % y;
-  if(quotient > mask >> 1 || quotient < -sign) return interrupt(0), x;
+  if(quotient > mask >> 1 || quotient < -sign) return interrupt(0, InterruptSource::CPU), x;
   return (remainder & mask) << bits | (quotient & mask);
 }
 
 template<u32 size> auto V30MZ::DIVU(u32 x, u32 y) -> u32 {
-  if(y == 0) return interrupt(0), x;
+  if(y == 0) return interrupt(0, InterruptSource::CPU), x;
   u32 quotient  = x / y;
   u32 remainder = x % y;
-  if(quotient > mask) return interrupt(0), x;
+  if(quotient > mask) return interrupt(0, InterruptSource::CPU), x;
   return (remainder & mask) << bits | (quotient & mask);
 }
 
@@ -77,9 +82,14 @@ template<u32 size> auto V30MZ::INC(u16 x) -> u16 {
 template<u32 size> auto V30MZ::MULI(s16 x, s16 y) -> u32 {
   x = size == Byte ? (s8)x : (s16)x;
   y = size == Byte ? (s8)y : (s16)y;
-  u32 result = x * y;
-  PSW.CY = result >> bits;
-  PSW.V  = result >> bits;
+  s32 result = x * y;
+  s32 truncatedResult = size == Byte ? (s8)result : (s16)result;
+  PSW.CY = result != truncatedResult;
+  PSW.V  = result != truncatedResult;
+  PSW.P  = 0; // undefined
+  PSW.AC = 0; // undefined
+  PSW.Z  = 1; // undefined
+  PSW.S  = 0; // undefined
   return result;
 }
 
@@ -87,6 +97,10 @@ template<u32 size> auto V30MZ::MULU(u16 x, u16 y) -> u32 {
   u32 result = x * y;
   PSW.CY = result >> bits;
   PSW.V  = result >> bits;
+  PSW.P  = 0; // undefined
+  PSW.AC = 0; // undefined
+  PSW.Z  = 1; // undefined
+  PSW.S  = 0; // undefined
   return result;
 }
 
@@ -124,7 +138,7 @@ template<u32 size> auto V30MZ::RCL(u16 x, u5 y) -> u16 {
     result = (result << 1) | PSW.CY;
     PSW.CY = carry;
   }
-  PSW.V = (x ^ result) & sign;
+  PSW.V = (result ^ (PSW.CY << (bits - 1))) & sign;
   return result & mask;
 }
 
@@ -135,78 +149,81 @@ template<u32 size> auto V30MZ::RCR(u16 x, u5 y) -> u16 {
     result = (PSW.CY ? sign : 0) | (result >> 1);
     PSW.CY = carry;
   }
-  PSW.V = (x ^ result) & sign;
+  PSW.V = (result ^ (result << 1)) & sign;
   return result & mask;
 }
 
-template<u32 size> auto V30MZ::ROL(u16 x, u4 y) -> u16 {
-  PSW.CY = (x << y) & (1 << bits);
-  u16 result = ((x << y) | (x >> (bits - y))) & mask;
-  PSW.V = (x ^ result) & sign;
-  return result;
+template<u32 size> auto V30MZ::ROL(u16 x, u5 y) -> u16 {
+  u16 result = x;
+  for(u32 n = 0; n < y; n++) {
+    PSW.CY = result & sign;
+    result = (result << 1) | PSW.CY;
+  }
+  PSW.V = (result ^ (PSW.CY << (bits - 1))) & sign;
+  return result & mask;
 }
 
-template<u32 size> auto V30MZ::ROR(u16 x, u4 y) -> u16 {
-  PSW.CY = (x >> (y - 1)) & 1;
-  u16 result = ((x >> y) | (x << (bits - y))) & mask;
-  PSW.V = (x ^ result) & sign;
-  return result;
-}
-
-template<u32 size> auto V30MZ::SAL(u16 x, u5 y) -> u16 {
-  PSW.CY = (x << y) & (1 << bits);
-  u16 result = (x << y) & mask;
-  PSW.P = parity(result);
-  PSW.Z = result == 0;
-  PSW.S = result & sign;
-  PSW.V = 0;
-  return result;
+template<u32 size> auto V30MZ::ROR(u16 x, u5 y) -> u16 {
+  u16 result = x;
+  for(u32 n = 0; n < y; n++) {
+    PSW.CY = result & 1;
+    result = (PSW.CY ? sign : 0) | (result >> 1);
+  }
+  PSW.V = (result ^ (result << 1)) & sign;
+  return result & mask;
 }
 
 template<u32 size> auto V30MZ::SAR(u16 x, u5 y) -> u16 {
-  if(y & 16) {
-    PSW.CY = x & sign;
-    return 0 - PSW.CY;
+  u16 result = x;
+  for(u32 n = 0; n < y; n++) {
+    PSW.CY = result & 1;
+    result = (result & sign) | (result >> 1);
   }
-  PSW.CY = (x >> (y - 1)) & 1;
-  u16 result = (x >> y) & mask;
-  if(x & sign) result |= mask << (bits - y);
+  result &= mask;
+  PSW.AC = 0;
   PSW.P = parity(result);
   PSW.Z = result == 0;
   PSW.S = result & sign;
-  PSW.V = 0;
+  PSW.V = (result ^ (result << 1)) & sign;
   return result;
 }
 
 template<u32 size> auto V30MZ::SBB(u16 x, u16 y) -> u16 {
-  return SUB<size>(x, y + PSW.CY);
+  return SUB<size>(x, y, PSW.CY);
 }
 
 template<u32 size> auto V30MZ::SHL(u16 x, u5 y) -> u16 {
-  PSW.CY = (x << y) & (1 << bits);
+  if(y != 0) PSW.CY = (x << y) & (1 << bits);
   u16 result = (x << y) & mask;
+  PSW.AC = 0;
   PSW.P = parity(result);
   PSW.Z = result == 0;
   PSW.S = result & sign;
-  PSW.V = (x ^ result) & sign;
+  PSW.V = (result ^ (PSW.CY << (bits - 1))) & sign;
   return result;
 }
 
 template<u32 size> auto V30MZ::SHR(u16 x, u5 y) -> u16 {
-  PSW.CY = (x >> (y - 1)) & 1;
+  if(y != 0) PSW.CY = (x >> (y - 1)) & 1;
   u16 result = (x >> y) & mask;
+  PSW.AC = 0;
   PSW.P = parity(result);
   PSW.Z = result == 0;
   PSW.S = result & sign;
-  PSW.V = (x ^ result) & sign;
+  PSW.V = (result ^ (result << 1)) & sign;
   return result;
 }
 
 template<u32 size> auto V30MZ::SUB(u16 x, u16 y) -> u16 {
-  u16 result = (x - y) & mask;
-  PSW.CY = y > x;
+  return SUB<size>(x, y, 0);
+}
+
+template<u32 size> auto V30MZ::SUB(u16 x, u16 y, u16 c) -> u16 {
+  s32 result = ((s32)x - (s32)y - (s32)c);
+  PSW.CY = result < 0;
+  result &= mask;
   PSW.P  = parity(result);
-  PSW.AC = (u4)y > (u4)x;
+  PSW.AC = (((s16)(x & 0xF)) - ((s16)(y & 0xF)) - ((s16)(c & 0xF))) < 0;
   PSW.Z  = result == 0;
   PSW.S  = result & sign;
   PSW.V  = (x ^ y) & (x ^ result) & sign;

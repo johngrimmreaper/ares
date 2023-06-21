@@ -12,7 +12,8 @@ auto ControllerPort::load(Node::Object parent) -> void {
   port->setType("Controller");
   port->setHotSwappable(true);
   port->setAllocate([&](auto name) { return allocate(name); });
-  port->setSupported({"Gamepad"});
+  port->setDisconnect([&] { device.reset(); });
+  port->setSupported({"Gamepad", "Mouse"});
 }
 
 auto ControllerPort::unload() -> void {
@@ -26,6 +27,7 @@ auto ControllerPort::save() -> void {
 
 auto ControllerPort::allocate(string name) -> Node::Peripheral {
   if(name == "Gamepad") device = new Gamepad(port);
+  if(name == "Mouse"  ) device = new Mouse(port);
   if(device) return device->node;
   return {};
 }

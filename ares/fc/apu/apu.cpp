@@ -25,7 +25,7 @@ auto APU::load(Node::Object parent) -> void {
     if(amp == 0) {
       pulseDAC[amp] = 0;
     } else {
-      pulseDAC[amp] = 16384.0 * 95.88 / (8128.0 / amp + 100.0);
+      pulseDAC[amp] = 32768.0 * 95.88 / (8128.0 / amp + 100.0);
     }
   }
 
@@ -36,7 +36,7 @@ auto APU::load(Node::Object parent) -> void {
           dmcTriangleNoiseDAC[dmcAmp][triangleAmp][noiseAmp] = 0;
         } else {
           dmcTriangleNoiseDAC[dmcAmp][triangleAmp][noiseAmp]
-          = 16384.0 * 159.79 / (100.0 + 1.0 / (triangleAmp / 8227.0 + noiseAmp / 12241.0 + dmcAmp / 22638.0));
+          = 32768.0 * 159.79 / (100.0 + 1.0 / (triangleAmp / 8227.0 + noiseAmp / 12241.0 + dmcAmp / 22638.0));
         }
       }
     }
@@ -59,14 +59,8 @@ auto APU::main() -> void {
   s32 output = 0;
   output += pulseDAC[pulseOutput];
   output += dmcTriangleNoiseDAC[dmcOutput][triangleOutput][noiseOutput];
+
   stream->frame(sclamp<16>(output) / 32768.0);
-
-  tick();
-}
-
-auto APU::tick() -> void {
-  Thread::step(rate());
-  Thread::synchronize(cpu);
 }
 
 auto APU::setIRQ() -> void {
@@ -74,8 +68,6 @@ auto APU::setIRQ() -> void {
 }
 
 auto APU::power(bool reset) -> void {
-  Thread::create(system.frequency(), {&APU::main, this});
-
   pulse1 = {};
   pulse2 = {};
   triangle = {};

@@ -63,10 +63,11 @@ struct VDP : Thread {
 
   //main.cpp
   auto step(u32 clocks) -> void;
-  auto tick() -> void;
+  template<bool _h40> auto tick() -> void;
   auto vtick() -> void;
   auto hblank(bool line) -> void;
   auto vblank(bool line) -> void;
+  auto vblankcheck() -> void;
   auto vedge() -> void;
   auto slot() -> void;
   auto refresh() -> void;
@@ -74,6 +75,7 @@ struct VDP : Thread {
   auto render() -> void;
   auto mainH32() -> void;
   auto mainH40() -> void;
+  template<bool _h40, bool _pixels> auto blocks() -> void;
   auto generateCycleTimings() -> void;
 
   //io.cpp
@@ -207,11 +209,13 @@ struct VDP : Thread {
     n1  wait;
     n1  read;
     n1  enable;
+    n4  delay;
   } dma;
 
   struct Pixel {
-    auto above() const -> bool { return priority == 1 && color; }
-    auto below() const -> bool { return priority == 0 && color; }
+    auto solid() const -> bool { return color & 0xF; }
+    auto above() const -> bool { return priority == 1 && solid(); }
+    auto below() const -> bool { return priority == 0 && solid(); }
 
     //serialization.cpp
     auto serialize(serializer&) -> void;
@@ -373,8 +377,8 @@ struct VDP : Thread {
 
   struct DAC {
     //dac.cpp
-    auto pixel(u32 x) -> void;
-    auto output(n32 color) -> void;
+    template<bool _h40, bool draw> auto pixel(u32 x) -> void;
+    template<bool _h40> auto output(n32 color) -> void;
     auto power(bool reset) -> void;
 
     //serialization.cpp
@@ -418,13 +422,13 @@ private:
   //vertical scroll RAM
   struct VSRAM {
     //memory.cpp
-    auto read(n6 address) const -> n10;
-    auto write(n6 address, n10 data) -> void;
+    auto read(n6 address) const -> n11;
+    auto write(n6 address, n11 data) -> void;
 
     //serialization.cpp
     auto serialize(serializer&) -> void;
 
-    n10 memory[40];
+    n11 memory[40];
   } vsram;
 
   //color RAM

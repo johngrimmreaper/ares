@@ -177,27 +177,34 @@ auto MCD::wait(u32 clocks) -> void {
 }
 
 auto MCD::power(bool reset) -> void {
-  M68000::power();
   Thread::create(12'500'000, {&MCD::main, this});
-  counter = {};
+  if(!reset) irq = {};
+  resetCpu();
+  n32 vec4 = io.vectorLevel4;
   io = {};
+  io.vectorLevel4 = reset ? vec4 : n32(~0);
+  counter = {};
   led = {};
-  irq = {};
   external = {};
   communication = {};
   cdc.power(reset);
-  cdd.power(reset);
   timer.power(reset);
   gpu.power(reset);
   pcm.power(reset);
+  resetPeripheral(reset);
+}
 
+auto MCD::resetCpu() -> void {
+  M68000::power();
   irq.reset.enable = 1;
   irq.reset.raise();
+}
 
-  io.vectorLevel4.byte(3) = bios[0x70 >> 1].byte(1);
-  io.vectorLevel4.byte(2) = bios[0x70 >> 1].byte(0);
-  io.vectorLevel4.byte(1) = ~0;
-  io.vectorLevel4.byte(0) = ~0;
+// A peripheral reset is expected to take ~100ms according to the dev manual.
+// The subcpu continues executing normally during this process.
+// The exact operations that occur for this reset are not known.
+auto MCD::resetPeripheral(bool reset) -> void {
+  cdd.power(reset); // reset cd drive (bios requirement)
 }
 
 }

@@ -1,8 +1,10 @@
-auto SH2::readByte(u32 address) -> u32 {
+template<u32 Origin> auto SH2::readByte(u32 address) -> u32 {
   switch(address >> 29) {
 
   case Area::Cached: {
-    if(likely(cache.enable)) return cache.read<Byte>(address);
+    if constexpr(Origin == Bus::Cache) {
+      if(likely(cache.enable)) return cache.read<Byte>(address);
+    }
     return busReadByte(address & 0x1fff'ffff);
   }
 
@@ -11,7 +13,10 @@ auto SH2::readByte(u32 address) -> u32 {
   }
 
   case Area::Data: {
-    return cache.readData<Byte>(address);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.readData<Byte>(address);
+    }
+    break;
   }
 
   case Area::IO: {
@@ -28,7 +33,7 @@ auto SH2::readByte(u32 address) -> u32 {
   return 0;
 }
 
-auto SH2::readWord(u32 address) -> u32 {
+template<u32 Origin> auto SH2::readWord(u32 address) -> u32 {
   if constexpr(Accuracy::AddressErrors) {
     if(unlikely(address & 1)) return exceptions |= AddressErrorCPU, 0;
   }
@@ -36,7 +41,9 @@ auto SH2::readWord(u32 address) -> u32 {
   switch(address >> 29) {
 
   case Area::Cached: {
-    if(likely(cache.enable)) return cache.read<Word>(address);
+    if constexpr(Origin == Bus::Cache) {
+      if(likely(cache.enable)) return cache.read<Word>(address);
+    }
     return busReadWord(address & 0x1fff'fffe);
   }
 
@@ -45,7 +52,10 @@ auto SH2::readWord(u32 address) -> u32 {
   }
 
   case Area::Data: {
-    return cache.readData<Word>(address);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.readData<Word>(address);
+    }
+    break;
   }
 
   case Area::IO: {
@@ -60,7 +70,7 @@ auto SH2::readWord(u32 address) -> u32 {
   return 0;
 }
 
-auto SH2::readLong(u32 address) -> u32 {
+template<u32 Origin> auto SH2::readLong(u32 address) -> u32 {
   if constexpr(Accuracy::AddressErrors) {
     if(unlikely(address & 3)) return exceptions |= AddressErrorCPU, 0;
   }
@@ -68,7 +78,9 @@ auto SH2::readLong(u32 address) -> u32 {
   switch(address >> 29) {
 
   case Area::Cached: {
-    if(likely(cache.enable)) return cache.read<Long>(address);
+    if constexpr(Origin == Bus::Cache) {
+      if(likely(cache.enable)) return cache.read<Long>(address);
+    }
     return busReadLong(address & 0x1fff'fffc);
   }
 
@@ -77,11 +89,17 @@ auto SH2::readLong(u32 address) -> u32 {
   }
 
   case Area::Address: {
-    return cache.readAddress(address);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.readAddress(address);
+    }
+    break;
   }
 
   case Area::Data: {
-    return cache.readData<Long>(address);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.readData<Long>(address);
+    }
+    break;
   }
 
   case Area::IO: {
@@ -104,7 +122,7 @@ auto SH2::readLong(u32 address) -> u32 {
   return 0;
 }
 
-auto SH2::writeByte(u32 address, u32 data) -> void {
+template<u32 Origin> auto SH2::writeByte(u32 address, u32 data) -> void {
   if constexpr(Accuracy::Recompiler) {
     recompiler.invalidate(address);
   }
@@ -112,20 +130,29 @@ auto SH2::writeByte(u32 address, u32 data) -> void {
   switch(address >> 29) {
 
   case Area::Cached: {
-    if(likely(cache.enable)) cache.write<Byte>(address, data);
+    if constexpr(Origin == Bus::Cache) {
+      if(likely(cache.enable)) cache.write<Byte>(address, data);
+    }
     return busWriteByte(address & 0x1fff'ffff, data);
   }
 
   case Area::Uncached: {
+    cyclesUntilSync = 0;
     return busWriteByte(address & 0x1fff'ffff, data);
   }
 
   case Area::Purge: {
-    return cache.purge(address);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.purge(address);
+    }
+    break;
   }
 
   case Area::Data: {
-    return cache.writeData<Byte>(address, data);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.writeData<Byte>(address, data);
+    }
+    break;
   }
 
   case Area::IO: {
@@ -140,7 +167,7 @@ auto SH2::writeByte(u32 address, u32 data) -> void {
   }
 }
 
-auto SH2::writeWord(u32 address, u32 data) -> void {
+template<u32 Origin> auto SH2::writeWord(u32 address, u32 data) -> void {
   if constexpr(Accuracy::AddressErrors) {
     if(unlikely(address & 1)) return (void)(exceptions |= AddressErrorCPU);
   }
@@ -152,20 +179,29 @@ auto SH2::writeWord(u32 address, u32 data) -> void {
   switch(address >> 29) {
 
   case Area::Cached: {
-    if(likely(cache.enable)) cache.write<Word>(address, data);
+    if constexpr(Origin == Bus::Cache) {
+      if(likely(cache.enable)) cache.write<Word>(address, data);
+    }
     return busWriteWord(address & 0x1fff'fffe, data);
   }
 
   case Area::Uncached: {
+    cyclesUntilSync = 0;
     return busWriteWord(address & 0x1fff'fffe, data);
   }
 
   case Area::Purge: {
-    return cache.purge(address);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.purge(address);
+    }
+    break;
   }
 
   case Area::Data: {
-    return cache.writeData<Word>(address, data);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.writeData<Word>(address, data);
+    }
+    break;
   }
 
   case Area::IO: {
@@ -177,7 +213,7 @@ auto SH2::writeWord(u32 address, u32 data) -> void {
   }
 }
 
-auto SH2::writeLong(u32 address, u32 data) -> void {
+template<u32 Origin> auto SH2::writeLong(u32 address, u32 data) -> void {
   if constexpr(Accuracy::AddressErrors) {
     if(unlikely(address & 3)) return (void)(exceptions |= AddressErrorCPU);
   }
@@ -190,24 +226,36 @@ auto SH2::writeLong(u32 address, u32 data) -> void {
   switch(address >> 29) {
 
   case Area::Cached: {
-    if(likely(cache.enable)) cache.write<Long>(address, data);
+    if constexpr(Origin == Bus::Cache) {
+      if(likely(cache.enable)) cache.write<Long>(address, data);
+    }
     return busWriteLong(address & 0x1fff'fffc, data);
   }
 
   case Area::Uncached: {
+    cyclesUntilSync = 0;
     return busWriteLong(address & 0x1fff'fffc, data);
   }
 
   case Area::Purge: {
-    return cache.purge(address);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.purge(address);
+    }
+    break;
   }
 
   case Area::Address: {
-    return cache.writeAddress(address, data);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.writeAddress(address, data);
+    }
+    break;
   }
 
   case Area::Data: {
-    return cache.writeData<Long>(address, data);
+    if constexpr(Origin == Bus::Cache) {
+      return cache.writeData<Long>(address, data);
+    }
+    break;
   }
 
   case Area::IO: {

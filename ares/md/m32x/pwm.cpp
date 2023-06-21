@@ -10,31 +10,28 @@ auto M32X::PWM::unload(Node::Object parent) -> void {
 }
 
 auto M32X::PWM::main() -> void {
-  if(mono) {
-    lsample = lfifo.read(0);
-    rsample = rfifo.read(0);
-  } else {
-    if(lmode == 0) lsample = 0;
-    if(lmode == 1) lsample = lfifo.read(0);
-    if(lmode == 2) lsample = rfifo.read(0);
-    if(lmode == 3) lsample = 0;  //undefined
+  n12 clocks = cycle-1;
+  if(clocks && (lmode.bit(0)^lmode.bit(1) || rmode.bit(0)^rmode.bit(1))) {
+    if(lmode == 1) lsample = lfifo.read();
+    if(lmode == 2) lsample = rfifo.read();
 
-    if(rmode == 0) rsample = 0;
-    if(rmode == 1) rsample = rfifo.read(0);
-    if(rmode == 2) rsample = lfifo.read(0);
-    if(rmode == 3) rsample = 0;  //undefined
-  }
+    if(rmode == 1) rsample = rfifo.read();
+    if(rmode == 2) rsample = lfifo.read();
 
-  if(timer) {
-    if(++periods == timer) {
+    lfifoLatch.bit(14) = lfifo.empty();
+    rfifoLatch.bit(14) = rfifo.empty();
+    mfifoLatch.bit(14) = lfifoLatch.bit(14) & rfifoLatch.bit(14);
+
+    if(periods++ == n4(timer-1)) {
       periods = 0;
       m32x.shm.irq.pwm.active = 1;
       m32x.shs.irq.pwm.active = 1;
+      m32x.shm.dmac.dreq[1] = dreqIRQ;
+      m32x.shs.dmac.dreq[1] = dreqIRQ;
     }
   }
 
-  u32 clocks = max(1, cycle);
-  counter += clocks;
+  counter += max(1, clocks);
   while(counter >= 522) {
     counter -= 522;
     stream->frame(lsample / 2047.0, rsample / 2047.0);
@@ -50,6 +47,19 @@ auto M32X::PWM::step(u32 clocks) -> void {
 
 auto M32X::PWM::power(bool reset) -> void {
   Thread::create(23'020'200, {&M32X::PWM::main, this});
+  lmode = 0;
+  rmode = 0;
+  mono = 0;
+  dreqIRQ = 0;
+  timer = 0;
+  cycle = 0;
+  periods = 0;
+  counter = 0;
+  lsample = 0;
+  rsample = 0;
   lfifo.flush();
   rfifo.flush();
+  lfifoLatch = 0x4000; // empty
+  rfifoLatch = 0x4000; // empty
+  mfifoLatch = 0x4000; // empty
 }

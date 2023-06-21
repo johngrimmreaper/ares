@@ -1,9 +1,11 @@
 namespace Board {
 
+#include "standard.cpp"
 #include "linear.cpp"
 #include "banked.cpp"
 #include "svp.cpp"
 #include "j-cart.cpp"
+#include "realtec.cpp"
 #include "game-genie.cpp"
 #include "mega-32x.cpp"
 #include "debugger.cpp"
@@ -26,11 +28,13 @@ auto Interface::load(Memory::Readable<n16>& rom, string name) -> bool {
   return false;
 }
 
-auto Interface::load(Memory::Writable<n16>& wram, Memory::Writable<n8>& uram, Memory::Writable<n8>& lram, string name) -> bool {
+auto Interface::load(u32& addr, u32& size, Memory::Writable<n16>& wram, Memory::Writable<n8>& uram, Memory::Writable<n8>& lram, string name) -> bool {
   wram.reset();
   uram.reset();
   lram.reset();
   if(auto fp = pak->read(name)) {
+    addr = fp->attribute("address").natural();
+    size = fp->size() << 1;
     auto mode = fp->attribute("mode");
     if(mode == "word") {
       wram.allocate(fp->size() >> 1);
@@ -49,10 +53,12 @@ auto Interface::load(Memory::Writable<n16>& wram, Memory::Writable<n8>& uram, Me
   return false;
 }
 
-auto Interface::load(M24C& m24c, string name) -> bool {
+auto Interface::load(u32& addr, u32& size, M24C& m24c, string name) -> bool {
   m24c.reset();
   if(auto fp = pak->read(name)) {
     auto mode = fp->attribute("mode");
+    addr = fp->attribute("address").natural();
+    size = 1;
     m24c.reset();
     if(mode == "X24C01" ) m24c.load(M24C::Type::X24C01 );
     if(mode == "M24C01" ) m24c.load(M24C::Type::M24C01 );

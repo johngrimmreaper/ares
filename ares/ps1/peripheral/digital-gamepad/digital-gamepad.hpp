@@ -18,6 +18,8 @@ struct DigitalGamepad : PeripheralDevice {
   auto reset() -> void override;
   auto acknowledge() -> bool override;
   auto bus(u8 data) -> u8 override;
+  auto invalid(u8 data) -> u8;
+  auto active() -> bool override;
 
   enum class State : u32 {
     Idle,
@@ -25,6 +27,7 @@ struct DigitalGamepad : PeripheralDevice {
     IDUpper,
     DataLower,
     DataUpper,
-    Release,
   } state = State::Idle;
+
+  bool _active;
 };

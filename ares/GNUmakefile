@@ -1,7 +1,5 @@
 ifeq ($(platform),windows)
   options += -luuid -lkernel32 -luser32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32
-  options += -Wl,-enable-auto-import
-  options += -Wl,-enable-runtime-pseudo-reloc
 else ifeq ($(platform),macos)
 else ifneq ($(filter $(platform),linux bsd),)
   options += -Wl,-export-dynamic
@@ -15,6 +13,10 @@ ares.objects := ares ares-fixed-allocator
 $(object.path)/ares.o: $(ares.path)/ares/ares.cpp
 $(object.path)/ares-fixed-allocator.o: $(ares.path)/ares/memory/fixed-allocator.cpp
 
+ifeq ($(platform),macos)
+  ares.dylibs :=
+endif
+
 ifeq ($(vulkan),true)
   flags += -DVULKAN
 endif
@@ -25,6 +27,10 @@ endif
 
 ifeq ($(profile),performance)
   flags += -DPROFILE_PERFORMANCE
+endif
+
+ifneq ($(filter $(cores),a26),)
+  include $(ares.path)/a26/GNUmakefile
 endif
 
 ifneq ($(filter $(cores),fc),)
@@ -89,6 +95,10 @@ endif
 
 ifneq ($(filter $(cores),ngp),)
   include $(ares.path)/ngp/GNUmakefile
+endif
+
+ifneq ($(filter $(cores),spec),)
+  include $(ares.path)/spec/GNUmakefile
 endif
 
 include $(ares.path)/component/GNUmakefile

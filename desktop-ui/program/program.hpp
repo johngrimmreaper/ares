@@ -9,6 +9,7 @@ struct Program : ares::Platform {
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
   auto event(ares::Event) -> void override;
   auto log(string_view message) -> void override;
+  auto status(string_view message) -> void override;
   auto video(ares::Node::Video::Screen, const u32* data, u32 pitch, u32 width, u32 height) -> void override;
   auto audio(ares::Node::Audio::Stream) -> void override;
   auto input(ares::Node::Input::Input) -> void override;
@@ -49,6 +50,8 @@ struct Program : ares::Platform {
 
   bool startFullScreen = false;
   string startGameLoad;
+  string startSystem;
+  string startShader;
 
   vector<ares::Node::Video::Screen> screens;
   vector<ares::Node::Audio::Stream> streams;
@@ -57,7 +60,9 @@ struct Program : ares::Platform {
   bool fastForwarding = false;
   bool rewinding = false;
   bool runAhead = false;
+  bool requestFrameAdvance = false;
   bool requestScreenshot = false;
+  bool keyboardCaptured = false;
 
   struct State {
     u32 slot = 1;
@@ -78,8 +83,10 @@ struct Program : ares::Platform {
   struct Message {
     u64 timestamp = 0;
     string text;
-    maybe<u64> framesPerSecond;
   } message;
+
+  vector<Message> messages;
+  maybe<u64> framesPerSecond;
 };
 
 extern Program program;

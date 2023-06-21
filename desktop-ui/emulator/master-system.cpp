@@ -19,7 +19,7 @@ MasterSystem::MasterSystem() {
 
   { InputDevice device{"Controls"};
     device.digital("Pause", virtualPorts[0].pad.start);
-    device.digital("Reset", virtualPorts[0].pad.rt);
+    //device.digital("Reset", virtualPorts[0].pad.rt);
     port.append(device); }
 
     ports.append(port);
@@ -33,8 +33,57 @@ MasterSystem::MasterSystem() {
     device.digital("Down",  virtualPorts[id].pad.down);
     device.digital("Left",  virtualPorts[id].pad.left);
     device.digital("Right", virtualPorts[id].pad.right);
-    device.digital("1",     virtualPorts[id].pad.a);
-    device.digital("2",     virtualPorts[id].pad.b);
+    device.digital("1",     virtualPorts[id].pad.south);
+    device.digital("2",     virtualPorts[id].pad.east);
+    port.append(device); }
+
+  { InputDevice device{"Paddle"};
+    device.analog ("L-Left",  virtualPorts[id].pad.lstick_left);
+    device.analog ("L-Right", virtualPorts[id].pad.lstick_right);
+    device.analog ("X-Axis",  virtualPorts[id].pad.lstick_left, virtualPorts[id].pad.lstick_right);
+    device.digital("Button",  virtualPorts[id].pad.south);
+    port.append(device); }
+
+  { InputDevice device{"Sports Pad"};
+    device.relative("X", virtualPorts[id].mouse.x);
+    device.relative("Y", virtualPorts[id].mouse.y);
+    device.digital ("1", virtualPorts[id].mouse.left);
+    device.digital ("2", virtualPorts[id].mouse.right);
+    port.append(device); }
+
+  { InputDevice device{"MD Control Pad"};
+    device.digital("Up",    virtualPorts[id].pad.up);
+    device.digital("Down",  virtualPorts[id].pad.down);
+    device.digital("Left",  virtualPorts[id].pad.left);
+    device.digital("Right", virtualPorts[id].pad.right);
+    device.digital("A",     virtualPorts[id].pad.west);
+    device.digital("B",     virtualPorts[id].pad.south);
+    device.digital("C",     virtualPorts[id].pad.east);
+    device.digital("Start", virtualPorts[id].pad.start);
+    port.append(device); }
+
+  { InputDevice device{"MD Fighting Pad"};
+    device.digital("Up",    virtualPorts[id].pad.up);
+    device.digital("Down",  virtualPorts[id].pad.down);
+    device.digital("Left",  virtualPorts[id].pad.left);
+    device.digital("Right", virtualPorts[id].pad.right);
+    device.digital("A",     virtualPorts[id].pad.west);
+    device.digital("B",     virtualPorts[id].pad.south);
+    device.digital("C",     virtualPorts[id].pad.east);
+    device.digital("X",     virtualPorts[id].pad.l_bumper);
+    device.digital("Y",     virtualPorts[id].pad.north);
+    device.digital("Z",     virtualPorts[id].pad.r_bumper);
+    device.digital("Mode",  virtualPorts[id].pad.select);
+    device.digital("Start", virtualPorts[id].pad.start);
+    port.append(device); }
+
+  { InputDevice device{"Mega Mouse"};
+    device.relative("X",      virtualPorts[id].mouse.x);
+    device.relative("Y",      virtualPorts[id].mouse.y);
+    device.digital ("Left",   virtualPorts[id].mouse.left);
+    device.digital ("Right",  virtualPorts[id].mouse.right);
+    device.digital ("Middle", virtualPorts[id].mouse.middle);
+    device.digital ("Start",  virtualPorts[id].mouse.extra);
     port.append(device); }
 
     ports.append(port);
@@ -43,7 +92,7 @@ MasterSystem::MasterSystem() {
 
 auto MasterSystem::load() -> bool {
   game = mia::Medium::create("Master System");
-  game->load(Emulator::load(game, configuration.game));
+  if(!game->load(Emulator::load(game, configuration.game))) return false;
 
   auto region = Emulator::region();
   //if statements below are ordered by lowest to highest priority
@@ -62,13 +111,17 @@ auto MasterSystem::load() -> bool {
     port->connect();
   }
 
+  auto device = "Gamepad";
+  if(game->pak->attribute("paddle").boolean()) device = "Paddle";
+  if(game->pak->attribute("sportspad").boolean()) device = "Sports Pad";
+
   if(auto port = root->find<ares::Node::Port>("Controller Port 1")) {
-    port->allocate("Gamepad");
+    port->allocate(device);
     port->connect();
   }
 
   if(auto port = root->find<ares::Node::Port>("Controller Port 2")) {
-    port->allocate("Gamepad");
+    port->allocate(device);
     port->connect();
   }
 

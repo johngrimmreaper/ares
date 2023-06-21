@@ -1,6 +1,6 @@
 //Reality Signal Processor
 
-struct RSP : Thread, Memory::IO<RSP> {
+struct RSP : Thread, Memory::RCP<RSP> {
   Node::Object node;
   Memory::Writable dmem;
   Memory::Writable imem;
@@ -33,7 +33,7 @@ struct RSP : Thread, Memory::IO<RSP> {
   auto step(u32 clocks) -> void;
 
   auto instruction() -> void;
-  auto instructionEpilogue() -> bool;
+  auto instructionEpilogue() -> s32;
 
   auto power(bool reset) -> void;
 
@@ -43,48 +43,45 @@ struct RSP : Thread, Memory::IO<RSP> {
   } pipeline;
 
   //dma.cpp
-  auto dmaTransfer() -> void;
+  auto dmaTransferStart() -> void;
+  auto dmaTransferStep() -> void;
 
   //io.cpp
-  auto readWord(u32 address) -> u32;
-  auto writeWord(u32 address, u32 data) -> void;
+  auto readWord(u32 address, u32& cycles) -> u32;
+  auto writeWord(u32 address, u32 data, u32& cycles) -> void;
+  auto ioRead(u32 address) -> u32;
+  auto ioWrite(u32 address, u32 data) -> void;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
 
   struct DMA {
-    n1  pbusRegion;
-    n12 pbusAddress;
-    n24 dramAddress;
-
-    struct Transfer {
-      n12 length;
-      n12 skip;
-      n8  count;
-    } read, write;
-
-    struct Request {
-      //serialization.cpp
-      auto serialize(serializer&) -> void;
-
-      enum class Type : u32 { Read, Write } type;
+    struct Regs {    
       n1  pbusRegion;
       n12 pbusAddress;
       n24 dramAddress;
-      n16 length;
-      n16 skip;
-      n16 count;
-    };
-    nall::queue<Request[2]> requests;
+      n12 length;
+      n12 skip;
+      n8  count;
+      
+      auto serialize(serializer&) -> void;
+    } pending, current;
+
+    struct Status {
+      n1 read;
+      n1 write;
+
+      auto any() -> n1 { return read | write; }
+    } busy, full;
   } dma;
 
-  struct Status : Memory::IO<Status> {
+  struct Status : Memory::RCP<Status> {
     RSP& self;
     Status(RSP& self) : self(self) {}
 
     //io.cpp
-    auto readWord(u32 address) -> u32;
-    auto writeWord(u32 address, u32 data) -> void;
+    auto readWord(u32 address, u32& cycles) -> u32;
+    auto writeWord(u32 address, u32 data, u32& cycles) -> void;
 
     n1 semaphore;
     n1 halted = 1;
@@ -111,19 +108,18 @@ struct RSP : Thread, Memory::IO<RSP> {
     };
 
     r32 r[32];
-    u32 pc;
+    u16 pc; // previously u12; now u16 for performance.
   } ipu;
 
   struct Branch {
-    enum : u32 { Step, Take, DelaySlot, Halt };
+    enum : u32 { Step, Take, DelaySlot };
 
     auto inDelaySlot() const -> bool { return state == DelaySlot; }
     auto reset() -> void { state = Step; }
-    auto take(u32 address) -> void { state = Take; pc = address; }
+    auto take(u12 address) -> void { state = Take; pc = address; }
     auto delaySlot() -> void { state = DelaySlot; }
-    auto halt() -> void { state = Halt; }
 
-    u64 pc = 0;
+    u12 pc = 0;
     u32 state = Step;
   } branch;
 
@@ -151,6 +147,7 @@ struct RSP : Thread, Memory::IO<RSP> {
   auto LHU(r32& rt, cr32& rs, s16 imm) -> void;
   auto LUI(r32& rt, u16 imm) -> void;
   auto LW(r32& rt, cr32& rs, s16 imm) -> void;
+  auto LWU(r32& rt, cr32& rs, s16 imm) -> void;
   auto NOR(r32& rd, cr32& rs, cr32& rt) -> void;
   auto OR(r32& rd, cr32& rs, cr32& rt) -> void;
   auto ORI(r32& rt, cr32& rs, u16 imm) -> void;
@@ -178,10 +175,12 @@ struct RSP : Thread, Memory::IO<RSP> {
   //vpu.cpp: Vector Processing Unit
   union r128 {
     struct { uint128_t u128; };
+#if ARCHITECTURE_SUPPORTS_SSE4_1
     struct {   __m128i v128; };
 
     operator __m128i() const { return v128; }
     auto operator=(__m128i value) { v128 = value; }
+#endif
 
     auto byte(u32 index) -> uint8_t& { return ((uint8_t*)&u128)[15 - index]; }
     auto byte(u32 index) const -> uint8_t { return ((uint8_t*)&u128)[15 - index]; }
@@ -227,76 +226,87 @@ struct RSP : Thread, Memory::IO<RSP> {
 
   auto CFC2(r32& rt, u8 rd) -> void;
   auto CTC2(cr32& rt, u8 rd) -> void;
-  auto LBV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LDV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LFV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LHV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LLV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LPV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LQV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LRV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LSV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LTV(u8 vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LUV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto LWV(r128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto MFC2(r32& rt, cr128& vs, u8 e) -> void;
-  auto MTC2(cr32& rt, r128& vs, u8 e) -> void;
-  auto SBV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SDV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SFV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SHV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SLV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SPV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SQV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SRV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SSV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto STV(u8 vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SUV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto SWV(cr128& vt, u8 e, cr32& rs, s8 imm) -> void;
-  auto VABS(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VADD(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VADDC(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VAND(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VCH(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VCL(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VCR(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VEQ(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VGE(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VLT(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  template<bool U>
-  auto VMACF(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
+  template<u8 e> auto LBV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LDV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LFV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LHV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LLV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LPV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LQV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LRV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LSV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LTV(u8 vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LUV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto LWV(r128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto MFC2(r32& rt, cr128& vs) -> void;
+  template<u8 e> auto MTC2(cr32& rt, r128& vs) -> void;
+  template<u8 e> auto SBV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SDV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SFV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SHV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SLV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SPV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SQV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SRV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SSV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto STV(u8 vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SUV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto SWV(cr128& vt, cr32& rs, s8 imm) -> void;
+  template<u8 e> auto VABS(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VADD(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VADDC(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VAND(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VCH(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VCL(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VCR(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VEQ(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VGE(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VLT(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<bool U, u8 e>
+  auto VMACF(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMACF(r128& vd, cr128& vs, cr128& vt) -> void { VMACF<0, e>(vd, vs, vt); }
+  template<u8 e> auto VMACU(r128& vd, cr128& vs, cr128& vt) -> void { VMACF<1, e>(vd, vs, vt); }
   auto VMACQ(r128& vd) -> void;
-  auto VMADH(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMADL(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMADM(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMADN(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMOV(r128& vd, u8 de, cr128& vt, u8 e) -> void;
-  auto VMRG(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMUDH(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMUDL(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMUDM(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMUDN(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  template<bool U>
-  auto VMULF(r128& rd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VMULQ(r128& rd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VNAND(r128& rd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VNE(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
+  template<u8 e> auto VMADH(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMADL(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMADM(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMADN(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMOV(r128& vd, u8 de, cr128& vt) -> void;
+  template<u8 e> auto VMRG(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMUDH(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMUDL(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMUDM(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMUDN(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<bool U, u8 e>
+  auto VMULF(r128& rd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VMULF(r128& rd, cr128& vs, cr128& vt) -> void { VMULF<0, e>(rd, vs, vt); }
+  template<u8 e> auto VMULU(r128& rd, cr128& vs, cr128& vt) -> void { VMULF<1, e>(rd, vs, vt); }
+  template<u8 e> auto VMULQ(r128& rd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VNAND(r128& rd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VNE(r128& vd, cr128& vs, cr128& vt) -> void;
   auto VNOP() -> void;
-  auto VNOR(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VNXOR(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VOR(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  template<bool L>
-  auto VRCP(r128& vd, u8 de, cr128& vt, u8 e) -> void;
-  auto VRCPH(r128& vd, u8 de, cr128& vt, u8 e) -> void;
-  template<bool D>
-  auto VRND(r128& vd, u8 vs, cr128& vt, u8 e) -> void;
-  template<bool L>
-  auto VRSQ(r128& vd, u8 de, cr128& vt, u8 e) -> void;
-  auto VRSQH(r128& vd, u8 de, cr128& vt, u8 e) -> void;
-  auto VSAR(r128& vd, cr128& vs, u8 e) -> void;
-  auto VSUB(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VSUBC(r128& vd, cr128& vs, cr128& vt, u8 e) -> void;
-  auto VXOR(r128& rd, cr128& vs, cr128& vt, u8 e) -> void;
+  template<u8 e> auto VNOR(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VNXOR(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VOR(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<bool L, u8 e>
+  auto VRCP(r128& vd, u8 de, cr128& vt) -> void;
+  template<u8 e> auto VRCP(r128& vd, u8 de, cr128& vt) -> void { VRCP<0, e>(vd, de, vt); }
+  template<u8 e> auto VRCPL(r128& vd, u8 de, cr128& vt) -> void { VRCP<1, e>(vd, de, vt); }
+  template<u8 e> auto VRCPH(r128& vd, u8 de, cr128& vt) -> void;
+  template<bool D, u8 e>
+  auto VRND(r128& vd, u8 vs, cr128& vt) -> void;
+  template<u8 e> auto VRNDN(r128& vd, u8 vs, cr128& vt) -> void { VRND<0, e>(vd, vs, vt); }
+  template<u8 e> auto VRNDP(r128& vd, u8 vs, cr128& vt) -> void { VRND<1, e>(vd, vs, vt); }
+  template<bool L, u8 e>
+  auto VRSQ(r128& vd, u8 de, cr128& vt) -> void;
+  template<u8 e> auto VRSQ(r128& vd, u8 de, cr128& vt) -> void { VRSQ<0, e>(vd, de, vt); }
+  template<u8 e> auto VRSQL(r128& vd, u8 de, cr128& vt) -> void { VRSQ<1, e>(vd, de, vt); }
+  template<u8 e> auto VRSQH(r128& vd, u8 de, cr128& vt) -> void;
+  template<u8 e> auto VSAR(r128& vd, cr128& vs) -> void;
+  template<u8 e> auto VSUB(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VSUBC(r128& vd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VXOR(r128& rd, cr128& vs, cr128& vt) -> void;
+  template<u8 e> auto VZERO(r128& rd, cr128& vs, cr128& vt) -> void;
 
 //unserialized:
   u16 reciprocals[512];
@@ -314,41 +324,44 @@ struct RSP : Thread, Memory::IO<RSP> {
   auto INVALID() -> void;
 
   //recompiler.cpp
-  struct Recompiler : recompiler::amd64 {
-    using recompiler::amd64::call;
+  struct Recompiler : recompiler::generic {
     RSP& self;
-    Recompiler(RSP& self) : self(self) {}
+    Recompiler(RSP& self) : self(self), generic(allocator) {}
 
     struct Block {
       auto execute(RSP& self) -> void {
-        ((void (*)(r32*, RSP*, r128*))code)(&self.ipu.r[0], &self, &self.vpu.r[0]);
+        ((void (*)(RSP*, IPU*, VU*))code)(&self, &self.ipu, &self.vpu);
       }
 
       u8* code;
+      u12 size;
     };
 
-    struct Pool {
-      auto operator==(const Pool& source) const -> bool { return hashcode == source.hashcode; }
-      auto operator< (const Pool& source) const -> bool { return hashcode <  source.hashcode; }
+    struct BlockHashPair {
+      auto operator==(const BlockHashPair& source) const -> bool { return hashcode == source.hashcode; }
+      auto operator< (const BlockHashPair& source) const -> bool { return hashcode <  source.hashcode; }
       auto hash() const -> u32 { return hashcode; }
 
-      u32 hashcode;
-      Block* blocks[1024];
+      Block* block;
+      u64 hashcode;
     };
 
     auto reset() -> void {
-      context = nullptr;
-      pools.reset();
+      context.fill();
+      blocks.reset();
+      dirty = 0;
     }
 
-    auto invalidate() -> void {
-      context = nullptr;
+    auto invalidate(u12 address, u12 size = 1) -> void {
+      dirty |= mask(address, size);
     }
 
-    auto pool() -> Pool*;
-    auto block(u32 address) -> Block*;
+    auto measure(u12 address) -> u12;
+    auto hash(u12 address, u12 size) -> u64;
 
-    auto emit(u32 address) -> Block*;
+    auto block(u12 address) -> Block*;
+
+    auto emit(u12 address) -> Block*;
     auto emitEXECUTE(u32 instruction) -> bool;
     auto emitSPECIAL(u32 instruction) -> bool;
     auto emitREGIMM(u32 instruction) -> bool;
@@ -357,12 +370,22 @@ struct RSP : Thread, Memory::IO<RSP> {
     auto emitLWC2(u32 instruction) -> bool;
     auto emitSWC2(u32 instruction) -> bool;
 
-    template<typename R, typename... P> auto call(R (RSP::*function)(P...)) -> void;
+    auto isTerminal(u32 instruction) -> bool;
+
+    static auto mask(u12 address, u12 size) -> u64 {
+      //1 bit per 64 bytes
+      u6 s = address >> 6;
+      u6 e = address + size - 1 >> 6;
+      u64 smask = ~0ull << s;
+      u64 emask = ~0ull >> 63 - e;
+      //handle wraparound
+      return s <= e ? smask & emask : smask | emask;
+    }
 
     bump_allocator allocator;
-    Pool* context = nullptr;
-    set<Pool> pools;
-  //hashset<Pool> pools;
+    array<Block*[1024]> context;
+    hashset<BlockHashPair> blocks;
+    u64 dirty;
   } recompiler{*this};
 
   struct Disassembler {

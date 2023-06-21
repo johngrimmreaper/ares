@@ -24,14 +24,14 @@ auto CPU::unload() -> void {
 auto CPU::main() -> void {
   if(state.nmiLine) {
     state.nmiLine = 0;  //edge-sensitive
-    if(irq(0, 0x0066, 0xff)) {
+    if(nmi()) {
       debugger.interrupt("NMI");
     }
   }
 
   if(state.irqLine) {
     //level-sensitive
-    if(irq(1, 0x0038, 0xff)) {
+    if(irq()) {
       debugger.interrupt("IRQ");
     }
   }
@@ -59,6 +59,10 @@ auto CPU::power() -> void {
   Thread::create(system.colorburst(), {&CPU::main, this});
   PC = 0x0000;  //reset vector address
   SP = 0xfffd;  //initial stack pointer location
+
+  ram.fill(0);  //fixes hang in Shanghai II (Japan) (GG)
+                //bios usually clears ram, so it should be safe
+
   ram.write(0xc000, 0xab);  //CPU $3e initial value
   ram.write(0xc700, 0x9b);  //VDP $01 initial value
   state = {};

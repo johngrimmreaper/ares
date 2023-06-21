@@ -1,6 +1,7 @@
 auto CPU::Debugger::load(Node::Object parent) -> void {
   tracer.instruction = parent->append<Node::Debugger::Tracer::Instruction>("Instruction", "CPU");
-  tracer.instruction->setAddressBits(32, 2);
+  tracer.instruction->setAddressBits(64, 2);
+  tracer.instruction->setDepth(64);
 
   tracer.exception = parent->append<Node::Debugger::Tracer::Notification>("Exception", "CPU");
   tracer.interrupt = parent->append<Node::Debugger::Tracer::Notification>("Interrupt", "CPU");
@@ -16,7 +17,7 @@ auto CPU::Debugger::unload() -> void {
 
 auto CPU::Debugger::instruction() -> void {
   if(unlikely(tracer.instruction->enabled())) {
-    u32 address = cpu.pipeline.address;
+    u64 address = cpu.pipeline.address;
     u32 instruction = cpu.pipeline.instruction;
     if(tracer.instruction->address(address)) {
       cpu.disassembler.showColors = 0;
@@ -48,6 +49,7 @@ auto CPU::Debugger::exception(u8 code) -> void {
     case 15: type = "floating point"; break;
     case 23: type = "watch address"; break;
     }
+    type.append(string{" (PC=", hex(cpu.ipu.pc, 16L), ")"});
     tracer.exception->notify(type);
   }
 }
@@ -67,11 +69,18 @@ auto CPU::Debugger::interrupt(u8 mask) -> void {
   }
 }
 
+auto CPU::Debugger::nmi() -> void {
+  if(unlikely(tracer.exception->enabled())) {
+    tracer.exception->notify("NMI");
+  }
+}
+
 auto CPU::Debugger::tlbWrite(u32 index) -> void {
   if(unlikely(tracer.tlb->enabled())) {
     auto entry = cpu.tlb.entry[index & 31];
     tracer.tlb->notify({"write: ", index, " {"});
     tracer.tlb->notify({"  global:           ", entry.global[0], ",", entry.global[1]});
+    tracer.tlb->notify({"  valid:            ", entry.valid[0],  ",", entry.valid[1]});
     tracer.tlb->notify({"  physical address: 0x", hex(entry.physicalAddress[0]), ",0x", hex(entry.physicalAddress[1])});
     tracer.tlb->notify({"  page mask:        0x", hex(entry.pageMask)});
     tracer.tlb->notify({"  virtual address:  0x", hex(entry.virtualAddress)});

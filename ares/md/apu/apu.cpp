@@ -28,13 +28,13 @@ auto APU::main() -> void {
   if(state.nmiLine) {
     state.nmiLine = 0;  //edge-sensitive
     debugger.interrupt("NMI");
-    irq(0, 0x0066, 0xff);
+    nmi();
   }
 
   if(state.intLine) {
     //level-sensitive
     debugger.interrupt("IRQ");
-    irq(1, 0x0038, 0xff);
+    irq();
   }
 
   debugger.instruction();
@@ -43,8 +43,8 @@ auto APU::main() -> void {
 
 auto APU::step(u32 clocks) -> void {
   Thread::step(clocks);
+  Thread::synchronize(cpu);
   state.busreqLatch = busownerCPU() ? 1 : 0;
-  Thread::synchronize(cpu, vdp, vdp.psg, opn2);
 }
 
 auto APU::setNMI(n1 line) -> void {
@@ -69,10 +69,13 @@ auto APU::power(bool reset) -> void {
   Z80::power();
   Thread::create(system.frequency() / 15.0, {&APU::main, this});
   if(!reset) {
+    Z80::power();
     ram.fill();
     state.resLine = 0;
     state.busreqLine = 0;
     state.busreqLatch = 0;
+  } else {
+    Z80::reset();
   }
   state.nmiLine = 0;
   state.intLine = 0;
@@ -81,11 +84,11 @@ auto APU::power(bool reset) -> void {
 }
 
 auto APU::restart() -> void {
-  Z80::power();
+  Z80::reset();
   Thread::restart({&APU::main, this});
   state.nmiLine = 0;
   state.intLine = 0;
-  state.bank = 0;
+  state.busreqLatch = state.busreqLine;
   opn2.power(true);
 }
 

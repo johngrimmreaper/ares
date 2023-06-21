@@ -1,6 +1,6 @@
 #pragma once
 
-#include <nall/recompiler/amd64/amd64.hpp>
+#include <nall/recompiler/generic/generic.hpp>
 
 //Hitachi SH-2
 
@@ -16,7 +16,7 @@ struct SH2 {
   virtual auto busWriteLong(u32 address, u32 data) -> void = 0;
 
   auto inDelaySlot() const -> bool {
-    return PPM != Branch::Step;
+    return regs.PPM != Branch::Step;
   }
 
   //sh2.cpp
@@ -29,7 +29,6 @@ struct SH2 {
   auto exceptionHandler() -> void;
   auto push(u32 data) -> void;
   auto interrupt(u8 level, u8 vector) -> void;
-  auto exception(u8 vector) -> void;
   auto addressErrorCPU() -> void;
   auto addressErrorDMA() -> void;
   auto illegalInstruction() -> void;
@@ -39,7 +38,7 @@ struct SH2 {
   auto jump(u32 pc) -> void;
   auto branch(u32 pc) -> void;
   auto delaySlot(u32 pc) -> void;
-  auto instructionEpilogue() -> bool;
+  auto instructionEpilogue() -> s32;
   auto instruction() -> void;
   auto execute(u16 opcode) -> void;
 
@@ -220,21 +219,23 @@ struct SH2 {
     u32 M;
   };
 
-  u32 R[16];  //general purpose registers
-  u32 PC;     //program counter
-  u32 PR;     //procedure register
-  u32 GBR;    //global base register
-  u32 VBR;    //vector base register
-  union {
-    u64 MAC;  //multiply-and-accumulate register
-    struct { u32 order_msb2(MACH, MACL); };
-  };
-  u32 CCR;    //clock counter register
-  S32 SR;     //status register
-  u32 PPC;    //program counter for delay slots
-  u32 PPM;    //delay slot mode
-  u32 ET;     //exception triggered flag
-  u32 ID;     //interrupts disabled flag
+  struct Registers {
+    u32 R[16];  //general purpose registers
+    u32 PC;     //program counter
+    u32 PR;     //procedure register
+    u32 GBR;    //global base register
+    u32 VBR;    //vector base register
+    union {
+      u64 MAC;  //multiply-and-accumulate register
+      struct { u32 order_msb2(MACH, MACL); };
+    };
+    u32 CCR;    //clock counter register
+    S32 SR;     //status register
+    u32 PPC;    //program counter for delay slots
+    u32 PPM;    //delay slot mode
+    u32 ET;     //exception triggered flag
+    u32 ID;     //interrupts disabled flag
+  } regs;
 
   enum : u32 {
     ResetCold       = 1 << 0,
@@ -244,14 +245,16 @@ struct SH2 {
   };
   u32 exceptions = 0;  //delayed exception flags
 
-  struct Recompiler : recompiler::amd64 {
-    using recompiler::amd64::call;
+  s32 cyclesUntilSync = 0;
+  s32 minCyclesBetweenSyncs = 0;
+
+  struct Recompiler : recompiler::generic {
     SH2& self;
-    Recompiler(SH2& self) : self(self) {}
+    Recompiler(SH2& self) : self(self), generic(allocator) {}
 
     struct Block {
       auto execute(SH2& self) -> void {
-        ((void (*)(u32*, SH2*))code)(&self.R[0], &self);
+        ((void (*)(SH2*, Registers*))code)(&self, &self.regs);
       }
 
       u8* code;
@@ -265,29 +268,18 @@ struct SH2 {
       for(u32 index : range(1 << 24)) pools[index] = nullptr;
     }
 
-    auto invalidate(u32 address) -> void {
-      pool(address)->blocks[address >> 1 & 0x7f] = nullptr;
-    }
-
+    auto invalidate(u32 address) -> void;
     auto pool(u32 address) -> Pool*;
     auto block(u32 address) -> Block*;
     auto emit(u32 address) -> Block*;
-    auto emitInstruction(u16 opcode) -> bool;
+    auto emitInstruction(u16 opcode) -> u32;
+    auto getSR(reg dst) -> void;
+    auto setSR(reg src) -> void;
+    template<typename F> auto checkDelaySlot(F body) -> void;
 
-    template<typename V, typename... P>
-    alwaysinline auto call(V (SH2::*function)(P...)) -> void {
-      static_assert(sizeof...(P) <= 5);
-      if constexpr(ABI::Windows) {
-        if constexpr(sizeof...(P) >= 5) mov(dis8(rsp, 0x28), ra5);
-        if constexpr(sizeof...(P) >= 4) mov(dis8(rsp, 0x20), ra4);
-      }
-      mov(ra0, rbp);
-      call(imm64{function}, rax);
-    }
-
+    bool inDelaySlot;
     bump_allocator allocator;
     Pool* pools[1 << 24];
-    int min_cycles = 0;
   } recompiler{*this};
 
   #include "sh7604/sh7604.hpp"

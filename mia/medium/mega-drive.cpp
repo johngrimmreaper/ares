@@ -8,17 +8,22 @@ struct MegaDrive : Cartridge {
   auto analyzePeripherals(vector<u8>& rom, string hash) -> void;
   auto analyzeCopyProtection(vector<u8>& rom, string hash) -> void;
 
+  string board;
+
   struct RAM {
     explicit operator bool() const { return mode && size != 0; }
 
     string mode;
+    u32 address = 0x200000;
     u32 size = 0;
+    bool enable = 0;
   } ram;
 
   struct EEPROM {
     explicit operator bool() const { return mode && size != 0; }
 
     string mode;
+    u32 address = 0x200000;
     u32 size = 0;
     u8 rsda = 0;
     u8 wsda = 0;
@@ -47,6 +52,7 @@ auto MegaDrive::load(string location) -> bool {
   pak = new vfs::directory;
   pak->setAttribute("title",    document["game/title"].string());
   pak->setAttribute("region",   document["game/region"].string());
+  pak->setAttribute("board",    document["game/board"].string());
   pak->setAttribute("bootable", true);
   pak->setAttribute("megacd",   (bool)document["game/device"].string().split(", ").find("Mega CD"));
   pak->append("manifest.bml", manifest);
@@ -72,12 +78,15 @@ auto MegaDrive::load(string location) -> bool {
     Medium::load(node, ".ram");
     if(auto fp = pak->read("save.ram")) {
       fp->setAttribute("mode", node["mode"].string());
+      fp->setAttribute("address", node["address"].natural());
+      fp->setAttribute("enable", node["enable"].boolean());
     }
   }
 
   if(auto node = document["game/board/memory(type=EEPROM,content=Save)"]) {
     Medium::load(node, ".eeprom");
     if(auto fp = pak->read("save.eeprom")) {
+      fp->setAttribute("address", node["address"].natural());
       fp->setAttribute("mode", node["mode"].string());
       fp->setAttribute("rsda", node["rsda"].natural());
       fp->setAttribute("wsda", node["wsda"].natural());
@@ -109,6 +118,7 @@ auto MegaDrive::save(string location) -> bool {
 auto MegaDrive::analyze(vector<u8>& rom) -> string {
   if(rom.size() < 0x800) return {};
 
+  board = {};
   ram = {};
   eeprom = {};
   peripherals = {};
@@ -120,6 +130,10 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
 
   vector<string> devices;
   string device = slice((const char*)&rom[0x190], 0, 16).trimRight(" ");
+  if(device == "OJKRPTBVFCA") {
+    //ignore erroneous device string used by Codemasters
+    device = "";
+  }
   for(auto& id : device) {
     if(id == '0');  //Master System controller
     if(id == '4');  //multitap
@@ -147,7 +161,8 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
     if(region == "EUROPE") regions.append("PAL");
   }
   if(!regions) {
-    if(region.find("J")) regions.append("NTSC-J");
+    if(region.find("J")
+    || region.find("K")) regions.append("NTSC-J");
     if(region.find("U")) regions.append("NTSC-U");
     if(region.find("E")) regions.append("PAL");
   }
@@ -197,6 +212,8 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
   s +={"  region: ", regions.merge(", "), "\n"};
   if(devices)
   s +={"  device: ", devices.merge(", "), "\n"};
+  if(board)
+  s +={"  board:  ", board, "\n"};
   s += "  board\n";
 
   if(domesticName == "Game Genie") {
@@ -224,6 +241,7 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
 
   if(eeprom) {
     s += "    memory\n";
+    s +={"      address: 0x", hex(ram.address), "\n"};
     s += "      type: EEPROM\n";
     s +={"      size: 0x", hex(eeprom.size), "\n"};
     s += "      content: Save\n";
@@ -234,9 +252,11 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
   } else if(ram) {
     s += "    memory\n";
     s += "      type: RAM\n";
+    s +={"      address: 0x", hex(ram.address), "\n"};
     s +={"      size: 0x", hex(ram.size), "\n"};
     s += "      content: Save\n";
     s +={"      mode: ", ram.mode, "\n"};
+    s +={"      enable: ", ram.enable, "\n"};
   }
 
   if(peripherals.jcart) {
@@ -247,6 +267,8 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
 }
 
 auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
+  string serial = slice((const char*)&rom[0x0180], 0, 14);
+
   //SRAM
   //====
 
@@ -270,6 +292,8 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
     if(ram.mode == "upper") ram.size = (ramTo - ramFrom + 2) >> 1;
     if(ram.mode == "lower") ram.size = (ramTo - ramFrom + 2) >> 1;
     if(ram.mode == "word" ) ram.size = (ramTo - ramFrom + 1);
+
+    ram.address = ramFrom & ~1;
   }
 
   //Buck Rogers: Countdown to Doomsday (USA, Europe)
@@ -296,8 +320,32 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
     ram.size = 32768;
   }
 
-  //Might and Magic III: Isles of Terra (USA)
+  //Might and Magic III: Isles of Terra (USA) (Proto)
   if(hash == "ac08551ecd4c037211fca98359efcfe7c0b048880e82a474d5c5fcd157e33592") {
+    ram.mode = "lower";
+    ram.size = 32768;
+  }
+
+  //NBA Live '98 (USA)
+  if(hash == "9de38bd95d7ae8910fe5440651feafaef540ed743ea61925503dce6605192b0e") {
+    ram.mode = "lower";
+    ram.size = 8192;
+  }
+
+  //NHL '96 (USA, Europe)
+  if(hash == "dce28c858bb368d8095267e04a8bdff17d913787efd783352334b0dba1e480da") {
+    ram.mode = "lower";
+    ram.size = 8192;
+  }
+
+  //NHL '98 (USA)
+  if(hash == "ed68ec25c676f7b935414d07657b9721a6ec3b43cecf1bc9dc1d069d0a14e974") {
+    ram.mode = "lower";
+    ram.size = 32768;
+  }
+
+  //Psy-O-Blade (Japan)
+  if(hash == "26706ead54c450a98aac785e2d6dd66e36e0fe52c4980618b6fe7602b3a2623c") {
     ram.mode = "lower";
     ram.size = 32768;
   }
@@ -306,6 +354,46 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
   if(hash == "30749097096807abf67cd1f7b2392f5789f5149ee33661e6d13113396f06a121") {
     ram.mode = "lower";
     ram.size = 8192;
+  }
+
+  // Triple Play 96 (USA)
+  //   $000000-$1fffff : 2MiB ROM
+  //   $200001-$20ffff : 32 KiB lower SRAM
+  //   $300000-$3fffff : 1MiB ROM
+  if(serial == "GM T-172026-04" && rom.size() >= 3_MiB) {
+    if(Hash::SHA256({&rom[0],2_MiB}).digest() == "2712d5233e7e8f50a5a0ed954c404c16dd4bc20321ac19035bc8d3b07be10b72") {
+      // Matched low ROM at $000000
+      if( Hash::SHA256({&rom[2_MiB],1_MiB}).digest() == "a912d184412f764cef828e36aa44868b1515bfa1730327acbe480c8b95179225") {
+        // Matched high rom at offset $200000 (copy to $300000)
+        rom.resize(4_MiB);
+        memory::copy(&rom[3_MiB], &rom[2_MiB], 1_MiB);
+        ram.enable = true;
+      } else if(rom.size() == 4_MiB &&
+          Hash::SHA256({&rom[3_MiB],1_MiB}).digest() == "a912d184412f764cef828e36aa44868b1515bfa1730327acbe480c8b95179225") {
+        // Matched high ROM at offset $300000
+        ram.enable = true;
+      }
+    }
+  }
+
+  // Triple Play - Gold Edition (USA)
+  //   $000000-$1fffff : 2MiB ROM
+  //   $200001-$20ffff : 32 KiB lower SRAM
+  //   $300000-$3fffff : 1MiB ROM
+  if(serial == "GM T-172116-00" && rom.size() >= 3_MiB) {
+    if(Hash::SHA256({&rom[0],2_MiB}).digest() == "979531ead09319a57ec6e3a892128782aa9713369ba4e400414ba0d26e6053cf") {
+      // Matched low ROM at $000000
+      if( Hash::SHA256({&rom[2_MiB],1_MiB}).digest() == "306cfa0e742cf6ee5adc1d544fccb2ef3ed3c19716055a4daceb25a2ad5aadcf") {
+        // Matched high rom at offset $200000 (copy to $300000)
+        rom.resize(4_MiB);
+        memory::copy(&rom[3_MiB], &rom[2_MiB], 1_MiB);
+        ram.enable = true;
+      } else if(rom.size() == 4_MiB &&
+          Hash::SHA256({&rom[3_MiB],1_MiB}).digest() == "306cfa0e742cf6ee5adc1d544fccb2ef3ed3c19716055a4daceb25a2ad5aadcf") {
+        // Matched high ROM at $300000
+        ram.enable = true;
+      }
+    }
   }
 
   //M28C16
@@ -478,6 +566,15 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
 
   //Wonder Boy in Monster World (USA, Europe)
   if(hash == "6b2ac36f624f914ad26e32baa87d1253aea9dcfc13d2a5842ecdd2bd4a7a43b9") {
+    eeprom.mode = "X24C01";
+    eeprom.size = 128;
+    eeprom.rsda = 0;
+    eeprom.wsda = 0;
+    eeprom.wscl = 1;
+  }
+
+  //Wonder Boy V - Monster World III (Japan)
+  if(hash == "d758864efa18da7a8a87dce32a5b61a8067fb60846696a9588956bc316e480f9") {
     eeprom.mode = "X24C01";
     eeprom.size = 128;
     eeprom.rsda = 0;
@@ -663,6 +760,29 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
     eeprom.rsda = 0;
     eeprom.wsda = 0;
     eeprom.wscl = 8;
+  }
+
+  //REALTEC
+  //======
+
+  //Earth Defense ~ Earth Defend, The (USA, Taiwan) (En) (Unl)
+  if(hash == "2552a6fd12772f650dd91b8a6686d1d423ccde640bb728611f3b6d8c74696e98") {
+    board = "REALTEC";
+  }
+
+  //Funny World & Balloon Boy (USA) (Unl)
+  if(hash == "8f36a8ea96bbb09f8d4a2d7efb77a3c3da9a69e14c8a714b40bcdb856da2ef97") {
+    board = "REALTEC";
+  }
+
+  //Mallet Legend's Whac-a-Critter ~ Mallet Legend (USA, Taiwan) (En) (Unl)
+  if(hash == "0e137267121d63408562dac226f692b70a5399e2e6d359b3e0e570ca011e16a0") {
+    board = "REALTEC";
+  }
+
+  //Tom Clown (Taiwan) (En) (Unl)
+  if(hash == "b04b9a1f4b17ec5251857cf0a689f442229eecadba96adc405b84343c36ad0db") {
+    board = "REALTEC";
   }
 }
 
