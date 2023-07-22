@@ -1,12 +1,14 @@
-ares (132-1) UNRELEASED; urgency=medium
+ares (132-1) unstable; urgency=medium
 
   * debian/watch: Use GitHub /tags rather than /releases page.
   * update build-dependencies:
     * pkg-config -> pkgconf
     * libsdl1.2-dev -> libsdl2-dev (Closes: #1038026)
   * fix FTBFS with GCC-13 (Closes: #1037580)
+  * add copyright information for new vendored files
+    shipped in thirdparty/.
 
- -- Alexandre Detiste <alexandre.detiste@gmail.com>  Wed, 21 Jun 2023 14:27:36 +0200
+ -- Alexandre Detiste <alexandre.detiste@gmail.com>  Sat, 22 Jul 2023 17:16:04 +0200
 
 ares (131-1) UNRELEASED; urgency=medium
 
