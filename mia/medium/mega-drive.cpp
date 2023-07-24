@@ -7,8 +7,10 @@ struct MegaDrive : Cartridge {
   auto analyzeStorage(vector<u8>& rom, string hash) -> void;
   auto analyzePeripherals(vector<u8>& rom, string hash) -> void;
   auto analyzeCopyProtection(vector<u8>& rom, string hash) -> void;
+  auto analyzeRegion(vector<u8>& rom, string hash) -> void;
 
   string board;
+  vector<string> regions;
 
   struct RAM {
     explicit operator bool() const { return mode && size != 0; }
@@ -116,7 +118,10 @@ auto MegaDrive::save(string location) -> bool {
 }
 
 auto MegaDrive::analyze(vector<u8>& rom) -> string {
-  if(rom.size() < 0x800) return {};
+  if(rom.size() < 0x800) {
+    print("[mia] Loading rom failed. Minimum expected rom size is 2048 (0x800) bytes. Rom size: ", rom.size(), " (0x", hex(rom.size()), ") bytes.\n");
+    return {};
+  }
 
   board = {};
   ram = {};
@@ -127,6 +132,7 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
   analyzeStorage(rom, hash);
   analyzePeripherals(rom, hash);
   analyzeCopyProtection(rom, hash);
+  analyzeRegion(rom, hash);
 
   vector<string> devices;
   string device = slice((const char*)&rom[0x190], 0, 16).trimRight(" ");
@@ -152,32 +158,6 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
     if(id == 'R');  //RS-232 modem
     if(id == 'T');  //tablet
     if(id == 'V');  //paddle
-  }
-
-  vector<string> regions;
-  string region = slice((const char*)&rom[0x01f0], 0, 16).trimRight(" ");
-  if(!regions) {
-    if(region == "JAPAN" ) regions.append("NTSC-J");
-    if(region == "EUROPE") regions.append("PAL");
-  }
-  if(!regions) {
-    if(region.find("J")
-    || region.find("K")) regions.append("NTSC-J");
-    if(region.find("U")) regions.append("NTSC-U");
-    if(region.find("E")) regions.append("PAL");
-  }
-  if(!regions && region.size() == 1) {
-    maybe<u8> bits;
-    u8 field = region[0];
-    if(field >= '0' && field <= '9') bits = field - '0';
-    if(field >= 'A' && field <= 'F') bits = field - 'A' + 10;
-    if(bits && *bits & 1) regions.append("NTSC-J");  //domestic 60hz
-    if(bits && *bits & 2);                           //domestic 50hz
-    if(bits && *bits & 4) regions.append("NTSC-U");  //overseas 60hz
-    if(bits && *bits & 8) regions.append("PAL");     //overseas 50hz
-  }
-  if(!regions) {
-    regions.append("NTSC-J", "NTSC-U", "PAL");
   }
 
   string domesticName;
@@ -266,24 +246,71 @@ auto MegaDrive::analyze(vector<u8>& rom) -> string {
   return s;
 }
 
+auto MegaDrive::analyzeRegion(vector<u8>& rom, string hash) -> void {
+  string serial = slice((const char*)&rom[0x0180], 0, 14);
+
+  int offset = 0;
+  if(serial == "GM MK-1563 -00" && rom.size() == 4_MiB) {
+    //For Sonic & Knuckles + Sonic the Hedgehog 3, use Sonic 3 header
+    offset = 0x200000;
+  }
+
+  string region = slice((const char*)&rom[0x01f0 + offset], 0, 16).trimRight(" ");
+  if(!regions) {
+    if(region == "JAPAN" ) regions.append("NTSC-J");
+    if(region == "EUROPE") regions.append("PAL");
+  }
+  if(!regions) {
+    if(region.find("J")
+    || region.find("K")) regions.append("NTSC-J");
+    if(region.find("U")) regions.append("NTSC-U");
+    if(region.find("E")) regions.append("PAL");
+  }
+  if(!regions && region.size() == 1) {
+    maybe<u8> bits;
+    u8 field = region(0);
+    if(field >= '0' && field <= '9') bits = field - '0';
+    if(field >= 'A' && field <= 'F') bits = field - 'A' + 10;
+    if(bits && *bits & 1) regions.append("NTSC-J");  //domestic 60hz
+    if(bits && *bits & 2);                           //domestic 50hz
+    if(bits && *bits & 4) regions.append("NTSC-U");  //overseas 60hz
+    if(bits && *bits & 8) regions.append("PAL");     //overseas 50hz
+  }
+  if(!regions) {
+    regions.append("NTSC-J", "NTSC-U", "PAL");
+  }
+
+  //Alisia Dragoon (Europe)
+  if(hash == "0930b77d0474e99c10690245cac12a6618b6c16420e3575379aba6e715ea797a") {
+    regions.reset();
+    regions.append("PAL");
+  }
+}
+
 auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
   string serial = slice((const char*)&rom[0x0180], 0, 14);
+  int offset = 0; 
+
+  //For Sonic & Knuckles + Sonic the Hedgehog 3, use Sonic 3 header for extra memory section
+  if(serial == "GM MK-1563 -00" && rom.size() == 4_MiB) {
+    offset += 0x200000;
+  }
 
   //SRAM
   //====
 
-  if(rom[0x01b0] == 'R' && rom[0x01b1] == 'A') {
+  if(rom[0x01b0 + offset] == 'R' && rom[0x01b1 + offset] == 'A') {
     u32 ramFrom = 0;
-    ramFrom |= rom[0x01b4] << 24;
-    ramFrom |= rom[0x01b5] << 16;
-    ramFrom |= rom[0x01b6] <<  8;
-    ramFrom |= rom[0x01b7] <<  0;
+    ramFrom |= rom[0x01b4 + offset] << 24;
+    ramFrom |= rom[0x01b5 + offset] << 16;
+    ramFrom |= rom[0x01b6 + offset] <<  8;
+    ramFrom |= rom[0x01b7 + offset] <<  0;
 
     u32 ramTo = 0;
-    ramTo |= rom[0x01b8] << 24;
-    ramTo |= rom[0x01b9] << 16;
-    ramTo |= rom[0x01ba] <<  8;
-    ramTo |= rom[0x01bb] <<  0;
+    ramTo |= rom[0x01b8 + offset] << 24;
+    ramTo |= rom[0x01b9 + offset] << 16;
+    ramTo |= rom[0x01ba + offset] <<  8;
+    ramTo |= rom[0x01bb + offset] <<  0;
 
     if(!(ramFrom & 1) && !(ramTo & 1)) ram.mode = "upper";
     if( (ramFrom & 1) &&  (ramTo & 1)) ram.mode = "lower";
@@ -298,6 +325,12 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
 
   //Buck Rogers: Countdown to Doomsday (USA, Europe)
   if(hash == "997cbd682bc7c0636302f07219d9152244c8ae06028fd7d91463d35756630ce5") {
+    ram.mode = "lower";
+    ram.size = 8192;
+  }
+
+  //FIFA Soccer 95 (Korea)
+  if(hash == "b6b1f9666adcccbefeb4bd67dbbbc666b96f4aee566bc459ce11b210f30950fe") {
     ram.mode = "lower";
     ram.size = 8192;
   }
@@ -324,6 +357,12 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
   if(hash == "ac08551ecd4c037211fca98359efcfe7c0b048880e82a474d5c5fcd157e33592") {
     ram.mode = "lower";
     ram.size = 32768;
+  }
+
+  //NBA Live 95 (Korea)
+  if(hash == "e67d99837dc8861d6f538d36d893d80ebdfb338a5dfb4f5a7c46735d0b4f68aa") {
+    ram.mode = "lower";
+    ram.size = 8192;
   }
 
   //NBA Live '98 (USA)

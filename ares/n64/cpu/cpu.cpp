@@ -30,8 +30,12 @@ auto CPU::unload() -> void {
 }
 
 auto CPU::main() -> void {
-  instruction();
-  synchronize();
+  while(!vi.refreshed) {
+    instruction();
+    synchronize();
+  }
+
+  vi.refreshed = false;
 }
 
 auto CPU::step(u32 clocks) -> void {
@@ -47,11 +51,11 @@ auto CPU::synchronize() -> void {
   rsp.clock -= clocks;
   rdp.clock -= clocks;
   pif.clock -= clocks;
-  while( vi.clock < 0)  vi.main();
-  while( ai.clock < 0)  ai.main();
-  while(rsp.clock < 0) rsp.main();
-  while(rdp.clock < 0) rdp.main();
-  while(pif.clock < 0) pif.main();
+  vi.main();
+  ai.main();
+  rsp.main();
+  rdp.main();
+  pif.main();
 
   queue.step(clocks, [](u32 event) {
     switch(event) {
@@ -92,6 +96,17 @@ auto CPU::instruction() -> void {
   }
 
   if constexpr(Accuracy::CPU::Recompiler) {
+    // Fast path: attempt to lookup previously compiled blocks with devirtualizeFast
+    // and fastFetchBlock, this skips exception handling, error checking, and
+    // code emitting pathways for maximum lookup performance.
+    // As memory writes cause recompiler block invalidation, this shouldn't be detectable.
+    if (auto address = devirtualizeFast(ipu.pc)) {
+      if(auto block = recompiler.fastFetchBlock(address)) {
+        block->execute(*this);
+        return;
+      }
+    }
+
     if (auto address = devirtualize(ipu.pc)) {
       auto block = recompiler.block(*address);
       block->execute(*this);
@@ -111,7 +126,8 @@ auto CPU::instruction() -> void {
 
 auto CPU::instructionEpilogue() -> s32 {
   if constexpr(Accuracy::CPU::Recompiler) {
-    icache.step(ipu.pc);  //simulates timings without performing actual icache loads
+    //simulates timings without performing actual icache loads
+	icache.step(ipu.pc, devirtualizeFast(ipu.pc));
   }
 
   ipu.r[0].u64 = 0;

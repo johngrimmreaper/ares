@@ -14,17 +14,13 @@
 #if defined(ARCHITECTURE_AMD64)
 #include <nmmintrin.h>
 using v128 = __m128i;
-#elif defined(ARCHITECTURE_ARM64)
+#elif defined(ARCHITECTURE_ARM64) && !defined(COMPILER_MICROSOFT)
 #include <sse2neon.h>
 using v128 = __m128i;
 #endif
 
 #if defined(VULKAN)
   #include <n64/vulkan/vulkan.hpp>
-#endif
-
-#if defined(MAME_RDP)
-class n64_state;
 #endif
 
 namespace ares::Nintendo64 {

@@ -65,41 +65,52 @@ auto VideoSettings::construct() -> void {
   renderSettingsLabel.setText("N64 Render Settings").setFont(Font().setBold());
 
   renderQualityLayout.setPadding(12_sx, 0);
-    enableVulkanOption.setText("Enable GPU acceleration").setChecked(settings.video.enableVulkan).onToggle([&] {
-    settings.video.enableVulkan = enableVulkanOption.checked();
-    if(emulator) emulator->setBoolean("Enable GPU acceleration", settings.video.enableVulkan);
 
-    renderSupersamplingOption.setEnabled(settings.video.enableVulkan && settings.video.quality != "SD");
-    renderQualitySD.setEnabled(settings.video.enableVulkan);
-    renderQualityHD.setEnabled(settings.video.enableVulkan);
-    renderQualityUHD.setEnabled(settings.video.enableVulkan);
-    disableVideoInterfaceProcessingOption.setEnabled(settings.video.enableVulkan);
-  });
-  enableVulkanLayout.setAlignment(1).setPadding(12_sx, 0);
-  enableVulkanHint.setText("Enables Vulkan/Metal Hardware rendering").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
   disableVideoInterfaceProcessingOption.setText("Disable Video Interface Processing").setChecked(settings.video.disableVideoInterfaceProcessing).onToggle([&] {
     settings.video.disableVideoInterfaceProcessing = disableVideoInterfaceProcessingOption.checked();
     if(emulator) emulator->setBoolean("Disable Video Interface Processing", settings.video.disableVideoInterfaceProcessing);
   });
   disableVideoInterfaceProcessingLayout.setAlignment(1).setPadding(12_sx, 0);
   disableVideoInterfaceProcessingHint.setText("Disables Video Interface post processing to render image from VRAM directly").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
+
+  weaveDeinterlacingOption.setText("Weave Deinterlacing").setChecked(settings.video.weaveDeinterlacing).onToggle([&] {
+    settings.video.weaveDeinterlacing = weaveDeinterlacingOption.checked();
+    if(emulator) emulator->setBoolean("(Experimental) Double the perceived horizontal resolution, disabled when supersampling is used", settings.video.weaveDeinterlacing);
+    if(weaveDeinterlacingOption.checked() == true) {
+      renderSupersamplingOption.setChecked(false).setEnabled(false);
+      settings.video.supersampling = false;
+    } else {
+      if(settings.video.quality != "SD") renderSupersamplingOption.setEnabled(true);
+    }
+  });
+  weaveDeinterlacingLayout.setAlignment(1).setPadding(12_sx, 0);
+  weaveDeinterlacingHint.setText("Doubles the perceived horizontal resolution, incompatible with supersampling").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
+
   renderQualitySD.setText("SD Quality").onActivate([&] {
     settings.video.quality = "SD";
     renderSupersamplingOption.setChecked(false).setEnabled(false);
+    settings.video.supersampling = false;
+    weaveDeinterlacingOption.setEnabled(true);
   });
   renderQualityHD.setText("HD Quality").onActivate([&] {
     settings.video.quality = "HD";
-    renderSupersamplingOption.setChecked(settings.video.supersampling).setEnabled(true);
+    if(weaveDeinterlacingOption.checked() == false) renderSupersamplingOption.setChecked(settings.video.supersampling).setEnabled(true);
   });
   renderQualityUHD.setText("UHD Quality").onActivate([&] {
     settings.video.quality = "UHD";
-    renderSupersamplingOption.setChecked(settings.video.supersampling).setEnabled(true);
+    if(weaveDeinterlacingOption.checked() == false) renderSupersamplingOption.setChecked(settings.video.supersampling).setEnabled(true);
   });
   if(settings.video.quality == "SD") renderQualitySD.setChecked();
   if(settings.video.quality == "HD") renderQualityHD.setChecked();
   if(settings.video.quality == "UHD") renderQualityUHD.setChecked();
   renderSupersamplingOption.setText("Supersampling").setChecked(settings.video.supersampling && settings.video.quality != "SD").setEnabled(settings.video.quality != "SD").onToggle([&] {
     settings.video.supersampling = renderSupersamplingOption.checked();
+    if(renderSupersamplingOption.checked() == true) {
+      weaveDeinterlacingOption.setEnabled(false).setChecked(false);
+      settings.video.weaveDeinterlacing = false;
+    } else {
+      weaveDeinterlacingOption.setEnabled(true);
+    }
   });
   renderSupersamplingLayout.setAlignment(1).setPadding(12_sx, 0);
   renderSupersamplingHint.setText("Scales HD and UHD resolutions back down to SD").setFont(Font().setSize(7.0)).setForegroundColor(SystemColor::Sublabel);
@@ -109,10 +120,10 @@ auto VideoSettings::construct() -> void {
   #if !defined(VULKAN)
   //hide Vulkan-specific options if Vulkan is not available
   renderSettingsLabel.setCollapsible(true).setVisible(false);
-  enableVulkanLayout.setCollapsible(true).setVisible(false);
   renderQualityLayout.setCollapsible(true).setVisible(false);
   renderSupersamplingLayout.setCollapsible(true).setVisible(false);
   renderSettingsHint.setCollapsible(true).setVisible(false);
   disableVideoInterfaceProcessingLayout.setCollapsible(true).setVisible(false);
+  weaveDeinterlacingLayout.setCollapsible(true).setVisible(false);
   #endif
 }

@@ -54,13 +54,13 @@ auto Vulkan::load(Node::Object) -> bool {
     }
 
     if (!implementation) {
-      platform->status("Vulkan init failed, falling back to MAME RDP");
+      platform->status("Vulkan init failed: No RDP rendering support");
       vulkan.enable = false;
     } else {
       platform->status("Vulkan Enabled: using paraLLEl-RDP");
     }
   } else {
-    platform->status("Vulkan Disabled: using MAME RDP");
+    platform->status("Vulkan Disabled: No RDP rendering support");
   }
 
   return true;
@@ -159,6 +159,15 @@ auto Vulkan::scanoutAsync(bool field) -> bool {
   if(disableVideoInterfaceProcessing) {
     options.vi = {false, false, false, false, false, false};
   }
+  if(!supersampleScanout){
+    options.blend_previous_frame = weaveDeinterlacing;
+    options.upscale_deinterlacing = !weaveDeinterlacing;
+  }
+  else {
+    options.blend_previous_frame = false;
+    options.upscale_deinterlacing = true;
+  }
+
 
   if(implementation->scanout.fence) {
     implementation->scanout.fence->wait();

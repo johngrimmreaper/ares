@@ -8,6 +8,7 @@ struct Presentation : Window {
   auto unloadEmulator(bool reloading = false) -> void;
   auto showIcon(bool visible) -> void;
   auto loadShaders() -> void;
+  auto refreshSystemMenu() -> void;
 
   MenuBar menuBar{this};
     Menu loadMenu{&menuBar};
@@ -51,6 +52,8 @@ struct Presentation : Window {
     Menu toolsMenu{&menuBar};
       Menu saveStateMenu{&toolsMenu};
       Menu loadStateMenu{&toolsMenu};
+      MenuItem undoSaveStateMenu{&toolsMenu};
+      MenuItem undoLoadStateMenu{&toolsMenu};
       MenuItem captureScreenshot{&toolsMenu};
       MenuSeparator toolsMenuSeparatorA{&toolsMenu};
       MenuCheckItem pauseEmulation{&toolsMenu};

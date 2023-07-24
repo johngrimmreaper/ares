@@ -7,6 +7,7 @@ struct SuperFamicom : Cartridge {
 
 protected:
   auto region() const -> string;
+  auto videoRegion() const -> string;
   auto revision() const -> string;
   auto board() const -> string;
   auto label() const -> string;
@@ -182,7 +183,11 @@ auto SuperFamicom::analyze(vector<u8>& rom) -> string {
     rom.resize(rom.size() - 512);
   }
 
-  if(rom.size() < 0x8000) return {};  //ignore images too small to be valid
+  //ignore images too small to be valid
+  if(rom.size() < 0x8000) {
+    print("[mia] Loading rom failed. Minimum expected rom size is 32768 (0x8000) bytes. Rom size: ", rom.size(), " (0x", hex(rom.size()), ") bytes.\n");
+    return {};
+  }  
   data = rom;
 
   u32 LoROM   = scoreHeader(  0x7fb0);
@@ -394,6 +399,11 @@ auto SuperFamicom::analyze(vector<u8>& rom) -> string {
 }
 
 auto SuperFamicom::region() const -> string {
+  //Unlicensed software (homebrew, ROM hacks, etc) often change the standard region code,
+  //and then neglect to change the extended header region code. Thanks to that, we can't
+  //decode and display the full game serial + region code.
+  return videoRegion();
+
   string region;
 
   char A = data[headerAddress + 0x02];  //game type
@@ -439,6 +449,17 @@ auto SuperFamicom::region() const -> string {
   }
 
   return region ? region : "NTSC";
+}
+
+auto SuperFamicom::videoRegion() const -> string {
+  auto region = data[headerAddress + 0x29];
+  if(region == 0x00) return "NTSC";  //JPN
+  if(region == 0x01) return "NTSC";  //USA
+  if(region == 0x0b) return "NTSC";  //ROC
+  if(region == 0x0d) return "NTSC";  //KOR
+  if(region == 0x0f) return "NTSC";  //CAN
+  if(region == 0x10) return "NTSC";  //BRA
+  return "PAL";
 }
 
 auto SuperFamicom::revision() const -> string {

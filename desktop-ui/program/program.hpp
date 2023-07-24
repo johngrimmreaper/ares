@@ -17,11 +17,15 @@ struct Program : ares::Platform {
   //load.cpp
   auto identify(const string& filename) -> shared_pointer<Emulator>;
   auto load(shared_pointer<Emulator> emulator, string location = {}) -> bool;
+  auto load(string location) -> bool;
   auto unload() -> void;
 
   //states.cpp
   auto stateSave(u32 slot) -> bool;
   auto stateLoad(u32 slot) -> bool;
+  auto undoStateSave() -> bool;
+  auto undoStateLoad() -> bool;
+  auto clearUndoStates() -> void;
 
   //status.cpp
   auto updateMessage() -> void;
@@ -49,7 +53,9 @@ struct Program : ares::Platform {
   auto inputDriverUpdate() -> void;
 
   bool startFullScreen = false;
-  string startGameLoad;
+  vector<string> startGameLoad;
+  bool noFilePrompt = false;
+
   string startSystem;
   string startShader;
 
@@ -66,6 +72,7 @@ struct Program : ares::Platform {
 
   struct State {
     u32 slot = 1;
+    u32 undoSlot = 1;
   } state;
 
   //rewind.cpp

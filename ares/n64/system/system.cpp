@@ -25,6 +25,7 @@ auto option(string name, string value) -> bool {
   if(name == "Quality" && value == "UHD") vulkan.internalUpscale = 4;
   if(name == "Supersampling") vulkan.supersampleScanout = value.boolean();
   if(name == "Disable Video Interface Processing") vulkan.disableVideoInterfaceProcessing = value.boolean();
+  if(name == "Weave Deinterlacing") vulkan.weaveDeinterlacing = value.boolean();
   if(vulkan.internalUpscale == 1) vulkan.supersampleScanout = false;
   vulkan.outputUpscale = vulkan.supersampleScanout ? 1 : vulkan.internalUpscale;
   #endif
@@ -48,8 +49,7 @@ auto System::game() -> string {
 }
 
 auto System::run() -> void {
-  while(!vi.refreshed) cpu.main();
-  vi.refreshed = false;
+  cpu.main();
 }
 
 auto System::load(Node::System& root, string name) -> bool {
@@ -67,9 +67,11 @@ auto System::load(Node::System& root, string name) -> bool {
 
   if(name.find("NTSC")) {
     information.region = Region::NTSC;
+    information.videoFrequency = 48'681'812;
   }
   if(name.find("PAL")) {
     information.region = Region::PAL;
+    information.videoFrequency = 49'656'530;
   }
 
   node = Node::System::create(information.name);

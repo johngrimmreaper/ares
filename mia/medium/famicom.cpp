@@ -81,7 +81,10 @@ auto Famicom::save(string location) -> bool {
 }
 
 auto Famicom::analyze(vector<u8>& data) -> string {
-  if(data.size() < 256) return {};
+  if(data.size() < 256) {
+    print("[mia] Loading rom failed. Minimum expected rom size is 256 (0x100) bytes. Rom size: ", data.size(), " (0x", hex(data.size()), ") bytes.\n");
+    return {};
+  }
 
   string digest = Hash::SHA256(data).digest();
   string manifest = Medium::manifestDatabase(digest);
@@ -139,6 +142,7 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
     manifest += "      type: ROM\n";
     manifest += "      size: 0x10\n";
     manifest += "      content: iNES\n";
+    manifest +={"      data: ", hexString({data.data(), 16}), "\n"};
     return manifest;
   }
 
@@ -154,13 +158,15 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
   string region = "NTSC-J, NTSC-U, PAL"; //iNES 1.0 requires database to detect region
 
   bool iNes2 = (data[7] & 0xc) == 0x8;
-  if (iNes2) {
+  if(iNes2) {
     mapper |= ((data[8] & 0xf) << 8);
     submapper = data[8] >> 4;
     u32 timing = data[12] & 3;
 
     // TODO: add DENDY (pirate famiclone) timing
-    if (timing == 1) region = "PAL";
+    if(timing == 0) region = "NTSC-J, NTSC-U";
+    if(timing == 1) region = "PAL";
+    if(timing == 2) region = "NTSC-J, NTSC-U, PAL";
   }
 
   string s;
@@ -253,9 +259,18 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
     break;
 
   case  21:
-    s += "  board:  KONAMI-VRC-4\n";
-    s += "    chip type=VRC4\n";
-    s += "      pinout a0=1 a1=2\n";
+    switch(submapper) {
+      case 0: case 1:
+        s += "  board:  KONAMI-VRC-4\n";
+        s += "    chip type=VRC4\n";
+        s += "      pinout a0=1 a1=2\n";
+        break;
+      case 2:
+        s += "  board:  KONAMI-VRC-4\n";
+        s += "    chip type=VRC4\n";
+        s += "      pinout a0=6 a1=7\n";
+        break;
+    }
     prgram = 8192;
     break;
 
@@ -266,9 +281,23 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
     break;
 
   case  23:
-    s += "  board:  KONAMI-VRC-2\n";
-    s += "    chip type=VRC2\n";
-    s += "      pinout a0=0 a1=1\n";
+    switch(submapper) {
+      case 0: case 1:
+        s += "  board:  KONAMI-VRC-4\n";
+        s += "    chip type=VRC2\n";
+        s += "      pinout a0=0 a1=1\n";
+        break;
+      case 2:
+        s += "  board:  KONAMI-VRC-4\n";
+        s += "    chip type=VRC2\n";
+        s += "      pinout a0=2 a1=3\n";
+        break;
+      case 3:
+        s += "  board:  KONAMI-VRC-2\n";
+        s += "    chip type=VRC2\n";
+        s += "      pinout a0=0 a1=1\n";
+        break;
+    }
     prgram = 8192;
     break;
 
@@ -279,9 +308,24 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
     break;
 
   case  25:
-    s += "  board:  KONAMI-VRC-4\n";
-    s += "    chip type=VRC4\n";
-    s += "      pinout a0=1 a1=0\n";
+    switch(submapper) {
+      case 0: case 1:
+        s += "  board:  KONAMI-VRC-4\n";
+        s += "    chip type=VRC4\n";
+        s += "      pinout a0=1 a1=0\n";
+        break;
+      case 2:
+        s += "  board:  KONAMI-VRC-4\n";
+        s += "    chip type=VRC4\n";
+        s += "      pinout a0=3 a1=2\n";
+        break;
+      case 3:
+        s += "  board:  KONAMI-VRC-2\n";
+        s += "    chip type=VRC2\n";
+        s += "      pinout a0=1 a1=0\n";
+        break;
+    }
+
     prgram = 8192;
     break;
 
@@ -311,6 +355,16 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
       s += "  board:  HVC-BNROM\n";
       s +={"    mirror mode=", !mirror ? "horizontal" : "vertical", "\n"};
     }
+    break;
+
+  case  37:
+    s += "  board:  PAL-ZZ\n";
+    s += "    chip type=MMC3B\n";
+    break;
+
+  case  47:
+    s += "  board:  NES-QJ\n";
+    s += "    chip type=MMC3B\n";
     break;
 
   case  48:
@@ -378,6 +432,11 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
 
   case  78:
     s += "  board:  JALECO-JF-16\n";
+    break;
+
+  case  79:
+    s += "  board:  AVE-NINA-06\n";
+    s +={"    mirror mode=", !mirror ? "horizontal" : "vertical", "\n"};
     break;
 
   case  80:
@@ -558,6 +617,7 @@ auto Famicom::analyzeINES(vector<u8>& data) -> string {
   s += "      type: ROM\n";
   s += "      size: 0x10\n";
   s += "      content: iNES\n";
+  s +={"      data: ", hexString({data.data(), 16}), "\n"};
 
   if(prgrom) {
     s += "    memory\n";

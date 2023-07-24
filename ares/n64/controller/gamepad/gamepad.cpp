@@ -124,7 +124,7 @@ auto Gamepad::comm(n8 send, n8 recv, n8 input[], n8 output[]) -> n2 {
           else output[index] = 0;
           address++;
         }
-        output[recv - 1] = pif.dataCRC({&output[0], recv - 1});
+        output[recv - 1] = pif.dataCRC({&output[0], recv - 1u});
         valid = 1;
       }
     }
@@ -139,7 +139,7 @@ auto Gamepad::comm(n8 send, n8 recv, n8 input[], n8 output[]) -> n2 {
           else output[index] = motor->enable() ? 0xFF : 0x00;
           address++;
         }
-        output[recv - 1] = pif.dataCRC({&output[0], recv - 1});
+        output[recv - 1] = pif.dataCRC({&output[0], recv - 1u});
         valid = 1;
       }
     }
@@ -155,7 +155,7 @@ auto Gamepad::comm(n8 send, n8 recv, n8 input[], n8 output[]) -> n2 {
           if(address <= 0x7FFF) ram.write<Byte>(address, input[3 + index]);
           address++;
         }
-        output[0] = pif.dataCRC({&input[3], send - 3});
+        output[0] = pif.dataCRC({&input[3], send - 3u});
         valid = 1;
       }
     }
@@ -164,7 +164,7 @@ auto Gamepad::comm(n8 send, n8 recv, n8 input[], n8 output[]) -> n2 {
     if(motor) {
       u16 address = (input[1] << 8 | input[2] << 0) & ~31;
       if(pif.addressCRC(address) == (n5)input[2]) {
-        output[0] = pif.dataCRC({&input[3], send - 3});
+        output[0] = pif.dataCRC({&input[3], send - 3u});
         valid = 1;
         if(address >= 0xC000) rumble(input[3] & 1);
       }
@@ -195,45 +195,58 @@ auto Gamepad::read() -> n32 {
   platform->input(z);
   platform->input(start);
 
-  //scale {-32768 ... +32767} to {-85 ... +85}
-  auto ax = x->value() * 85.0 / 32767.0;
-  auto ay = y->value() * 85.0 / 32767.0;
+  auto cardinalMax   = 85.0;
+  auto diagonalMax   = 69.0;
+  auto innerDeadzone =  7.0; // default should remain 7 (~8.2% of 85) as the deadzone is axial in nature and fights cardinalMax
+  auto outerDeadzoneRadiusMax = 2.0 / sqrt(2.0) * (diagonalMax / cardinalMax * (cardinalMax - innerDeadzone) + innerDeadzone); //from linear scaling equation, substitute outerDeadzoneRadiusMax*sqrt(2)/2 for lengthAbsoluteX and set diagonalMax as the result then solve for outerDeadzoneRadiusMax
 
-  //create inner axial dead-zone in range {-7 ... +7} and scale from it up to outer circular dead-zone of radius 85
+  //scale {-32768 ... +32767} to {-outerDeadzoneRadiusMax ... +outerDeadzoneRadiusMax}
+  auto ax = x->value() * outerDeadzoneRadiusMax / 32767.0;
+  auto ay = y->value() * outerDeadzoneRadiusMax / 32767.0;
+  
+  //create inner axial dead-zone in range {-innerDeadzone ... +innerDeadzone} and scale from it up to outer circular dead-zone of radius outerDeadzoneRadiusMax
   auto length = sqrt(ax * ax + ay * ay);
-  if(length <= 85.0) {
+  if(length <= outerDeadzoneRadiusMax) {
     auto lengthAbsoluteX = abs(ax);
     auto lengthAbsoluteY = abs(ay);
-    if(lengthAbsoluteX <= 7.0) {
+    if(lengthAbsoluteX <= innerDeadzone) {
       lengthAbsoluteX = 0.0;
     } else {
-      lengthAbsoluteX = (lengthAbsoluteX - 7.0) * 85.0 / (85.0 - 7.0) / lengthAbsoluteX;
+      lengthAbsoluteX = (lengthAbsoluteX - innerDeadzone) * cardinalMax / (cardinalMax - innerDeadzone) / lengthAbsoluteX;
     }
     ax *= lengthAbsoluteX;
-    if(lengthAbsoluteY <= 7.0) {
+    if(lengthAbsoluteY <= innerDeadzone) {
       lengthAbsoluteY = 0.0;
     } else {
-      lengthAbsoluteY = (lengthAbsoluteY - 7.0) * 85.0 / (85.0 - 7.0) / lengthAbsoluteY;
+      lengthAbsoluteY = (lengthAbsoluteY - innerDeadzone) * cardinalMax / (cardinalMax - innerDeadzone) / lengthAbsoluteY;
     }
     ay *= lengthAbsoluteY;
   } else {
-    length = 85.0 / length;
+    length = outerDeadzoneRadiusMax / length;
     ax *= length;
     ay *= length;
   }
-
-  //bound diagonals to an octagonal range {-69 ... +69}
+  
+  //bound diagonals to an octagonal range {-diagonalMax ... +diagonalMax}
   if(ax != 0.0 && ay != 0.0) {
     auto slope = ay / ax;
-    auto edgex = copysign(85.0 / (abs(slope) + 16.0 / 69.0), ax);
-    auto edgey = copysign(min(abs(edgex * slope), 85.0 / (1.0 / abs(slope) + 16.0 / 69.0)), ay);
+    auto edgex = copysign(cardinalMax / (abs(slope) + (cardinalMax - diagonalMax) / diagonalMax), ax);
+    auto edgey = copysign(min(abs(edgex * slope), cardinalMax / (1.0 / abs(slope) + (cardinalMax - diagonalMax) / diagonalMax)), ay);
     edgex = edgey / slope;
 
-    auto scale = sqrt(edgex * edgex + edgey * edgey) / 85.0;
+    auto scale = sqrt(edgex * edgex + edgey * edgey) / outerDeadzoneRadiusMax;
     ax *= scale;
     ay *= scale;
   }
 
+  //keep cardinal input within positive and negative bounds of cardinalMax
+  if(abs(ax) > cardinalMax) ax = copysign(cardinalMax, ax);
+  if(abs(ay) > cardinalMax) ay = copysign(cardinalMax, ay);
+  
+  //add epsilon to counteract floating point precision error
+  ax = copysign(abs(ax) + 1e-09, ax);
+  ay = copysign(abs(ay) + 1e-09, ay);
+  
   n32 data;
   data.byte(0) = s8(-ay);
   data.byte(1) = s8(+ax);
@@ -253,7 +266,7 @@ auto Gamepad::read() -> n32 {
   data.bit(29) = z->value();
   data.bit(30) = b->value();
   data.bit(31) = a->value();
-
+  
   //when L+R+Start are pressed: the X/Y axes are zeroed, RST is set, and Start is cleared
   if(l->value() && r->value() && start->value()) {
     data.byte(0) = 0;  //Y-Axis

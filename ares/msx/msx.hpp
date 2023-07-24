@@ -28,8 +28,9 @@ namespace ares::MSX {
   #include <msx/keyboard/keyboard.hpp>
   #include <msx/cartridge/cartridge.hpp>
   #include <msx/controller/controller.hpp>
-
+  #include <msx/tape/tape.hpp>
   #include <msx/cpu/cpu.hpp>
   #include <msx/vdp/vdp.hpp>
   #include <msx/psg/psg.hpp>
+  #include <msx/rtc/rtc.hpp>
 }

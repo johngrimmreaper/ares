@@ -24,21 +24,21 @@ Prerequisites
 
 ###### Minimum required packages:
 ```
-g++ make pkg-config libgtk2.0-dev libcanberra-gtk-module libgl-dev libasound2-dev
+g++ make pkg-config libgtk-3-dev libcanberra-gtk-module libgl-dev libasound2-dev
 ```  
 ###### Additional Audio Drivers
 ares supports additional audio drivers besides the ALSA drivers included above. Installing these additional packages will allow them to be selected in Settings > Drivers:  
 `libao-dev libopenal-dev'
 
 ###### GTK2 & GTK3
-By default, GTK2 is used, but support for GTK3 is available. You will need to install the additional package `libgtk-3-dev` as well as specifying the command line option `hiro=gtk3` at compile time.
+By default, GTK3 is used, but support for GTK2 is available. You will need to install the additional package `libgtk2.0-dev` as well as specifying the command line option `hiro=gtk2` at compile time.
 
 ###### SDL2 for input
 If you would like to use SDL for input, you will need to install the following the `libsdl2-dev` and `libsdl2-0.0` packages and perform a clean build of ares. You should then be able to select SDL for input in the Settings > Drivers menu.   
 
 ##### Building with clang
 
-clang++ is now the preferred compiler for ares. If it is detected, the build will default to building with clang. It is recommended to install the `clang` package. If you would like to manually specify a compiler, you can use the following option: `compiler=[g++|clang++]`  
+clang++ is now the preferred compiler for ares. If it is detected, the build will default to building with clang. It is necessary to install both the `clang` and `lld` packages. If you would like to manually specify a compiler, you can use the following option: `compiler=[g++|clang++]`  
   
 --------------
 
@@ -60,8 +60,7 @@ pacman -S mingw-w64-clang-x86_64-toolchain
 Once complete, open a CLANG64 terminal window and proceed with building ares. 
 
 ###### Debug Symbols
-When building with clang, by default symbols will be generated using an MSVC compatible format (CodeView) for use with Windows debugging tools. In order to generate GDB compatible symbols (Dwarf), specify the following option:  
-`symformat=dwarf`  
+When building with clang, by default symbols will be generated for debug builds using an MSVC compatible format (CodeView) for use with Windows debugging tools. In order to generate GDB compatible symbols, specify the following option: `symformat=gdb`  
 
 Compilation
 -----------
@@ -106,12 +105,15 @@ Command-line options
 When started from the command-line, ares accepts a few options.
 
 ```
-Usage: ./ares [options] game
+Usage: ./ares [options] game(s)
 
   --help                 Displays available options and exit
   --fullscreen           Start in full screen mode
   --system system        Specify the system name
   --shader shader        Specify GLSL shader name to load (requires OpenGL driver)
+  --setting name=value   Specify a value for a setting
+  --dump-all-settings    Show a list of all existing settings and exit
+  --no-file-prompt       Do not prompt to load (optional) additional roms (eg: 64DD)
 ```
 
 The --system option is useful when the system type cannot be auto-detected.
@@ -120,6 +122,17 @@ The --system option is useful when the system type cannot be auto-detected.
 Example:
 `ares --system MSX examples.rom --fullscreen`
 
+Specifying multiple games allows for multi-cart support.  For example, to load
+the Super GameBoy BIOS and a game in one command (to avoid a file prompt), you 
+can do:
+
+`ares "Super GameBoy.sfc" "Super Mario Land.gb"`
+
+The --no-file-prompt option is useful if you wish to launch a game from CLI
+without being prompted to load additional roms. For example, some Nintendo 64 
+games optionally support 64DD expansion disks, so this option can be used to
+suppress the "64DD Disk" file dialog, and assume any secondary content is 
+disconnected.
 
 High-level Components
 ---------------------
@@ -131,3 +144,8 @@ High-level Components
 * __ruby__:       interface between a hiro application and platform-specific APIs for emulator video, audio, and input
 * __mia__:        internal ROM database and ROM/image loader
 * __libco__:      cooperative multithreading library
+
+Contributing
+------------
+
+Please join our discord to chat with other ares developers: https://discord.com/invite/gz2quhk2kv

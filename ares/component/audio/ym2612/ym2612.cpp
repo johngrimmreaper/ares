@@ -30,12 +30,16 @@ auto YM2612::clock() -> array<i16[2]> {
       return y < 0x1a00 ? pow2[y & 0x1ff] << 2 >> (y >> 9) : 0; // -78 dB floor
     };
 
-    s32 feedback = modMask & op[0].output + op[0].prior >> 9 - channel.feedback;
+    s32 feedback = modMask & op[0].prior + op[0].priorBuffer >> 9 - channel.feedback;
     s32 accumulator = 0;
 
+    op[0].priorBuffer = op[0].prior; // only need to buffer the output for feedback
     for(auto n : range(4)) op[n].prior = op[n].output;
 
     op[0].output = wave(0, feedback * (channel.feedback > 0));
+
+    // Note: Despite not emulating per cycle, operator pipelining has been accounted for.
+    // Given the op order 0-2-1-3, newly generated output is not available for the following op.
 
     if(channel.algorithm == 0) {
       //0 -> 1 -> 2 -> 3
@@ -48,7 +52,7 @@ auto YM2612::clock() -> array<i16[2]> {
     if(channel.algorithm == 1) {
       //(0 + 1) -> 2 -> 3
       op[1].output = wave(1, 0);
-      op[2].output = wave(2, mod(0) + old(1));
+      op[2].output = wave(2, old(0) + old(1));
       op[3].output = wave(3, mod(2));
       accumulator += out(3);
     }
@@ -65,7 +69,7 @@ auto YM2612::clock() -> array<i16[2]> {
       //(0 -> 1) + 2 -> 3
       op[1].output = wave(1, mod(0));
       op[2].output = wave(2, 0);
-      op[3].output = wave(3, mod(1) + mod(2));
+      op[3].output = wave(3, old(1) + mod(2));
       accumulator += out(3);
     }
 
@@ -104,8 +108,18 @@ auto YM2612::clock() -> array<i16[2]> {
     s32 voiceData = sclamp<14>(accumulator) & outMask;
     if(dac.enable && (&channel == &channels[5])) voiceData = (s32)dac.sample - 0x80 << 6;
 
-    if(channel.leftEnable ) left  += voiceData;
-    if(channel.rightEnable) right += voiceData;
+    // DAC output + voltage offset (crossover distortion)
+    if(voiceData < 0) {
+      left  += channel.leftEnable  * (voiceData + (1<<5)) - (4<<5);
+      right += channel.rightEnable * (voiceData + (1<<5)) - (4<<5);
+    } else {
+      left  += channel.leftEnable  * (voiceData + (0<<5)) + (4<<5);
+      right += channel.rightEnable * (voiceData + (0<<5)) + (4<<5);
+    }
+
+    // DAC output (ym3438 fix)
+    //if(channel.leftEnable ) left  += voiceData;
+    //if(channel.rightEnable) right += voiceData;
   }
 
   timerA.run();
