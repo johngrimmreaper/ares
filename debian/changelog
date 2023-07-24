@@ -1,5 +1,21 @@
 ares (132-1) unstable; urgency=medium
 
+  [ Debian Janitor ]
+  * Trim trailing whitespace.
+  * Use secure copyright file specification URI.
+  * Refer to common license file for Apache-2.0.
+  * Bump debhelper from old 12 to 13.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+  [ Andreas Wirooks ] 
+  * Updated to 131 (Closes: #1028143)
+  * Refreshed all patches - some needed manual work
+  * Removal of MD on 32 bit and N64 in general still needed
+  * Mentioned Atari in docs
+  * Renamed higan with ares in docs
+
+  [ Alexandre Detiste ]
   * debian/watch: Use GitHub /tags rather than /releases page.
   * update build-dependencies:
     * pkg-config -> pkgconf
@@ -9,28 +25,6 @@ ares (132-1) unstable; urgency=medium
     shipped in thirdparty/.
 
  -- Alexandre Detiste <alexandre.detiste@gmail.com>  Sat, 22 Jul 2023 17:16:04 +0200
-
-ares (131-1) UNRELEASED; urgency=medium
-
-  * Non-maintainer upload.
-  * Updated to 131 (Closes: #1028143)
-  * Refreshed all patches - some needed manual work
-  * Removal of MD on 32 bit and N64 in general still needed
-  * Mentioned Atari in docs
-  * Renamed higan with ares in docs
-
- -- Andreas Wirooks <andreas.wirooks@web.de>  Fri, 06 Jan 2023 13:12:23 +0100
-
-ares (126-4) UNRELEASED; urgency=medium
-
-  * Trim trailing whitespace.
-  * Use secure copyright file specification URI.
-  * Refer to common license file for Apache-2.0.
-  * Bump debhelper from old 12 to 13.
-  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
-    Repository-Browse.
-
- -- Debian Janitor <janitor@jelmer.uk>  Sat, 19 Feb 2022 22:22:50 -0000
 
 ares (126-3) unstable; urgency=medium
 
