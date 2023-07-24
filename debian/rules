@@ -12,11 +12,22 @@ else
     BUILDOPT=build=debug
 endif
 
+
+ifeq ($(DEB_BUILD_ARCH_CPU),i386)
+    ares_arch := x86
+else ifeq ($(DEB_BUILD_ARCH_CPU),armhf)
+    ares_arch := arm32
+else ifeq ($(DEB_BUILD_ARCH_CPU),ppc64el)
+    ares_arch := ppc64
+else
+    ares_arch := $(DEB_BUILD_ARCH_CPU)
+endif
+
 %:
 	dh $@ --sourcedirectory=desktop-ui
 
 override_dh_auto_build:
-	dh_auto_build -- $(BUILDOPT) compiler='$$(CXX)'
+	dh_auto_build -- $(BUILDOPT) compiler='$$(CXX)' arch='$(ares_arch)'
 
 override_dh_auto_install:
 	dh_auto_install -- prefix=../debian/tmp/usr
