@@ -5,10 +5,9 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/desktop-ui/GNUmakefile
 +++ b/desktop-ui/GNUmakefile
-@@ -4,7 +4,7 @@
+@@ -4,6 +4,6 @@
  openmp := false
  vulkan := true
- mame.rdp := true
 -local := true
 +local := false
  lto := true
@@ -18,8 +17,8 @@ Author: Tobias Hansen <thansen@debian.org>
  include $(hiro.path)/GNUmakefile
  
  profile := performance
--cores := a26 fc sfc n64 sg ms ps1 pce ng msx cv gb gba ws ngp spec
-+cores := a26 fc sfc sg ms ps1 pce ng msx cv gb gba ws ngp spec
+-cores := a26 fc sfc n64 sg ms ps1 pce ng msx cv myvision gb gba ws ngp spec
++cores := a26 fc sfc sg ms ps1 pce ng msx cv myvision gb gba ws ngp spec
  #cores += saturn
  ifneq ($(shell $(compiler) -E -dM - < /dev/null | grep INT128),)
     cores += md
