@@ -16,7 +16,7 @@ endif
 	dh $@ --sourcedirectory=desktop-ui
 
 override_dh_auto_build:
-	dh_auto_build -- $(BUILDOPT)
+	dh_auto_build -- $(BUILDOPT) compiler='$$(CXX)'
 
 override_dh_auto_install:
 	dh_auto_install -- prefix=../debian/tmp/usr
