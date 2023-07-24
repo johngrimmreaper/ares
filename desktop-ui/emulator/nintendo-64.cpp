@@ -91,8 +91,13 @@ auto Nintendo64::load() -> bool {
 
   ares::Nintendo64::option("Quality", settings.video.quality);
   ares::Nintendo64::option("Supersampling", settings.video.supersampling);
-  ares::Nintendo64::option("Enable GPU acceleration", settings.video.enableVulkan);
+#if defined(VULKAN)
+  ares::Nintendo64::option("Enable GPU acceleration", true);
+#else
+  ares::Nintendo64::option("Enable GPU acceleration", false);
+#endif
   ares::Nintendo64::option("Disable Video Interface Processing", settings.video.disableVideoInterfaceProcessing);
+  ares::Nintendo64::option("Weave Deinterlacing", settings.video.weaveDeinterlacing);
 
   if(!ares::Nintendo64::load(root, {"[Nintendo] ", name, " (", region, ")"})) return false;
 

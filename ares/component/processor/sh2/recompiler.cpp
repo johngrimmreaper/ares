@@ -20,26 +20,96 @@
 #define ET      Reg(ET)
 #define ID      Reg(ID)
 
-auto SH2::Recompiler::invalidate(u32 address) -> void {
+auto SH2::Recompiler::mask(u8 address, u8 size) -> u64 {
+  //1 bit per 4 bytes
+  u6 s = address >> 2;
+  u6 e = address + size - 1 >> 2;
+  u64 smask = ~0ull << s;
+  u64 emask = ~0ull >> 63 - e;
+  assert(s <= e);
+  return smask & emask;
+}
+
+auto SH2::Recompiler::invalidate(u32 address, u8 size) -> void {
   auto pool = pools[address >> 8 & 0xffffff];
   if(!pool) return;
   memory::jitprotect(false);
-  pool->blocks[address >> 1 & 0x7f] = nullptr;
+  pool->dirty |= mask(address, size);
   memory::jitprotect(true);
 }
 
 auto SH2::Recompiler::pool(u32 address) -> Pool* {
   auto& pool = pools[address >> 8 & 0xffffff];
-  if(!pool) pool = (Pool*)allocator.acquire(sizeof(Pool));
+  if(!pool) {
+    pool = (Pool*)allocator.acquire(sizeof(Pool));
+    memory::jitprotect(false);
+    pool->generation = generation;
+    memory::jitprotect(true);
+  } else if(address >> 29 == Area::Cached && pool->generation != generation) {
+    memory::jitprotect(false);
+    for(auto& block : pool->blocks) block = nullptr;
+    pool->generation = generation;
+    pool->dirty = 0;
+    memory::jitprotect(true);
+  } else if(pool->dirty) {
+    memory::jitprotect(false);
+    u8 address = 0;
+    for(auto& block : pool->blocks) {
+      if(block && (pool->dirty & mask(address, block->size)) != 0) {
+        block = nullptr;
+      }
+      address += 2;
+    }
+    pool->dirty = 0;
+    memory::jitprotect(true);
+  }
   return pool;
 }
 
 auto SH2::Recompiler::block(u32 address) -> Block* {
   if(auto block = pool(address)->blocks[address >> 1 & 0x7f]) return block;
+
+  auto size = measure(address);
+  auto hashcode = hash(address, size);
+
+  BlockHashPair pair;
+  pair.hashcode = hashcode;
+  if(auto result = blocks.find(pair)) {
+    memory::jitprotect(false);
+    pool(address)->blocks[address >> 1 & 0x7f] = result->block;
+    memory::jitprotect(true);
+    return result->block;
+  }
+
   auto block = emit(address);
+  assert(block->size == size);
   pool(address)->blocks[address >> 1 & 0x7f] = block;
   memory::jitprotect(true);
+
+  pair.block = block;
+  blocks.insert(pair);
+
   return block;
+}
+
+auto SH2::Recompiler::measure(u32 address) -> u8 {
+  u32 start = address;
+  u32 index = address >> 1 & 0x7f;
+  bool hasBranched = 0;
+  while(true) {
+    u16 instruction = self.readWord(address);
+    instructions[index++] = instruction;
+    bool branched = isTerminal(instruction);
+    address += 2;
+    if(hasBranched || (address & 0xfe) == 0) break;  //block boundary
+    hasBranched = branched;
+  }
+
+  return address - start;
+}
+
+auto SH2::Recompiler::hash(u32 address, u8 size) -> u64 {
+  return XXH3_64bits(&instructions[address >> 1 & 0x7f], size ? size : 0x100);
 }
 
 auto SH2::Recompiler::emit(u32 address) -> Block* {
@@ -54,10 +124,12 @@ auto SH2::Recompiler::emit(u32 address) -> Block* {
   auto block = (Block*)allocator.acquire(sizeof(Block));
   beginFunction(2);
 
+  u32 start = address;
+  u32 index = address >> 1 & 0x7f;
   bool hasBranched = 0;
   inDelaySlot = 1;  //force runtime check on first instruction
   while(true) {
-    u16 instruction = self.readWord(address);
+    u16 instruction = instructions[index++];
     auto branch = emitInstruction(instruction);
     inDelaySlot = branch == Branch::Slot;
     add64(CCR, CCR, imm(1));
@@ -72,6 +144,7 @@ auto SH2::Recompiler::emit(u32 address) -> Block* {
 
   memory::jitprotect(false);
   block->code = endFunction();
+  block->size = address - start;
 
   return block;
 }
@@ -87,6 +160,8 @@ auto SH2::Recompiler::emit(u32 address) -> Block* {
 #define illegal &SH2::illegalInstruction
 
 auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
+  if constexpr(!Accuracy::CachedInterpreter) {
+
   #define n   (opcode >> 8 & 0x00f)
   #define m   (opcode >> 4 & 0x00f)
   #define i   (opcode >> 0 & 0x0ff)
@@ -175,7 +250,7 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   }
 
   //MOV.L Rm,@(disp,Rn)
-  case 0x10 ... 0x1f: {
+  case range16(0x10, 0x1f): {
     add32(reg(1), Rn, imm(d4*4));
     mov32(reg(2), Rm);
     call(writeL);
@@ -454,7 +529,7 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   }
 
   //MOV.L @(disp,Rm),Rn
-  case 0x50 ... 0x5f: {
+  case range16(0x50, 0x5f): {
     add32(reg(1), Rm, imm(d4*4));
     call(readL);
     mov32(Rn, reg(0));
@@ -605,13 +680,13 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   }
 
   //ADD #imm,Rn
-  case 0x70 ... 0x7f: {
+  case range16(0x70, 0x7f): {
     add32(Rn, Rn, imm((s8)i));
     return 0;
   }
 
   //MOV.W @(disp,PC),Rn
-  case 0x90 ... 0x9f: {
+  case range16(0x90, 0x9f): {
     auto delay = cmp32_jump(PPM, imm(0), flag_ne);
     mov32(reg(0), PC);
     auto tail = jump();
@@ -626,7 +701,7 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   }
 
   //BRA disp
-  case 0xa0 ... 0xaf: {
+  case range16(0xa0, 0xaf): {
     checkDelaySlot([=] {
       add32(PPC, PC, imm(4 + (i12)d12 * 2));
       mov32(PPM, imm(Branch::Slot));
@@ -635,7 +710,7 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   }
 
   //BSR disp
-  case 0xb0 ... 0xbf: {
+  case range16(0xb0, 0xbf): {
     checkDelaySlot([=] {
       mov32(reg(0), PC);
       mov32(PR, reg(0));
@@ -647,7 +722,7 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   }
 
   //MOV.L @(disp,PC),Rn
-  case 0xd0 ... 0xdf: {
+  case range16(0xd0, 0xdf): {
     auto delay = cmp32_jump(PPM, imm(0), flag_ne);
     mov32(reg(0), PC);
     auto tail = jump();
@@ -662,7 +737,7 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   }
 
   //MOV #imm,Rn
-  case 0xe0 ... 0xef: {
+  case range16(0xe0, 0xef): {
     mov32(Rn, imm((s8)i));
     return 0;
   }
@@ -1396,7 +1471,8 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
 
   }
 
-#if 0
+  } else {  //Accuracy::CachedInterpreter
+
   #define op(id, name, ...) \
     case id: \
       call(&SH2::name, &self, ##__VA_ARGS__); \
@@ -1408,7 +1484,8 @@ auto SH2::Recompiler::emitInstruction(u16 opcode) -> u32 {
   #include "decoder.hpp"
   #undef op
   #undef br
-#endif
+
+  }
 
   return 0;
 }
@@ -1446,6 +1523,19 @@ auto SH2::Recompiler::checkDelaySlot(F body) -> void {
   setLabel(skip);
   call(&SH2::illegalSlotInstruction);
   setLabel(skip2);
+}
+
+auto SH2::Recompiler::isTerminal(u16 opcode) -> bool {
+  #define op(id, name, ...) \
+    case id: \
+      return 0;
+  #define br(id, name, ...) \
+    case id: \
+      return 1;
+  #include "decoder.hpp"
+  #undef op
+  #undef br
+  return 0;
 }
 
 #undef Reg

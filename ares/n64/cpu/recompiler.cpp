@@ -12,6 +12,12 @@ auto CPU::Recompiler::block(u32 address) -> Block* {
   return block;
 }
 
+auto CPU::Recompiler::fastFetchBlock(u32 address) -> Block* {
+  auto& pool = pools[address >> 8 & 0x1fffff];
+  if(pool) return pool->blocks[address >> 2 & 0x3f];
+  return nullptr;
+}
+
 auto CPU::Recompiler::emit(u32 address) -> Block* {
   if(unlikely(allocator.available() < 1_MiB)) {
     print("CPU allocator flush\n");
@@ -285,7 +291,7 @@ auto CPU::Recompiler::emitEXECUTE(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x1c ... 0x1f: {
+  case range4(0x1c, 0x1f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -645,7 +651,7 @@ auto CPU::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x0a ... 0x0b: {
+  case range2(0x0a, 0x0b): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -856,7 +862,7 @@ auto CPU::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x28 ... 0x29: {
+  case range2(0x28, 0x29): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1078,7 +1084,7 @@ auto CPU::Recompiler::emitREGIMM(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x04 ... 0x07: {
+  case range4(0x04, 0x07): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1176,7 +1182,7 @@ auto CPU::Recompiler::emitREGIMM(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x14 ... 0x1f: {
+  case range12(0x14, 0x1f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1206,7 +1212,7 @@ auto CPU::Recompiler::emitSCC(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x02 ... 0x03: {
+  case range2(0x02, 0x03): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1228,7 +1234,7 @@ auto CPU::Recompiler::emitSCC(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x06 ... 0x0f: {
+  case range10(0x06, 0x0f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1345,7 +1351,7 @@ auto CPU::Recompiler::emitFPU(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x09 ... 0x0f: {
+  case range7(0x09, 0x0f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1948,12 +1954,12 @@ auto CPU::Recompiler::emitFPU(u32 instruction) -> bool {
 
   if((instruction >> 21 & 31) == 20)
   switch(instruction & 0x3f) {    
-  case 0x08 ... 0x0f: {
+  case range8(0x08, 0x0f): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
 
-  case 0x24 ... 0x25: {
+  case range2(0x24, 0x25): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
@@ -1978,11 +1984,11 @@ auto CPU::Recompiler::emitFPU(u32 instruction) -> bool {
 
   if((instruction >> 21 & 31) == 21)
   switch(instruction & 0x3f) {
-  case 0x08 ... 0x0f: {
+  case range8(0x08, 0x0f): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
-  case 0x24 ... 0x25: {
+  case range2(0x24, 0x25): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
@@ -2066,7 +2072,7 @@ auto CPU::Recompiler::emitCOP2(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x07 ... 0x0f: {
+  case range9(0x07, 0x0f): {
     call(&CPU::COP2INVALID);
     return 1;
   }

@@ -33,13 +33,74 @@ struct RSP : Thread, Memory::RCP<RSP> {
   auto step(u32 clocks) -> void;
 
   auto instruction() -> void;
-  auto instructionEpilogue() -> s32;
+  auto instructionEpilogue(u32 clocks) -> s32;
 
   auto power(bool reset) -> void;
 
   struct Pipeline {
     u32 address;
     u32 instruction;
+    u32 clocks;
+
+    struct {
+      n1 load;
+      n5 lockReg;
+    } current, previous, previous2;
+
+    auto hash() const -> u32 {
+      u32 value = 0;
+      value |= previous.load << 0;
+      value |= previous.lockReg << 1;
+      value |= previous2.load << 6;
+      value |= previous2.lockReg << 7;
+      return value;
+    }
+
+    auto begin() -> void {
+      clocks = 0;
+    }
+
+    auto end() -> void {
+      previous2 = previous;
+      previous = current;
+      current = {};
+      clocks += 3;
+    }
+
+    auto stall() -> void {
+      previous2 = previous;
+      previous = {};
+      clocks += 3;
+    }
+
+    auto regRead(u5 index) -> Pipeline& {
+      if(index == 0) {
+        //zero register can't be locked
+      } else if(index == previous.lockReg) {
+        stall();
+        stall();
+      } else if(index == previous2.lockReg) {
+        stall();
+      }
+      return *this;
+    }
+
+    auto regWrite(u5 index) -> Pipeline& {
+      current.lockReg = index;
+      return *this;
+    }
+
+    auto load() -> Pipeline& {
+      current.load = 1;
+      return *this;
+    }
+
+    auto store() -> Pipeline& {
+      while(previous2.load) {
+        stall();
+      }
+      return *this;
+    }
   } pipeline;
 
   //dma.cpp
@@ -174,7 +235,7 @@ struct RSP : Thread, Memory::RCP<RSP> {
 
   //vpu.cpp: Vector Processing Unit
   union r128 {
-    struct { uint128_t u128; };
+    struct { u64 order_msb2(hi, lo); } u128;
 #if ARCHITECTURE_SUPPORTS_SSE4_1
     struct {   __m128i v128; };
 
@@ -203,6 +264,9 @@ struct RSP : Thread, Memory::RCP<RSP> {
 
     //vu-registers.cpp
     auto operator()(u32 index) const -> r128;
+
+    //serialization.cpp
+    auto serialize(serializer&) -> void;
   };
   using cr128 = const r128;
 
@@ -217,8 +281,8 @@ struct RSP : Thread, Memory::RCP<RSP> {
     bool divdp;
   } vpu;
 
-  static constexpr r128 zero{0};
-  static constexpr r128 invert{u128(0) - 1};
+  static constexpr r128 zero{0ull, 0ull};
+  static constexpr r128 invert{~0ull, ~0ull};
 
   auto accumulatorGet(u32 index) const -> u64;
   auto accumulatorSet(u32 index, u64 value) -> void;
@@ -330,11 +394,13 @@ struct RSP : Thread, Memory::RCP<RSP> {
 
     struct Block {
       auto execute(RSP& self) -> void {
+        self.pipeline = pipeline;  //must be updated first so instructionEpilog() can handle taken branch
         ((void (*)(RSP*, IPU*, VU*))code)(&self, &self.ipu, &self.vpu);
       }
 
       u8* code;
       u12 size;
+      Pipeline pipeline;  //state at *end* of block excepting taken branch stall
     };
 
     struct BlockHashPair {
@@ -382,6 +448,7 @@ struct RSP : Thread, Memory::RCP<RSP> {
       return s <= e ? smask & emask : smask | emask;
     }
 
+    Pipeline pipeline;
     bump_allocator allocator;
     array<Block*[1024]> context;
     hashset<BlockHashPair> blocks;

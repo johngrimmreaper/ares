@@ -68,7 +68,7 @@ auto Nintendo64::save(string location) -> bool {
 
 auto Nintendo64::analyze(vector<u8>& data) -> string {
   if(data.size() < 0x1000) {
-    //too small
+    print("[mia] Loading rom failed. Minimum expected rom size is 4096 (0x1000) bytes. Rom size: ", data.size(), " (0x", hex(data.size()), ") bytes.\n");
     return {};
   } else if((data[0] == 0x80 && data[1] == 0x37 && data[2] == 0x12 && data[3] == 0x40)
          || (data[0] == 0x80 && data[1] == 0x27 && data[2] == 0x07 && data[3] == 0x40)) {   //64DD IPL
@@ -610,7 +610,7 @@ auto Nintendo64::analyze(vector<u8>& data) -> string {
   }
 
   //Homebrew (libdragon / Everdrive special header flag)
-  if(id[1] == 'E' && id[2] == 'D') {
+  if(id(1) == 'E' && id(2) == 'D') {
     n8 config = data[0x3f];
     if(config.bit(4,7) == 1) {eeprom = 512;}
     if(config.bit(4,7) == 2) {eeprom = 2_KiB;}

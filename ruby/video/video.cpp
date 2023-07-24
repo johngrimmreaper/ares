@@ -204,10 +204,6 @@ auto Video::hasDrivers() -> vector<string> {
   "Direct3D 9.0",
   #endif
 
-  #if defined(VIDEO_DIRECT3D9)
-  "Direct3D 11.0",
-  #endif
-
   #if defined(VIDEO_GDI)
   "GDI",
   #endif
@@ -335,7 +331,8 @@ auto Video::hasMonitors() -> vector<Monitor> {
       auto screenDictionary = [screen deviceDescription];
       auto screenID = [screenDictionary objectForKey:@"NSScreenNumber"];
       auto displayID = [screenID unsignedIntValue];
-      auto displayPort = CGDisplayIOServicePort(displayID);
+      CFUUIDRef displayUUID = CGDisplayCreateUUIDFromDisplayID(displayID);
+      io_service_t displayPort = CGDisplayGetDisplayIDFromUUID(displayUUID);
       auto dictionary = IODisplayCreateInfoDictionary(displayPort, 0);
       CFRetain(dictionary);
       if(auto names = (CFDictionaryRef)CFDictionaryGetValue(dictionary, CFSTR(kDisplayProductName))) {
@@ -430,6 +427,8 @@ auto Video::monitor(string name) -> Monitor {
   for(auto& monitor : monitors) {
     if(monitor.primary) return monitor;
   }
+  //if only one monitor is found, but it is not primary, use that
+  if(monitors.size() == 1) return monitors.left();
   //Video::monitors() should never let this occur
   Monitor monitor;
   monitor.name = "Primary";

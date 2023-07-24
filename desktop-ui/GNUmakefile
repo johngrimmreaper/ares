@@ -3,7 +3,6 @@ build := optimized
 threaded := true
 openmp := false
 vulkan := true
-mame.rdp := true
 local := true
 lto := true
 flags += -I. -I.. -I../ares -I../thirdparty -DMIA_LIBRARY
@@ -11,12 +10,14 @@ flags += -I. -I.. -I../ares -I../thirdparty -DMIA_LIBRARY
 nall.path := ../nall
 include $(nall.path)/GNUmakefile
 
-ifeq ($(arch),amd64)
-  ifeq ($(local),true)
-    flags += -march=native
-  else
-    # For official builds, default to x86-64-v2 (Intel Nehalem, AMD Bulldozer) which supports up to SSE 4.2.
-    flags += -march=x86-64-v2
+ifneq ($(filter $(arch),x86 amd64),)
+  ifeq ($(filter cl,$(compiler)),)
+    ifeq ($(local),true)
+      flags += -march=native
+    else
+      # For official builds, default to x86-64-v2 (Intel Nehalem, AMD Bulldozer) which supports up to SSE 4.2.
+      flags += -march=x86-64-v2
+    endif
   endif
 endif
 
@@ -26,6 +27,7 @@ include $(libco.path)/GNUmakefile
 thirdparty.path := ../thirdparty
 sljit.path := $(thirdparty.path)/sljit/sljit_src
 libchdr.path := $(thirdparty.path)/libchdr
+tzxfile.path := $(thirdparty.path)/TZXFile
 include $(thirdparty.path)/GNUmakefile
 
 ruby.path := ../ruby
@@ -36,7 +38,7 @@ hiro.resource := resource/ares.rc
 include $(hiro.path)/GNUmakefile
 
 profile := performance
-cores := a26 fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp spec
+cores := a26 fc sfc n64 sg ms md ps1 pce ng msx cv myvision gb gba ws ngp spec
 #cores += saturn
 
 ares.path := ../ares
@@ -52,27 +54,28 @@ $(object.path)/mia-resource.o: $(mia.path)/resource/resource.cpp
 
 desktop-ui.path = ../desktop-ui
 
-desktop-ui.objects += desktop-ui desktop-ui-resource desktop-ui-input desktop-ui-emulator desktop-ui-program
-desktop-ui.objects += desktop-ui-presentation desktop-ui-settings desktop-ui-tools
+desktop-ui.objects += desktop-ui desktop-ui-resource desktop-ui-input desktop-ui-game-browser desktop-ui-emulator
+desktop-ui.objects += desktop-ui-program desktop-ui-presentation desktop-ui-settings desktop-ui-tools
 desktop-ui.objects := $(desktop-ui.objects:%=$(object.path)/%.o)
 
 $(object.path)/desktop-ui.o: $(desktop-ui.path)/desktop-ui.cpp
 $(object.path)/desktop-ui-resource.o: $(desktop-ui.path)/resource/resource.cpp
 $(object.path)/desktop-ui-input.o: $(desktop-ui.path)/input/input.cpp
 $(object.path)/desktop-ui-emulator.o: $(desktop-ui.path)/emulator/emulator.cpp
+$(object.path)/desktop-ui-game-browser.o: $(desktop-ui.path)/game-browser/game-browser.cpp
 $(object.path)/desktop-ui-program.o: $(desktop-ui.path)/program/program.cpp
 $(object.path)/desktop-ui-presentation.o: $(desktop-ui.path)/presentation/presentation.cpp
 $(object.path)/desktop-ui-settings.o: $(desktop-ui.path)/settings/settings.cpp
 $(object.path)/desktop-ui-tools.o: $(desktop-ui.path)/tools/tools.cpp
 
-all.objects := $(libco.objects) $(sljit.objects) $(libchdr.objects) $(nall.objects) $(ruby.objects) $(hiro.objects) $(ares.objects) $(mia.objects) $(desktop-ui.objects)
-all.options := $(libco.options) $(sljit.options) $(libchdr.options) $(nall.options) $(ruby.options) $(hiro.options) $(ares.options) $(mia.options) $(desktop-ui.options) $(options)
+all.objects := $(libco.objects) $(sljit.objects) $(libchdr.objects) $(tzxfile.objects) $(nall.objects) $(ruby.objects) $(hiro.objects) $(ares.objects) $(mia.objects) $(desktop-ui.objects)
+all.options := $(libco.options) $(sljit.options) $(libchdr.options) $(tzxfile.options) $(nall.options) $(ruby.options) $(hiro.options) $(ares.options) $(mia.options) $(desktop-ui.options) $(options)
 
 $(all.objects): | $(object.path)
 
 all: $(all.objects) | $(output.path)
 	$(info Linking $(output.path)/$(name)$(extension) ...)
-	+@$(compiler) -o $(output.path)/$(name)$(extension) $(all.objects) $(all.options)
+	+@$(compiler) $(call exe,$(output.path)/$(name)$(extension)) $(all.objects) $(all.options)
 	$(call copy,../LICENSE,$(output.path)/LICENSE.txt)
 ifeq ($(platform),macos)
 # Apply workaround for buggy linker in Xcode < 11.4.1
@@ -122,8 +125,10 @@ else ifneq ($(filter $(platform),linux bsd),)
 	mkdir -p $(prefix)/share/applications/
 	mkdir -p $(prefix)/share/icons/hicolor/256x256/apps/
 	mkdir -p $(prefix)/share/$(name)/Shaders/
+	mkdir -p $(prefix)/share/$(name)/Database/
 	cp $(output.path)/$(name) $(prefix)/bin/$(name)
 	cp -R $(ares.path)/Shaders/* $(prefix)/share/$(name)/Shaders/
+	cp -R $(mia.path)/Database/* $(prefix)/share/$(name)/Database/
 	cp resource/$(name).desktop $(prefix)/share/applications/$(name).desktop
 	cp resource/$(name).png $(prefix)/share/icons/hicolor/256x256/apps/$(name).png
 endif

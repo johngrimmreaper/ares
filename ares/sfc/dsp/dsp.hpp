@@ -16,7 +16,7 @@ struct DSP : Thread {
   n8 apuram[64_KiB];
   n8 registers[128];
 
-  auto mute() const -> bool { return master.mute; }
+  auto mute() const -> bool { return mainvol.mute; }
 
   //dsp.cpp
   auto load(Node::Object) -> void;
@@ -45,25 +45,25 @@ private:
     n1  sample = 1;
   } clock;
 
-  struct Master {
+  struct MainVol {
     n1  reset = 1;
     n1  mute = 1;
     i8  volume[2];
     i17 output[2];
-  } master;
+  } mainvol;
 
   struct Echo {
     i8  feedback;
     i8  volume[2];
     i8  fir[8];
     i16 history[2][8];
-    n8  bank;
+    n8  page;
     n4  delay;
     n1  readonly = 1;
     i17 input[2];
     i17 output[2];
 
-    n8  _bank;
+    n8  _page;
     n1  _readonly;
     n16 _address;
     n16 _offset;  //offset from ESA into echo buffer

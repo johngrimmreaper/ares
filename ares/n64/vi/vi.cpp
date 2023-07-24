@@ -61,26 +61,28 @@ auto VI::unload() -> void {
 }
 
 auto VI::main() -> void {
-  //field is not compared
-  if(io.vcounter << 1 == io.coincidence) {
-    mi.raise(MI::IRQ::VI);
-  }
-
-  if(++io.vcounter >= (Region::NTSC() ? 262 : 312) + io.field) {
-    io.vcounter = 0;
-    io.field = io.field + 1 & io.serrate;
-    #if defined(VULKAN)
-    if (vulkan.enable) {
-      gpuOutputValid = vulkan.scanoutAsync(io.field);
-      vulkan.frame();
+  while(Thread::clock < 0) {
+    //field is not compared
+    if(io.vcounter << 1 == io.coincidence) {
+      mi.raise(MI::IRQ::VI);
     }
-    #endif
-    refreshed = true;
-    screen->frame();
-  }
 
-  if(Region::NTSC()) step(system.frequency() / 60 / 262);
-  if(Region::PAL ()) step(system.frequency() / 50 / 312);
+    if(++io.vcounter >= (Region::NTSC() ? 262 : 312) + io.field) {
+      io.vcounter = 0;
+      io.field = io.field + 1 & io.serrate;
+      #if defined(VULKAN)
+      if (vulkan.enable) {
+        gpuOutputValid = vulkan.scanoutAsync(io.field);
+        vulkan.frame();
+      }
+      #endif
+      refreshed = true;
+      screen->frame();
+    }
+
+    if(Region::NTSC()) step(system.frequency() / 60 / 262);
+    if(Region::PAL ()) step(system.frequency() / 50 / 312);
+  }
 }
 
 auto VI::step(u32 clocks) -> void {
@@ -96,7 +98,12 @@ auto VI::refresh() -> void {
     if(rgba) {
       screen->setViewport(0, 0, width, height);
       for(u32 y : range(height)) {
-        auto source = rgba + width * y * sizeof(u32);
+        u32 y_fix = y; 
+        // When weave interlacing is active, we need to fix the order of interleaved lines for the image output
+        // but only when the VI is set to interlance and we don't use supersampling (causes severe bugs)
+        // Otherwise proceed as normal
+        if(io.serrate == 1 && vulkan.weaveDeinterlacing && !vulkan.supersampleScanout) y_fix = (y % 2 == 0)? y+1 : y-1; // Swap each even/odd line
+        auto source = rgba + width * y_fix * sizeof(u32);
         auto target = screen->pixels(1).data() + y * vulkan.outputUpscale * 640;
         for(u32 x : range(width)) {
           target[x] = source[x * 4 + 0] << 16 | source[x * 4 + 1] << 8 | source[x * 4 + 2] << 0;

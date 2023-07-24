@@ -68,15 +68,36 @@ auto nall::main(Arguments arguments) -> void {
     program.startShader = shader;
   }
 
-  for(auto argument : arguments) {
-    if(file::exists(argument)) program.startGameLoad = argument;
+  if(arguments.take("--no-file-prompt")) {
+    program.noFilePrompt = true;
   }
 
   inputManager.create();
   Emulator::construct();
+  settings.load();
+
+  if(arguments.find("--setting")) {
+    string settingValue;
+    while(arguments.take("--setting", settingValue)) {
+      auto kv = settingValue.split("=", 1L);
+      if(kv.size() == 2) {
+        auto node = settings[kv[0]];
+        if(node) {
+          node.setValue(kv[1]);
+        } else {
+          print("Invalid setting: ", settingValue, "\n");
+          return;
+        }
+      } else {
+        print("Invalid setting: ", settingValue, "\n");
+        return;
+      }
+    }
+    settings.process(true);
+  }
 
   if(arguments.take("--help")) {
-    print("Usage: ares [OPTIONS]... game\n\n");
+    print("Usage: ares [OPTIONS]... game(s)\n\n");
     print("Options:\n");
     print("  --help               Displays available options and exit\n");
 #if defined(PLATFORM_WINDOWS)
@@ -85,6 +106,9 @@ auto nall::main(Arguments arguments) -> void {
     print("  --fullscreen         Start in full screen mode\n");
     print("  --system name        Specify the system name\n");
     print("  --shader name        Specify the name of the shader to use\n");
+    print("  --setting name=value Specify a value for a setting\n");
+    print("  --dump-all-settings  Show a list of all existing settings and exit\n");
+    print("  --no-file-prompt     Do not prompt to load (optional) additional roms (eg: 64DD)\n");
     print("\n");
     print("Available Systems:\n");
     print("  ");
@@ -95,10 +119,27 @@ auto nall::main(Arguments arguments) -> void {
     return;
   }
 
-  settings.load();
+  if(arguments.take("--dump-all-settings")) {
+    function<void(const Markup::Node&, string)> dump;
+    dump = [&](const Markup::Node& node, string prefix) -> void {
+      for(const auto& setting : node) {
+        print(prefix, setting.name(), "\n");
+        dump(setting, string(prefix, setting.name(), "/"));
+      }
+    };
+    dump(settings, "");
+    return;
+  }
+
+  program.startGameLoad.reset();
+  for(auto argument : arguments) {
+    if(file::exists(argument)) program.startGameLoad.append(argument);
+  }
+
   Instances::presentation.construct();
   Instances::settingsWindow.construct();
   Instances::toolsWindow.construct();
+  Instances::gameBrowserWindow.construct();
 
   program.create();
   presentation.loadEmulators();
@@ -110,6 +151,7 @@ auto nall::main(Arguments arguments) -> void {
   Instances::presentation.destruct();
   Instances::settingsWindow.destruct();
   Instances::toolsWindow.destruct();
+  Instances::gameBrowserWindow.destruct();
 }
 
 #if defined(PLATFORM_WINDOWS) && defined(ARCHITECTURE_AMD64) && !defined(BUILD_LOCAL)

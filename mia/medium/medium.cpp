@@ -1,7 +1,9 @@
 namespace Media {
   vector<Database> databases;
+  #include "mame.cpp"
   #include "atari-2600.cpp"
   #include "colecovision.cpp"
+  #include "myvision.cpp"
   #include "famicom.cpp"
   #include "famicom-disk-system.cpp"
   #include "game-boy.cpp"
@@ -43,6 +45,7 @@ namespace Media {
 auto Medium::create(string name) -> shared_pointer<Pak> {
   if(name == "Atari 2600") return new Media::Atari2600;
   if(name == "ColecoVision") return new Media::ColecoVision;
+  if(name == "MyVision") return new Media::MyVision;
   if(name == "Famicom") return new Media::Famicom;
   if(name == "Famicom Disk System") return new Media::FamicomDiskSystem;
   if(name == "Game Boy") return new Media::GameBoy;
@@ -77,19 +80,38 @@ auto Medium::create(string name) -> shared_pointer<Pak> {
   return {};
 }
 
-//search game database for manifest, if one exists
-auto Medium::manifestDatabase(string sha256) -> string {
+auto Medium::loadDatabase() -> void {
   //load the database on the first time it's needed for a given media type
   bool found = false;
   for(auto& database : Media::databases) {
     if(database.name == name()) found = true;
   }
+
   if(!found) {
     Database database;
     database.name = name();
     database.list = BML::unserialize(file::read(locate({"Database/", name(), ".bml"})));
     Media::databases.append(std::move(database));
   }
+}
+
+//Retrieve all entries in game database
+auto Medium::database() -> Database {
+  loadDatabase();
+
+  //search the database for a given sha256 game entry
+  for(auto& database : Media::databases) {
+    if (database.name == name()) {
+      return database;
+    }
+  }
+
+  return {};
+}
+
+//search game database for manifest, if one exists
+auto Medium::manifestDatabase(string sha256) -> string {
+  loadDatabase();
 
   //search the database for a given sha256 game entry
   for(auto& database : Media::databases) {
@@ -106,20 +128,9 @@ auto Medium::manifestDatabase(string sha256) -> string {
   return {};
 }
 
-
 //search game database for manifest, if one exists
 auto Medium::manifestDatabaseArcade(string rom) -> string {
-  //load the database on the first time it's needed for a given media type
-  bool found = false;
-  for(auto& database : Media::databases) {
-    if(database.name == name()) found = true;
-  }
-  if(!found) {
-    Database database;
-    database.name = name();
-    database.list = BML::unserialize(file::read(locate({"Database/", name(), ".bml"})));
-    Media::databases.append(std::move(database));
-  }
+  loadDatabase();
 
   //search the database for a given named game entry
   for(auto& database : Media::databases) {
@@ -225,19 +236,26 @@ auto CompactDisc::readDataSectorCHD(string filename, u32 sectorID) -> vector<u8>
   Decode::CHD chd;
   if(!chd.load(filename)) return {};
 
-  // Account for 2 second pregap
-  sectorID += (75 * 2);
+  // Find the first data track within the chd
+  for (auto& track : chd.tracks) {
+    if(track.type == "AUDIO") continue;
+    for(auto& index : track.indices) {
+      if (index.number != 1) continue;
 
-  // Read the sector from CHD and extract the user data portion (2048 bytes)
-  auto sector = chd.read(sectorID);
-  vector<u8> output;
-  output.resize(2048);
+      // Read the sector from CHD and extract the user data portion (2048 bytes)
+      auto sector = chd.read(index.lba + sectorID);
+      vector<u8> output;
+      output.resize(2048);
 
-  if (sector.size() == 2048) {
-    memory::copy(output.data(), output.size(), sector.data(), output.size());
-    return output;
+      if (sector.size() == 2048) {
+        memory::copy(output.data(), output.size(), sector.data(), output.size());
+        return output;
+      }
+
+      memory::copy(output.data(), output.size(), sector.data() + 16, output.size());
+      return output;
+    }
   }
 
-  memory::copy(output.data(), output.size(), sector.data() + 16, output.size());
-  return output;
+  return {};
 }

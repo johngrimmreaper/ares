@@ -104,10 +104,10 @@ auto FDSAudio::clock() -> void {
 
 auto FDSAudio::updateOutput() -> void {
   static constexpr u32 lookup[4] = {36, 24, 17, 14};
-  i32 level = min(carrier.gain, 32) * lookup[masterVolume];
+  i32 level = min(carrier.gain, 32) * lookup[masterVolume]; //max level: 1152
 
-  n8 output = waveform.data[waveform.index] * level / 561;
-  stream->frame(output / 255.0 * 0.25);
+  n8 output = waveform.data[waveform.index] * level / 1152;
+  stream->frame(output / 255.0 * 0.5);
 }
 
 auto FDSAudio::read(n16 address, n8 data) -> n8 {
@@ -134,7 +134,7 @@ auto FDSAudio::read(n16 address, n8 data) -> n8 {
 }
 
 auto FDSAudio::write(n16 address, n8 data) -> void {
-  if(!enable && address != 0x4025) return;
+  if(!enable && address != 0x4023) return;
 
   if(address >= 0x4040 && address <= 0x407f && waveform.writable) {
     waveform.data[(n6)address] = data.bit(0,5);
@@ -143,7 +143,7 @@ auto FDSAudio::write(n16 address, n8 data) -> void {
 
   switch(address) {
 
-  case 0x4025:
+  case 0x4023:
     enable = data.bit(1);
     return;
 
@@ -175,10 +175,12 @@ auto FDSAudio::write(n16 address, n8 data) -> void {
     modulator.envelope = !data.bit(7);
     if(!modulator.envelope) modulator.gain = modulator.speed;
     modulator.reloadPeriod();
+    modulator.updateOutput(carrier.frequency);
     return;
 
   case 0x4085:
     modulator.updateCounter(data.bit(0,6));
+    modulator.updateOutput(carrier.frequency);
     return;
 
   case 0x4086:

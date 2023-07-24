@@ -30,8 +30,8 @@ struct Settings : Markup::Node {
 
     string quality = "SD";
     bool supersampling = false;
-    bool enableVulkan = true;
     bool disableVideoInterfaceProcessing = false;
+    bool weaveDeinterlacing = true;
   } video;
 
   struct Audio {
@@ -76,6 +76,7 @@ struct Settings : Markup::Node {
     string saves;
     string screenshots;
     string debugging;
+    string arcadeRoms;
     struct SuperFamicom {
       string gameBoy;
       string bsMemory;
@@ -122,12 +123,12 @@ struct VideoSettings : VerticalLayout {
       Label pixelAccuracyHint{&pixelAccuracyLayout, Size{~0, 0}};
   //
   Label renderSettingsLabel{this, Size{~0, 0}, 5};
-  HorizontalLayout enableVulkanLayout{this, Size{~0, 0}};
-    CheckLabel enableVulkanOption{&enableVulkanLayout, Size{0, 0}, 5};
-    Label enableVulkanHint{&enableVulkanLayout, Size{~0, 0}};  
   HorizontalLayout disableVideoInterfaceProcessingLayout{this, Size{~0, 0}, 5};
     CheckLabel disableVideoInterfaceProcessingOption{&disableVideoInterfaceProcessingLayout, Size{0, 0}, 5};
     Label disableVideoInterfaceProcessingHint{&disableVideoInterfaceProcessingLayout, Size{0, 0}};
+  HorizontalLayout weaveDeinterlacingLayout{this, Size{~0, 0}, 5};
+    CheckLabel weaveDeinterlacingOption{&weaveDeinterlacingLayout, Size{0, 0}, 5};
+    Label weaveDeinterlacingHint{&weaveDeinterlacingLayout, Size{0, 0}};
   HorizontalLayout renderQualityLayout{this, Size{~0, 0}, 5};
     RadioLabel renderQualitySD{&renderQualityLayout, Size{0, 0}};
     RadioLabel renderQualityHD{&renderQualityLayout, Size{0, 0}};
@@ -260,6 +261,11 @@ struct PathSettings : VerticalLayout {
     LineEdit debuggingPath{&debuggingLayout, Size{~0, 0}};
     Button debuggingAssign{&debuggingLayout, Size{80, 0}};
     Button debuggingReset{&debuggingLayout, Size{80, 0}};
+  Label arcadeRomsLabel{this, Size{~0, 0}, 5};
+  HorizontalLayout arcadeRomsLayout{this, Size{~0, 0}};
+    LineEdit arcadeRomsPath{&arcadeRomsLayout, Size{~0, 0}};
+    Button arcadeRomsAssign{&arcadeRomsLayout, Size{80, 0}};
+    Button arcadeRomsReset{&arcadeRomsLayout, Size{80, 0}};
 };
 
 struct DriverSettings : VerticalLayout {
