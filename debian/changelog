@@ -1,8 +1,14 @@
-ares (133-1) UNRELEASED; urgency=medium
+ares (133-1) unstable; urgency=medium
 
-  *
+  * attempt to build on all architectures
+  * allow crossbuilding (Closes: #866070)
+  * drop patches applied upstream:
+    * build default to Gtk-3
+    * fix FTBFS with GCC-13
+  * refresh existing patches
+  * update copyright information of thirdparty/
 
- -- Alexandre Detiste <alexandre.detiste@gmail.com>  Tue, 25 Jul 2023 00:16:59 +0200
+ -- Alexandre Detiste <alexandre.detiste@gmail.com>  Wed, 26 Jul 2023 17:26:41 +0200
 
 ares (132-1) unstable; urgency=medium
 
