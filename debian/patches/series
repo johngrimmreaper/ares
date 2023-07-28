@@ -5,3 +5,4 @@ desktop-file.patch
 sjlj-declare-xopen-source.patch
 menu-color.patch
 no-optional-extensions.patch
+use_distro_libchdr.patch
