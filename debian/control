@@ -13,6 +13,7 @@ Build-Depends: debhelper (>= 12),
                libopenal-dev,
                libao-dev,
                libxv-dev,
+               libchdr-dev,
                libudev-dev [linux-any],
                libasound2-dev [linux-any]
 Standards-Version: 4.6.0
