@@ -26,6 +26,9 @@ endif
 %:
 	dh $@ --sourcedirectory=desktop-ui
 
+override_dh_auto_clean:
+	dh_auto_clean -- arch='$(ares_arch)'
+
 override_dh_auto_build:
 	dh_auto_build -- $(BUILDOPT) compiler='$(CXX)' arch='$(ares_arch)'
 
