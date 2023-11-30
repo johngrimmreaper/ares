@@ -28,11 +28,17 @@ auto MemoryCard::save() -> void {
 
 auto MemoryCard::reset() -> void {
   state = State::Idle;
+  _active = false;
 }
 
 auto MemoryCard::acknowledge() -> bool {
   return state != State::Idle;
 }
+
+auto MemoryCard::active() -> bool {
+  return _active || acknowledge();
+}
+
 
 auto MemoryCard::bus(u8 data) -> u8 {
   n8 input  = data;
@@ -40,6 +46,7 @@ auto MemoryCard::bus(u8 data) -> u8 {
 
   if(state == State::Idle) {
     command = Command::None;
+    _active = false;
   }
 
   switch(command) {
@@ -53,6 +60,7 @@ auto MemoryCard::bus(u8 data) -> u8 {
   case State::Idle: {
     if(input != 0x81) break;
     output = 0xff;
+    _active = true;
     state = State::Select;
     break;
   }

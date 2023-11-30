@@ -33,7 +33,6 @@ struct CPU : Thread {
   auto unload() -> void;
 
   auto main() -> void;
-  auto step(u32 clocks) -> void;
   auto synchronize() -> void;
 
   auto instruction() -> void;
@@ -112,11 +111,11 @@ struct CPU : Thread {
     auto step(u32 vaddr, u32 address) -> void {
       auto& line = this->line(vaddr);
       if(!line.hit(address)) {
-        self.step(48);
+        self.step(48 * 2);
         line.valid = 1;
         line.tag   = address & ~0x0000'0fff;
       } else {
-        self.step(2);
+        self.step(1 * 2);
       }
     }
 
@@ -126,7 +125,7 @@ struct CPU : Thread {
       if(!line.hit(address)) {
         line.fill(address, cpu);
       } else {
-        cpu.step(2);
+        cpu.step(1 * 2);
       }
       return line.read(address);
     }
@@ -145,7 +144,7 @@ struct CPU : Thread {
     struct Line {
       auto hit(u32 address) const -> bool { return valid && tag == (address & ~0x0000'0fff); }
       auto fill(u32 address, CPU& cpu) -> void {
-        cpu.step(48);
+        cpu.step(48 * 2);
         valid = 1;
         tag   = address & ~0x0000'0fff;
         words[0] = cpu.busRead<Word>(tag | index | 0x00);
@@ -159,7 +158,7 @@ struct CPU : Thread {
       }
 
       auto writeBack(CPU& cpu) -> void {
-        cpu.step(48);
+        cpu.step(48 * 2);
         cpu.busWrite<Word>(tag | index | 0x00, words[0]);
         cpu.busWrite<Word>(tag | index | 0x04, words[1]);
         cpu.busWrite<Word>(tag | index | 0x08, words[2]);
@@ -186,6 +185,8 @@ struct CPU : Thread {
     template<u32 Size> auto read(u32 vaddr, u32 address) -> u64;
     template<u32 Size> auto write(u32 vaddr, u32 address, u64 data) -> void;
     auto power(bool reset) -> void;
+
+    auto readDebug(u32 vaddr, u32 address) -> u8;
 
     //8KB
     struct Line {
@@ -243,11 +244,12 @@ struct CPU : Thread {
     } entry[TLB::Entries];
 
     //tlb.cpp
-    auto load(u64 vaddr) -> Match;
-    auto load(u64 vaddr, const Entry& entry) -> Match;
+    auto load(u64 vaddr, bool noExceptions = false) -> Match;
+    auto load(u64 vaddr, const Entry& entry, bool noExceptions = false) -> maybe<Match>;
+    
     auto loadFast(u64 vaddr) -> Match;
     auto store(u64 vaddr) -> Match;
-    auto store(u64 vaddr, const Entry& entry) -> Match;
+    auto store(u64 vaddr, const Entry& entry) -> maybe<Match>;
 
     struct TlbCache { ;
       static constexpr int entries = 4;
@@ -293,6 +295,7 @@ struct CPU : Thread {
   auto segment(u64 vaddr) -> Context::Segment;
   auto devirtualize(u64 vaddr) -> maybe<u64>;
   alwaysinline auto devirtualizeFast(u64 vaddr) -> u64;
+  auto devirtualizeDebug(u64 vaddr) -> u64;
 
   auto fetch(u64 vaddr) -> maybe<u32>;
   template<u32 Size> auto busWrite(u32 address, u64 data) -> void;
@@ -301,6 +304,8 @@ struct CPU : Thread {
   template<u32 Size> auto write(u64 vaddr, u64 data, bool alignedError=true) -> bool;
   template<u32 Size> auto vaddrAlignedError(u64 vaddr, bool write) -> bool;
   auto addressException(u64 vaddr) -> void;
+
+  auto readDebug(u64 vaddr) -> u8;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
@@ -895,10 +900,10 @@ struct CPU : Thread {
     }
 
     auto pool(u32 address) -> Pool*;
-    auto block(u32 address) -> Block*;
+    auto block(u32 vaddr, u32 address, bool singleInstruction = false) -> Block*;
     auto fastFetchBlock(u32 address) -> Block*;
 
-    auto emit(u32 address) -> Block*;
+    auto emit(u32 vaddr, u32 address, bool singleInstruction = false) -> Block*;
     auto emitEXECUTE(u32 instruction) -> bool;
     auto emitSPECIAL(u32 instruction) -> bool;
     auto emitREGIMM(u32 instruction) -> bool;

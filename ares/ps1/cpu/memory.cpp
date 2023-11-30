@@ -10,12 +10,14 @@ inline auto CPU::fetch(u32 address) -> u32 {
   //uncached
   case 5: {//$a0000000-$bfffffff  KSEG1
     if(likely(address <= 0xa07f'ffff)) {
-      step(4);
-      return ram.read<Word>(address);
+      auto data = ram.read<Word>(address);
+      step(ram.wait<Word>());
+      return data;
     }
     if(likely(address >= 0xbfc0'0000)) {
-      step(24);
-      return bios.read<Word>(address);
+      auto data = bios.read<Word>(address);
+      step(bios.wait<Word>());
+      return data;
     }
     if(likely(address >= 0xbf00'0000)) {
       //the CPU cannot execute out of the scratchpad or (most) MMIO register areas
@@ -44,6 +46,21 @@ inline auto CPU::fetch(u32 address) -> u32 {
   unreachable;
 }
 
+//peek at the next instruction, does not consume cycles
+inline auto CPU::peek(u32 address) -> u32 {
+  address &= 0x1fff'ffff;
+
+  if(likely(address <= 0x007f'ffff)) {
+    return ram.read<Word>(address);
+  }
+
+  if(likely(address >= 0x1fc0'0000)) {
+    return bios.read<Word>(address);
+  }
+
+  return 0;
+}
+
 //read data from the bus
 template<u32 Size>
 inline auto CPU::read(u32 address) -> u32 {
@@ -61,7 +78,6 @@ inline auto CPU::read(u32 address) -> u32 {
   }
 
   if(unlikely(address >= 0xfffe'0000)) {
-    step(2);
     return memory.read<Size>(address);
   }
 
@@ -78,17 +94,20 @@ inline auto CPU::read(u32 address) -> u32 {
       return 0;  //nop
     }
     if(likely(address <= 0x007f'ffff)) {
-      step(4);
-      return ram.read<Size>(address);
+      auto data = ram.read<Size>(address);
+      step(ram.wait<Size>());
+      return data;
     }
     if(likely(address >= 0x1fc0'0000)) {
-      step(6 * Size);
-      return bios.read<Size>(address);
+      auto data = memory.read<Size>(address);
+      step(bios.wait<Size>());
+      return data;
     }
     if(likely(address >= 0x1f00'0000)) {
       auto& memory = bus.mmio(address);
+      auto data = memory.read<Size>(address);
       step(memory.wait<Size>());
-      return memory.read<Size>(address);
+      return data;
     }
     if constexpr(Accuracy::CPU::BusErrors) {
       exception.busData();
@@ -108,17 +127,20 @@ inline auto CPU::read(u32 address) -> u32 {
       return 0;  //nop
     }
     if(likely(address <= 0x807f'ffff)) {
-      step(4);
-      return ram.read<Size>(address);
+      auto data = ram.read<Size>(address);
+      step(ram.wait<Size>());
+      return data;
     }
     if(likely(address >= 0x9fc0'0000)) {
-      step(6 * Size);
-      return bios.read<Size>(address);
+      auto data = memory.read<Size>(address);
+      step(bios.wait<Size>());
+      return data;
     }
     if(likely(address >= 0x9f00'0000)) {
       auto& memory = bus.mmio(address);
+      auto data = memory.read<Size>(address);
       step(memory.wait<Size>());
-      return memory.read<Size>(address);
+      return data;
     }
     if constexpr(Accuracy::CPU::BusErrors) {
       exception.busData();
@@ -129,17 +151,20 @@ inline auto CPU::read(u32 address) -> u32 {
   //uncached
   case 5: {//KSEG1
     if(likely(address <= 0xa07f'ffff)) {
-      step(4);
-      return ram.read<Size>(address);
+      auto data = ram.read<Size>(address);
+      step(ram.wait<Size>());
+      return data;
     }
     if(likely(address >= 0xbfc0'0000)) {
-      step(6 * Size);
-      return bios.read<Size>(address);
+      auto data = bios.read<Size>(address);
+      step(bios.wait<Size>());
+      return data;
     }
     if(likely(address >= 0xbf00'0000)) {
       auto& memory = bus.mmio(address);
+      auto data = memory.read<Size>(address);
       step(memory.wait<Size>());
-      return memory.read<Size>(address);
+      return data;
     }
     if constexpr(Accuracy::CPU::BusErrors) {
       exception.busData();
@@ -167,6 +192,9 @@ inline auto CPU::read(u32 address) -> u32 {
 //write data to the bus
 template<u32 Size>
 inline auto CPU::write(u32 address, u32 data) -> void {
+  //NOTE: CPU has a write fifo that prevents stalls until full
+  //for now we disable write cycle timing to simulate an infinite write fifo
+  //once we implement the real thing; then we can uncomment the step() calls
   if constexpr(Accuracy::CPU::Breakpoints) {
     if(breakpoint.testData<Write, Size>(address)) return;
   }
@@ -181,7 +209,6 @@ inline auto CPU::write(u32 address, u32 data) -> void {
   }
 
   if(unlikely(address >= 0xfffe'0000)) {
-    step(2);
     return memory.write<Size>(address, data);
   }
 
@@ -198,19 +225,19 @@ inline auto CPU::write(u32 address, u32 data) -> void {
       return;
     }
     if(likely(address <= 0x007f'ffff)) {
-      step(4);
+      //step(ram.wait<Size>());
       if constexpr(Accuracy::CPU::Recompiler) {
         recompiler.invalidate(address);
       }
       return ram.write<Size>(address, data);
     }
     if(likely(address >= 0x1fc0'0000)) {
-      step(6 * Size);
+      //step(bios.wait<Size>());
       return bios.write<Size>(address, data);
     }
     if(likely(address >= 0x1f00'0000)) {
       auto& memory = bus.mmio(address);
-      step(memory.wait<Size>());
+      //step(memory.wait<Size>());
       return memory.write<Size>(address, data);
     }
     if constexpr(Accuracy::CPU::BusErrors) {
@@ -231,19 +258,19 @@ inline auto CPU::write(u32 address, u32 data) -> void {
       return;
     }
     if(likely(address <= 0x807f'ffff)) {
-      step(4);
+      //step(ram.wait<Size>());
       if constexpr(Accuracy::CPU::Recompiler) {
         recompiler.invalidate(address);
       }
       return ram.write<Size>(address, data);
     }
     if(likely(address >= 0x9fc0'0000)) {
-      step(6 * Size);
+      //step(bios.wait<Size>());
       return bios.write<Size>(address, data);
     }
     if(likely(address >= 0x9f00'0000)) {
       auto& memory = bus.mmio(address);
-      step(memory.wait<Size>());
+      //step(memory.wait<Size>());
       return memory.write<Size>(address, data);
     }
     if constexpr(Accuracy::CPU::BusErrors) {
@@ -255,19 +282,19 @@ inline auto CPU::write(u32 address, u32 data) -> void {
   //uncached
   case 5: {//KSEG1
     if(likely(address <= 0xa07f'ffff)) {
-      step(4);
+      //step(ram.wait<Size>());
       if constexpr(Accuracy::CPU::Recompiler) {
         recompiler.invalidate(address);
       }
       return ram.write<Size>(address, data);
     }
     if(likely(address >= 0xbfc0'0000)) {
-      step(6 * Size);
+      //step(bios.wait<Size>());
       return bios.write<Size>(address, data);
     }
     if(likely(address >= 0xbf00'0000)) {
       auto& memory = bus.mmio(address);
-      step(memory.wait<Size>());
+      //step(memory.wait<Size>());
       return memory.write<Size>(address, data);
     }
     if constexpr(Accuracy::CPU::BusErrors) {

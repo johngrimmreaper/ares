@@ -3,7 +3,7 @@
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://github.com/higan-emu/ares/blob/master/LICENSE)
 
 **ares** is a multi-system emulator that began development on October 14th, 2004.
-It is a descendent of [higan](https://github.com/higan-emu/higan) and [bsnes](https://github.com/bsnes-emu/bsnes/), and focuses on accuracy and preservation.
+It is a descendant of [higan](https://github.com/higan-emu/higan) and [bsnes](https://github.com/bsnes-emu/bsnes/), and focuses on accuracy and preservation.
 
 Official Releases
 -----------------
@@ -38,7 +38,7 @@ If you would like to use SDL for input, you will need to install the following t
 
 ##### Building with clang
 
-clang++ is now the preferred compiler for ares. If it is detected, the build will default to building with clang. It is necessary to install both the `clang` and `lld` packages. If you would like to manually specify a compiler, you can use the following option: `compiler=[g++|clang++]`  
+clang++ is now the preferred compiler for ares. If clang is detected on Windows/macOS/BSD, it will be selected by default. On Linux and other platforms, g++ remains the default if present. To build with clang, it is necessary to install both the `clang` and `lld` packages. If you would like to manually specify a compiler, you can use the following option: `compiler=[g++|clang++]`  
   
 --------------
 
@@ -47,7 +47,7 @@ clang++ is now the preferred compiler for ares. If it is detected, the build wil
 To build on Windows, using MSYS2 is recommended which can be download [here](https://www.msys2.org/). Follow the instructions
 on this page to install and setup an appropriate MINGW64 environment. Running the command:  
 ```
-pacman -S --needed base-devel mingw-w64-x86_64-toolchain
+pacman -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-SDL2
 ```  
 from the MSYS2 MSYS terminal should setup everything you need to compile ares. Note that in order to compile, you will want to be in a MINGW64 terminal window after install and setup is complete. 
 
@@ -55,7 +55,7 @@ from the MSYS2 MSYS terminal should setup everything you need to compile ares. N
 
 clang is available through Visual Studio (or Build Tools for Visual Studio) through its installer and can be used to build ares. You will still need to supply GNU make in this instance. MSYS2 also offers a clang environment. You will want to make sure you select the clangw64 option during installation of MSYS2 which should provide and additional CLANG64 pre-configured environment. Install the clang toolchain package from the MSYS2 terminal:  
 ```
-pacman -S mingw-w64-clang-x86_64-toolchain
+pacman -S mingw-w64-clang-x86_64-toolchain mingw-w64-clang-x86_64-SDL2
 ```  
 Once complete, open a CLANG64 terminal window and proceed with building ares. 
 
@@ -90,7 +90,7 @@ make clean
 #### Building specific cores  
 If you would like to build a subset of cores, you can specify the `cores="core1 core2"` option. Currently available cores:  
 ```
-a26 fc sfc n64 sg ms md ps1 pce ng msx cv gb gba ws ngp spec
+a26 fc sfc n64 sg ms md ps1 pce ng msx cv myvision gb gba ws ngp spec
 ```  
 
 Build Output

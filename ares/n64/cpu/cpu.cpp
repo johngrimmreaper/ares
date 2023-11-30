@@ -1,4 +1,5 @@
 #include <n64/n64.hpp>
+#include <nall/gdb/server.hpp>
 
 namespace ares::Nintendo64 {
 
@@ -30,7 +31,7 @@ auto CPU::unload() -> void {
 }
 
 auto CPU::main() -> void {
-  while(!vi.refreshed) {
+  while(!vi.refreshed && GDB::server.reportPC(ipu.pc & 0xFFFFFFFF)) {
     instruction();
     synchronize();
   }
@@ -38,12 +39,8 @@ auto CPU::main() -> void {
   vi.refreshed = false;
 }
 
-auto CPU::step(u32 clocks) -> void {
-  Thread::clock += clocks;
-}
-
 auto CPU::synchronize() -> void {
-  auto clocks = Thread::clock * 2;
+  auto clocks = Thread::clock;
   Thread::clock = 0;
 
    vi.clock -= clocks;
@@ -67,7 +64,7 @@ auto CPU::synchronize() -> void {
     case Queue::SI_DMA_Write:  return si.dmaWrite();
     case Queue::SI_BUS_Write:  return si.writeFinished();
     case Queue::RTC_Tick:      return cartridge.rtc.tick();
-    case Queue::DD_Clock_Tick:  return dd.rtcTickClock();
+    case Queue::DD_Clock_Tick:  return dd.rtc.tickClock();
     case Queue::DD_MECHA_Response:  return dd.mechaResponse();
     case Queue::DD_BM_Request:  return dd.bmRequest();
     case Queue::DD_Motor_Mode:  return dd.motorChange();
@@ -85,13 +82,13 @@ auto CPU::instruction() -> void {
   if(auto interrupts = scc.cause.interruptPending & scc.status.interruptMask) {
     if(scc.status.interruptEnable && !scc.status.exceptionLevel && !scc.status.errorLevel) {
       debugger.interrupt(scc.cause.interruptPending);
-      step(1);
+      step(1 * 2);
       return exception.interrupt();
     }
   }
   if (scc.nmiPending) {
     debugger.nmi();
-    step(1);
+    step(1 * 2);
     return exception.nmi();
   }
 
@@ -108,7 +105,7 @@ auto CPU::instruction() -> void {
     }
 
     if (auto address = devirtualize(ipu.pc)) {
-      auto block = recompiler.block(*address);
+      auto block = recompiler.block(ipu.pc, *address, GDB::server.hasBreakpoints());
       block->execute(*this);
     }
   }
@@ -127,7 +124,7 @@ auto CPU::instruction() -> void {
 auto CPU::instructionEpilogue() -> s32 {
   if constexpr(Accuracy::CPU::Recompiler) {
     //simulates timings without performing actual icache loads
-	icache.step(ipu.pc, devirtualizeFast(ipu.pc));
+    icache.step(ipu.pc, devirtualizeFast(ipu.pc));
   }
 
   ipu.r[0].u64 = 0;
@@ -172,7 +169,7 @@ auto CPU::power(bool reset) -> void {
 
   if constexpr(Accuracy::CPU::Recompiler) {
     auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
-    recompiler.allocator.resize(64_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
+    recompiler.allocator.resize(64_MiB, bump_allocator::executable, buffer);
     recompiler.reset();
   }
 }

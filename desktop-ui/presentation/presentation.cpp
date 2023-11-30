@@ -116,6 +116,9 @@ Presentation::Presentation() {
   hotkeySettingsAction.setText("Hotkeys" ELLIPSIS).setIcon(Icon::Device::Keyboard).onActivate([&] {
     settingsWindow.show("Hotkeys");
   });
+  emulatorSettingsAction.setText("Emulators" ELLIPSIS).setIcon(Icon::Place::Server).onActivate([&] {
+    settingsWindow.show("Emulators");
+  });
   optionSettingsAction.setText("Options" ELLIPSIS).setIcon(Icon::Action::Settings).onActivate([&] {
     settingsWindow.show("Options");
   });
@@ -127,6 +130,9 @@ Presentation::Presentation() {
   });
   driverSettingsAction.setText("Drivers" ELLIPSIS).setIcon(Icon::Place::Settings).onActivate([&] {
     settingsWindow.show("Drivers");
+  });
+  debugSettingsAction.setText("Debug" ELLIPSIS).setIcon(Icon::Device::Network).onActivate([&] {
+    settingsWindow.show("Debug");
   });
 
   toolsMenu.setVisible(false).setText("Tools");
@@ -243,10 +249,12 @@ Presentation::Presentation() {
 
   spacerLeft .setBackgroundColor({32, 32, 32});
   statusLeft .setBackgroundColor({32, 32, 32}).setForegroundColor({255, 255, 255});
+  statusDebug.setBackgroundColor({32, 32, 32}).setForegroundColor({255, 255, 255});
   statusRight.setBackgroundColor({32, 32, 32}).setForegroundColor({255, 255, 255});
   spacerRight.setBackgroundColor({32, 32, 32});
 
   statusLeft .setAlignment(0.0).setFont(Font().setBold());
+  statusDebug.setAlignment(1.0).setFont(Font().setBold());
   statusRight.setAlignment(1.0).setFont(Font().setBold());
 
   onClose([&] {
@@ -376,10 +384,27 @@ auto Presentation::loadEmulators() -> void {
   loadMenu.append(MenuSeparator());
 
   //build emulator load list
+  u32 enabled = 0;
+
+  //first pass; make sure "Arcade" is start of list
   for(auto& emulator : emulators) {
+    if(!emulator->configuration.visible) continue;
+    if(emulator->group() == "Arcade") {
+      Menu menu;
+      menu.setIcon(Icon::Emblem::Folder);
+      menu.setText(emulator->group());
+      loadMenu.append(menu);
+      break;
+    }
+  }
+
+  for(auto& emulator : emulators) {
+    if (!emulator->configuration.visible) continue;
+    enabled++;
     MenuItem item;
     item.setIcon(Icon::Place::Server);
     item.setText({emulator->name, ELLIPSIS});
+    item.setVisible(emulator->configuration.visible);
     item.onActivate([=] {
       program.load(emulator);
     });
@@ -387,7 +412,7 @@ auto Presentation::loadEmulators() -> void {
     Menu menu;
     for(auto& action : loadMenu.actions()) {
       if(auto group = action.cast<Menu>()) {
-        if(group.text() == emulator->manufacturer) {
+        if(group.text() == emulator->group()) {
           menu = group;
           break;
         }
@@ -395,15 +420,24 @@ auto Presentation::loadEmulators() -> void {
     }
     if(!menu) {
       menu.setIcon(Icon::Emblem::Folder);
-      menu.setText(emulator->manufacturer);
+      menu.setText(emulator->group());
       loadMenu.append(menu);
     }
     menu.append(item);
   }
+  if(enabled == 0) {
+    //if the user disables every system, give an indication for how to re-add systems to the load menu
+    MenuItem item{&loadMenu};
+    item.setIcon(Icon::Action::Add);
+    item.setText("Add Systems" ELLIPSIS);
+    item.onActivate([&] {
+      settingsWindow.show("Emulators");
+    });
+  }
 
   #if !defined(PLATFORM_MACOS)
   loadMenu.append(MenuSeparator());
-    
+
   { MenuItem quit{&loadMenu};
     quit.setIcon(Icon::Action::Quit);
     quit.setText("Quit");

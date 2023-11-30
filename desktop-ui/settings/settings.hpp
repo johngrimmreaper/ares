@@ -24,6 +24,7 @@ struct Settings : Markup::Node {
     f64 gamma = 1.0;
     bool colorBleed = false;
     bool colorEmulation = true;
+    bool deepBlackBoost = false;
     bool interframeBlending = true;
     bool overscan = false;
     bool pixelAccuracy = false;
@@ -64,6 +65,7 @@ struct Settings : Markup::Node {
     bool rewind = false;
     bool runAhead = false;
     bool autoSaveMemory = true;
+    bool homebrewMode = false;
   } general;
 
   struct Rewind {
@@ -73,6 +75,7 @@ struct Settings : Markup::Node {
 
   struct Paths {
     string home;
+    string firmware;
     string saves;
     string screenshots;
     string debugging;
@@ -87,6 +90,12 @@ struct Settings : Markup::Node {
   struct Recent {
     string game[9];
   } recent;
+
+  struct DebugServer {
+    u32 port = 9123;
+    bool enabled = false; // if enabled, server starts with ares
+    bool useIPv4 = false; // forces IPv4 over IPv6
+  } debugServer;
 };
 
 struct VideoSettings : VerticalLayout {
@@ -112,6 +121,9 @@ struct VideoSettings : VerticalLayout {
     HorizontalLayout colorEmulationLayout{this, Size{~0, 0}, 5};
       CheckLabel colorEmulationOption{&colorEmulationLayout, Size{0, 0}, 5};
       Label colorEmulationHint{&colorEmulationLayout, Size{~0, 0}};
+    HorizontalLayout deepBlackBoostLayout{this, Size{~0, 0}, 5};
+      CheckLabel deepBlackBoostOption{&deepBlackBoostLayout, Size{0, 0}, 5};
+      Label deepBlackBoostHint{&deepBlackBoostLayout, Size{~0, 0}};
     HorizontalLayout interframeBlendingLayout{this, Size{~0, 0}, 5};
       CheckLabel interframeBlendingOption{&interframeBlendingLayout, Size{0, 0}, 5};
       Label interframeBlendingHint{&interframeBlendingLayout, Size{~0, 0}};
@@ -208,6 +220,14 @@ struct HotkeySettings : VerticalLayout {
   Timer timer;
 };
 
+struct EmulatorSettings : VerticalLayout {
+  auto construct() -> void;
+  auto eventToggle(TableViewCell cell) -> void;
+
+  Label emulatorLabel{this, Size{~0, 0}, 5};
+  TableView emulatorList{this, Size{~0, ~0}};
+};
+
 struct OptionSettings : VerticalLayout {
   auto construct() -> void;
   HorizontalLayout rewindLayout{this, Size{~0, 0}, 5};
@@ -219,6 +239,9 @@ struct OptionSettings : VerticalLayout {
   HorizontalLayout autoSaveMemoryLayout{this, Size{~0, 0}, 5};
     CheckLabel autoSaveMemory{&autoSaveMemoryLayout, Size{0, 0}, 5};
     Label autoSaveMemoryHint{&autoSaveMemoryLayout, Size{~0, 0}};
+  HorizontalLayout homebrewModeLayout{this, Size{~0, 0}, 5};
+    CheckLabel homebrewMode{&homebrewModeLayout, Size{0, 0}, 5};
+    Label homebrewModeHint{&homebrewModeLayout, Size{~0, 0}};
 };
 
 struct FirmwareSettings : VerticalLayout {
@@ -228,13 +251,18 @@ struct FirmwareSettings : VerticalLayout {
   auto eventChange() -> void;
   auto eventAssign() -> void;
   auto eventClear() -> void;
+  auto eventScan() -> void;
+  auto findFirmware(string sha256) -> string;
 
   Label firmwareLabel{this, Size{~0, 0}, 5};
   TableView firmwareList{this, Size{~0, ~0}};
   HorizontalLayout controlLayout{this, Size{~0, 0}};
+    Button scanButton{&controlLayout, Size{80, 0}};
     Canvas spacer{&controlLayout, Size{~0, 0}};
     Button assignButton{&controlLayout, Size{80, 0}};
     Button clearButton{&controlLayout, Size{80, 0}};
+
+  map<string, string> fileHashes;
 };
 
 struct PathSettings : VerticalLayout {
@@ -246,6 +274,11 @@ struct PathSettings : VerticalLayout {
     LineEdit homePath{&homeLayout, Size{~0, 0}};
     Button homeAssign{&homeLayout, Size{80, 0}};
     Button homeReset{&homeLayout, Size{80, 0}};
+  Label firmwareLabel{this, Size{~0, 0}, 5};
+    HorizontalLayout firmwareLayout{this, Size{~0, 0}};
+    LineEdit firmwarePath{&firmwareLayout, Size{~0, 0}};
+    Button firmwareAssign{&firmwareLayout, Size{80, 0}};
+    Button firmwareReset{&firmwareLayout, Size{80, 0}};
   Label savesLabel{this, Size{~0, 0}, 5};
   HorizontalLayout savesLayout{this, Size{~0, 0}};
     LineEdit savesPath{&savesLayout, Size{~0, 0}};
@@ -326,6 +359,29 @@ struct DriverSettings : VerticalLayout {
     Group inputDefocusGroup{&inputDefocusPause, &inputDefocusBlock, &inputDefocusAllow};
 };
 
+struct DebugSettings : VerticalLayout {
+  auto construct() -> void;
+  auto infoRefresh() -> void;
+  auto serverRefresh() -> void;
+
+  Label debugLabel{this, Size{~0, 0}, 5};
+
+  HorizontalLayout portLayout{this, Size{~0, 0}};
+    Label portLabel{&portLayout, Size{48, 20}};
+    LineEdit port{&portLayout, Size{~0, 0}};
+    Label portHint{&portLayout, Size{~0, 0}};
+
+  HorizontalLayout ipv4Layout{this, Size{~0, 0}};
+    Label ipv4Label{&ipv4Layout, Size{48, 20}};
+    CheckLabel ipv4{&ipv4Layout, Size{~0, 0}};
+
+  HorizontalLayout enabledLayout{this, Size{~0, 0}};
+    Label enabledLabel{&enabledLayout, Size{48, 20}};
+    CheckLabel enabled{&enabledLayout, Size{~0, 0}};
+
+  Label connectInfo{this, Size{~0, 30}, 5};
+};
+
 struct HomePanel : VerticalLayout {
   auto construct() -> void;
 
@@ -344,10 +400,12 @@ struct SettingsWindow : Window {
       AudioSettings audioSettings;
       InputSettings inputSettings;
       HotkeySettings hotkeySettings;
+      EmulatorSettings emulatorSettings;
       OptionSettings optionSettings;
       FirmwareSettings firmwareSettings;
       PathSettings pathSettings;
       DriverSettings driverSettings;
+      DebugSettings debugSettings;
       HomePanel homePanel;
 };
 
@@ -358,7 +416,9 @@ extern VideoSettings& videoSettings;
 extern AudioSettings& audioSettings;
 extern InputSettings& inputSettings;
 extern HotkeySettings& hotkeySettings;
+extern EmulatorSettings& emulatorSettings;
 extern OptionSettings& optionSettings;
 extern FirmwareSettings& firmwareSettings;
 extern PathSettings& pathSettings;
 extern DriverSettings& driverSettings;
+extern DebugSettings& debugSettings;

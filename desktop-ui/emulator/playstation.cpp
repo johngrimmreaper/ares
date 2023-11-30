@@ -1,20 +1,22 @@
 struct PlayStation : Emulator {
   PlayStation();
   auto load() -> bool override;
+  auto load(Menu) -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
   shared_pointer<mia::Pak> memoryCard;
   u32 regionID = 0;
+  Timer discTrayTimer;
 };
 
 PlayStation::PlayStation() {
   manufacturer = "Sony";
   name = "PlayStation";
 
-  firmware.append({"BIOS", "US"});      //NTSC-U
-  firmware.append({"BIOS", "Japan"});   //NTSC-J
-  firmware.append({"BIOS", "Europe"});  //PAL
+  firmware.append({"BIOS", "US", "11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef"});      //NTSC-U
+  firmware.append({"BIOS", "Japan", "9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb"});   //NTSC-J
+  firmware.append({"BIOS", "Europe", "1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09"});  //PAL
 
   for(auto id : range(2)) {
     InputPort port{string{"Controller Port ", 1 + id}};
@@ -34,6 +36,38 @@ PlayStation::PlayStation() {
     device.digital("R2",       virtualPorts[id].pad.r_trigger);
     device.digital("Select",   virtualPorts[id].pad.select);
     device.digital("Start",    virtualPorts[id].pad.start);
+    port.append(device); }
+
+  { InputDevice device{"DualShock"};
+    device.analog ("L-Up",     virtualPorts[id].pad.lstick_up);
+    device.analog ("L-Down",   virtualPorts[id].pad.lstick_down);
+    device.analog ("L-Left",   virtualPorts[id].pad.lstick_left);
+    device.analog ("L-Right",  virtualPorts[id].pad.lstick_right);
+    device.analog ("R-Up",     virtualPorts[id].pad.rstick_up);
+    device.analog ("R-Down",   virtualPorts[id].pad.rstick_down);
+    device.analog ("R-Left",   virtualPorts[id].pad.rstick_left);
+    device.analog ("R-Right",  virtualPorts[id].pad.rstick_right);
+    device.digital("Up",       virtualPorts[id].pad.up);
+    device.digital("Down",     virtualPorts[id].pad.down);
+    device.digital("Left",     virtualPorts[id].pad.left);
+    device.digital("Right",    virtualPorts[id].pad.right);
+    device.digital("Cross",    virtualPorts[id].pad.south);
+    device.digital("Circle",   virtualPorts[id].pad.east);
+    device.digital("Square",   virtualPorts[id].pad.west);
+    device.digital("Triangle", virtualPorts[id].pad.north);
+    device.digital("L1",       virtualPorts[id].pad.l_bumper);
+    device.digital("L2",       virtualPorts[id].pad.l_trigger);
+    device.digital("L3",       virtualPorts[id].pad.lstick_click);
+    device.digital("R1",       virtualPorts[id].pad.r_bumper);
+    device.digital("R2",       virtualPorts[id].pad.r_trigger);
+    device.digital("R3",       virtualPorts[id].pad.rstick_click);
+    device.digital("Select",   virtualPorts[id].pad.select);
+    device.digital("Start",    virtualPorts[id].pad.start);
+    device.analog("L-Stick X", virtualPorts[id].pad.lstick_left, virtualPorts[id].pad.lstick_right);
+    device.analog("L-Stick Y", virtualPorts[id].pad.lstick_up,   virtualPorts[id].pad.lstick_down);
+    device.analog("R-Stick X", virtualPorts[id].pad.rstick_left, virtualPorts[id].pad.rstick_right);
+    device.analog("R-Stick Y", virtualPorts[id].pad.rstick_up,   virtualPorts[id].pad.rstick_down);
+    device.rumble("Rumble",    virtualPorts[0].pad.rumble);
     port.append(device); }
 
     ports.append(port);
@@ -83,6 +117,28 @@ auto PlayStation::load() -> bool {
   }
 
   return true;
+}
+
+auto PlayStation::load(Menu menu) -> void {
+  MenuItem changeDisc{&menu};
+  changeDisc.setIcon(Icon::Device::Optical);
+  changeDisc.setText("Change Disc").onActivate([&] {
+    save();
+    auto tray = root->find<ares::Node::Port>("PlayStation/Disc Tray");
+    tray->disconnect();
+
+    if(!game->load(Emulator::load(game, configuration.game))) {
+      return;
+    }
+
+    //give the emulator core a few seconds to notice an empty drive state before reconnecting
+    discTrayTimer.onActivate([&] {
+      discTrayTimer.setEnabled(false);
+      auto tray = root->find<ares::Node::Port>("PlayStation/Disc Tray");
+      tray->allocate();
+      tray->connect();
+    }).setInterval(3000).setEnabled();
+  });
 }
 
 auto PlayStation::save() -> bool {

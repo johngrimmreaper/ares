@@ -18,14 +18,14 @@ jobs:
           windres: windres
           shell: 'msys2 {0}'
           msystem: clang64
-          install: mingw-w64-clang-x86_64-clang
+          install: mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-SDL2
         - name: windows-arm64
           os: windows-latest
           compiler: clang++ --target=aarch64-w64-windows-gnu --sysroot=/clangarm64 -resource-dir=/clangarm64/lib/clang/$(basename "$(clang++ -print-resource-dir)")
           windres: windres --target=aarch64-w64-windows-gnu
           shell: 'msys2 {0}'
           msystem: clang64
-          install: mingw-w64-clang-x86_64-clang mingw-w64-clang-aarch64-clang
+          install: mingw-w64-clang-x86_64-clang mingw-w64-clang-aarch64-clang mingw-w64-clang-aarch64-pkgconf mingw-w64-clang-aarch64-SDL2
         - name: windows-msvc-x64
           os: windows-latest
           compiler: clang++
@@ -77,7 +77,7 @@ jobs:
         sudo apt-get install libsdl2-dev libgtk-3-dev libao-dev libopenal-dev
     - name: "macOS: Import Certificate"
       if: runner.os == 'macOS' && github.event_name != 'pull_request'
-      uses: devbotsxyz/import-signing-certificate@2ac4f44d28045073d23153256efbb4c4b2d8aa22    # Don't use rolling branch for security reasons
+      uses: wpilibsuite/import-signing-certificate@2ac4f44d28045073d23153256efbb4c4b2d8aa22    # Don't use rolling branch for security reasons
       with:
         certificate-data: ${{ secrets.MACOS_CERTIFICATE_DATA }}
         certificate-passphrase: ${{ secrets.MACOS_CERTIFICATE_PASSPHRASE }}
@@ -96,7 +96,8 @@ jobs:
     - name: Install macOS Dependencies
       if: runner.os == 'macOS'
       run: |
-        brew install make ninja
+        brew install make ninja sdl2
+        pip install --no-input setuptools
         echo "MAKE=gmake" >> $GITHUB_ENV
         pushd thirdparty/MoltenVK
         ./build-moltenvk.sh

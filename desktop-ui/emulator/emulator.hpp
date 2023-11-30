@@ -17,6 +17,7 @@ struct Emulator {
   auto refresh() -> void;
   auto setBoolean(const string& name, bool value) -> bool;
   auto setOverscan(bool value) -> bool;
+  auto setColorBleed(bool value) -> bool;
   auto error(const string& text) -> void;
   auto errorFirmware(const Firmware&, string system = "") -> void;
   auto load(mia::Pak& node, string name) -> bool;
@@ -29,6 +30,7 @@ struct Emulator {
   virtual auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> = 0;
   virtual auto notify(const string& message) -> void {}
   virtual auto arcade() -> bool { return false; }
+  virtual auto group() -> string { return manufacturer; }
 
   struct Firmware {
     string type;
@@ -49,6 +51,7 @@ struct Emulator {
   vector<string> portBlacklist;
 
   struct Configuration {
+    bool visible = true;  //whether or not to show this emulator in the load menu
     string game;          //the most recently used folder for games for each emulator core
   } configuration;
 
