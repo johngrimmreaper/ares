@@ -212,7 +212,7 @@ auto Vulkan::crashed() -> const char* {
 
 Vulkan::Implementation::Implementation(u8* data, u32 size) {
   if(!::Vulkan::Context::init_loader(nullptr)) return;
-  if(!context.init_instance_and_device(nullptr, 0, nullptr, 0, ::Vulkan::CONTEXT_CREATION_DISABLE_BINDLESS_BIT)) return;
+  if(!context.init_instance_and_device(nullptr, 0, nullptr, 0, 0)) return;
   device.set_context(context);
   device.init_frame_contexts(3);
 
@@ -232,12 +232,14 @@ Vulkan::Implementation::Implementation(u8* data, u32 size) {
   if(!processor->device_is_supported()) {
     delete processor;
     processor = nullptr;
+    return;
   }
+
   processor->set_validation_interface(&validator);
 }
 
 Vulkan::Implementation::~Implementation() {
-  delete processor;
+  if(processor) delete processor;
 }
 
 }

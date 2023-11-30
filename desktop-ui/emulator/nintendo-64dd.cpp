@@ -1,20 +1,22 @@
 struct Nintendo64DD : Emulator {
   Nintendo64DD();
   auto load() -> bool override;
+  auto load(Menu) -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
   shared_pointer<mia::Pak> gamepad;
   u32 regionID = 0;
+  Timer diskInsertTimer;
 };
 
 Nintendo64DD::Nintendo64DD() {
   manufacturer = "Nintendo";
   name = "Nintendo 64DD";
 
-  firmware.append({"BIOS", "Japan"});
-  firmware.append({"BIOS", "US"});
-  firmware.append({"BIOS", "DEV"});
+  firmware.append({"BIOS", "Japan", "806400ec0df94b0755de6c5b8249d6b6a9866124c5ddbdac198bde22499bfb8b"});
+  firmware.append({"BIOS", "US", "e9fec87a45fba02399e88064b9e2f8cf0f2106e351c58279a87f05da5bc984ad"});
+  firmware.append({"BIOS", "DEV", "9c2962a8b994a29e4cd04b3a6e4ed730a751414655ab6a9799ebf5fc08b79d44"});
 
   for(auto id : range(4)) {
     InputPort port{string{"Controller Port ", 1 + id}};
@@ -76,6 +78,7 @@ auto Nintendo64DD::load() -> bool {
 #endif
   ares::Nintendo64::option("Disable Video Interface Processing", settings.video.disableVideoInterfaceProcessing);
   ares::Nintendo64::option("Weave Deinterlacing", settings.video.weaveDeinterlacing);
+  ares::Nintendo64::option("Homebrew Mode", settings.general.homebrewMode);
 
   if(!ares::Nintendo64::load(root, {"[Nintendo] Nintendo 64DD (", region, ")"})) return false;
 
@@ -106,6 +109,28 @@ auto Nintendo64DD::load() -> bool {
 
 
   return true;
+}
+
+auto Nintendo64DD::load(Menu menu) -> void {
+  MenuItem changeDisk{&menu};
+  changeDisk.setIcon(Icon::Device::Optical);
+  changeDisk.setText("Change Disk").onActivate([&] {
+    save();
+    auto drive = root->find<ares::Node::Port>("Nintendo 64DD/Disk Drive");
+    drive->disconnect();
+
+    if(!game->load(Emulator::load(game, configuration.game))) {
+      return;
+    }
+
+    //give the emulator core a few seconds to notice an empty drive state before reconnecting
+    diskInsertTimer.onActivate([&] {
+      diskInsertTimer.setEnabled(false);
+      auto drive = root->find<ares::Node::Port>("Nintendo 64DD/Disk Drive");
+      drive->allocate();
+      drive->connect();
+    }).setInterval(3000).setEnabled();
+  });
 }
 
 auto Nintendo64DD::save() -> bool {

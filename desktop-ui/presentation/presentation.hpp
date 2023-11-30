@@ -45,10 +45,12 @@ struct Presentation : Window {
       MenuItem audioSettingsAction{&settingsMenu};
       MenuItem inputSettingsAction{&settingsMenu};
       MenuItem hotkeySettingsAction{&settingsMenu};
+      MenuItem emulatorSettingsAction{&settingsMenu};
       MenuItem optionSettingsAction{&settingsMenu};
       MenuItem firmwareSettingsAction{&settingsMenu};
       MenuItem pathSettingsAction{&settingsMenu};
       MenuItem driverSettingsAction{&settingsMenu};
+      MenuItem debugSettingsAction{&settingsMenu};
     Menu toolsMenu{&menuBar};
       Menu saveStateMenu{&toolsMenu};
       Menu loadStateMenu{&toolsMenu};
@@ -84,7 +86,8 @@ struct Presentation : Window {
     HorizontalLayout statusLayout{&layout, Size{~0, StatusHeight}, 0};
       Label spacerLeft{&statusLayout, Size{8, ~0}, 0};
       Label statusLeft{&statusLayout, Size{~0, ~0}, 0};
-      Label statusRight{&statusLayout, Size{100, ~0}, 0};
+      Label statusDebug{&statusLayout, Size{200, ~0}, 0};
+      Label statusRight{&statusLayout, Size{90, ~0}, 0};
       Label spacerRight{&statusLayout, Size{8, ~0}, 0};
 };
 

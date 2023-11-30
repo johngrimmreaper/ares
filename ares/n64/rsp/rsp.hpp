@@ -30,30 +30,70 @@ struct RSP : Thread, Memory::RCP<RSP> {
   auto unload() -> void;
 
   auto main() -> void;
-  auto step(u32 clocks) -> void;
 
   auto instruction() -> void;
   auto instructionEpilogue(u32 clocks) -> s32;
 
   auto power(bool reset) -> void;
 
+  struct OpInfo {
+    enum : u32 {
+      Load      = 1 << 0,
+      Store     = 1 << 1,
+      Branch    = 1 << 2,
+      Vector    = 1 << 3,
+      VNopGroup = 1 << 4,  //dual issue conflicts with VNOP
+    };
+
+    u32 flags;
+    u32 vfake;  //only affects dual issue logic
+    struct {
+      u32 use, def;
+    } r, v, vc;
+
+    auto load() const -> bool { return flags & Load; }
+    auto store() const -> bool { return flags & Store; }
+    auto branch() const -> bool { return flags & Branch; }
+    auto vector() const -> bool { return flags & Vector; }
+  };
+
+  static auto canDualIssue(const OpInfo& op0, const OpInfo& op1) -> bool {
+    return op0.vector() != op1.vector()             //must be one SU and one VU
+      && !(op0.v.def & (op1.v.use | op1.v.def))     //second op cannot read/write vector registers written by the first
+      && !(op0.vc.def & (op1.vc.use | op1.vc.def))  //the same logic applies to vector control registers
+      //certain instructions conflict due to "fake" uses from misinterpreted fields
+      //such false conflicts only occur with VNOP if the preceding instruction is MTC2 or LTV
+      && !(((op0.flags | ~op1.flags) & OpInfo::VNopGroup) && (op0.v.def & op1.vfake));
+  }
+
   struct Pipeline {
     u32 address;
     u32 instruction;
     u32 clocks;
+    u1 singleIssue;
 
-    struct {
-      n1 load;
-      n5 lockReg;
-    } current, previous, previous2;
+    struct Stage {
+      u1 load;
+      u32 rWrite;
+      u32 vWrite;
+    } previous[3];
+
+    struct : Stage {
+      u1 store;
+      u1 branch;
+      u32 rRead;
+      u32 vRead;
+    } current;
 
     auto hash() const -> u32 {
-      u32 value = 0;
-      value |= previous.load << 0;
-      value |= previous.lockReg << 1;
-      value |= previous2.load << 6;
-      value |= previous2.lockReg << 7;
-      return value;
+      Hash::CRC32 hash;
+      hash.input(u8(singleIssue));
+      for(auto& p : previous) {
+        hash.input(u8(p.load));
+        for(auto n : range(4)) hash.input(u8(p.rWrite >> n * 8));
+        for(auto n : range(4)) hash.input(u8(p.vWrite >> n * 8));
+      }
+      return hash.value();
     }
 
     auto begin() -> void {
@@ -61,45 +101,60 @@ struct RSP : Thread, Memory::RCP<RSP> {
     }
 
     auto end() -> void {
-      previous2 = previous;
-      previous = current;
+      readGPR(current.rRead);
+      readVR(current.vRead);
+      if(current.store) store();
+      singleIssue = current.branch;
+
+      previous[2] = previous[1];
+      previous[1] = previous[0];
+      previous[0] = current;
       current = {};
       clocks += 3;
     }
 
     auto stall() -> void {
-      previous2 = previous;
-      previous = {};
+      previous[2] = previous[1];
+      previous[1] = previous[0];
+      previous[0] = {};
       clocks += 3;
     }
 
-    auto regRead(u5 index) -> Pipeline& {
-      if(index == 0) {
-        //zero register can't be locked
-      } else if(index == previous.lockReg) {
-        stall();
-        stall();
-      } else if(index == previous2.lockReg) {
+    auto issue(const OpInfo& op) -> void {
+      current.rRead |= op.r.use;
+      current.rWrite |= op.r.def & ~1;  //zero register can't be written
+      current.vRead |= op.v.use;
+      current.vWrite |= op.v.def;
+      current.load |= op.load();
+      current.store |= op.store();
+      current.branch |= op.branch();
+    }
+
+  private:
+    auto readGPR(u32 mask) -> Pipeline& {
+      if(mask & previous[0].rWrite) {
+        stall(), stall();
+      } else if(mask & previous[1].rWrite) {
         stall();
       }
       return *this;
     }
 
-    auto regWrite(u5 index) -> Pipeline& {
-      current.lockReg = index;
-      return *this;
-    }
-
-    auto load() -> Pipeline& {
-      current.load = 1;
-      return *this;
-    }
-
-    auto store() -> Pipeline& {
-      while(previous2.load) {
+    auto readVR(u32 mask) -> Pipeline& {
+      if(mask & previous[0].vWrite) {
+        stall(), stall(), stall();
+      } else if(mask & previous[1].vWrite) {
+        stall(), stall();
+      } else if(mask & previous[2].vWrite) {
         stall();
       }
       return *this;
+    }
+
+    auto store() -> void {
+      while(previous[1].load) {
+        stall();
+      }
     }
   } pipeline;
 
@@ -108,8 +163,8 @@ struct RSP : Thread, Memory::RCP<RSP> {
   auto dmaTransferStep() -> void;
 
   //io.cpp
-  auto readWord(u32 address, u32& cycles) -> u32;
-  auto writeWord(u32 address, u32 data, u32& cycles) -> void;
+  auto readWord(u32 address, Thread& thread) -> u32;
+  auto writeWord(u32 address, u32 data, Thread& thread) -> void;
   auto ioRead(u32 address) -> u32;
   auto ioWrite(u32 address, u32 data) -> void;
 
@@ -141,8 +196,8 @@ struct RSP : Thread, Memory::RCP<RSP> {
     Status(RSP& self) : self(self) {}
 
     //io.cpp
-    auto readWord(u32 address, u32& cycles) -> u32;
-    auto writeWord(u32 address, u32 data, u32& cycles) -> void;
+    auto readWord(u32 address, Thread& thread) -> u32;
+    auto writeWord(u32 address, u32 data, Thread& thread) -> void;
 
     n1 semaphore;
     n1 halted = 1;
@@ -377,13 +432,22 @@ struct RSP : Thread, Memory::RCP<RSP> {
   u16 inverseSquareRoots[512];
 
   //decoder.cpp
-  auto decoderEXECUTE() -> void;
-  auto decoderSPECIAL() -> void;
-  auto decoderREGIMM() -> void;
-  auto decoderSCC() -> void;
-  auto decoderVU() -> void;
-  auto decoderLWC2() -> void;
-  auto decoderSWC2() -> void;
+  auto decoderEXECUTE(u32 instruction) const -> OpInfo;
+  auto decoderSPECIAL(u32 instruction) const -> OpInfo;
+  auto decoderREGIMM(u32 instruction) const -> OpInfo;
+  auto decoderSCC(u32 instruction) const -> OpInfo;
+  auto decoderVU(u32 instruction) const -> OpInfo;
+  auto decoderLWC2(u32 instruction) const -> OpInfo;
+  auto decoderSWC2(u32 instruction) const -> OpInfo;
+
+  //interpreter.cpp
+  auto interpreterEXECUTE() -> void;
+  auto interpreterSPECIAL() -> void;
+  auto interpreterREGIMM() -> void;
+  auto interpreterSCC() -> void;
+  auto interpreterVU() -> void;
+  auto interpreterLWC2() -> void;
+  auto interpreterSWC2() -> void;
 
   auto INVALID() -> void;
 

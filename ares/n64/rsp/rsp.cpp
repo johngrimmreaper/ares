@@ -3,6 +3,7 @@
 namespace ares::Nintendo64 {
 
 RSP rsp;
+#include "decoder.cpp"
 #include "dma.cpp"
 #include "io.cpp"
 #include "interpreter.cpp"
@@ -35,10 +36,6 @@ auto RSP::main() -> void {
   }
 }
 
-auto RSP::step(u32 clocks) -> void {
-  Thread::clock += clocks;
-}
-
 auto RSP::instruction() -> void {
   if constexpr(Accuracy::RSP::Recompiler) {
     auto block = recompiler.block(ipu.pc);
@@ -49,8 +46,25 @@ auto RSP::instruction() -> void {
     pipeline.begin();
     pipeline.address = ipu.pc;
     pipeline.instruction = imem.read<Word>(pipeline.address);
+    OpInfo op0 = decoderEXECUTE(pipeline.instruction);
+    pipeline.issue(op0);
     debugger.instruction();
-    decoderEXECUTE();
+    interpreterEXECUTE();
+
+    if(!pipeline.singleIssue && !op0.branch()) {
+      u32 instruction = imem.read<Word>(ipu.pc + 4);
+      OpInfo op1 = decoderEXECUTE(instruction);
+
+      if(canDualIssue(op0, op1)) {
+        instructionEpilogue(0);
+        pipeline.address = ipu.pc;
+        pipeline.instruction = instruction;
+        pipeline.issue(op1);
+        debugger.instruction();
+        interpreterEXECUTE();
+      }
+    }
+
     pipeline.end();
     instructionEpilogue(0);
   }
@@ -70,7 +84,12 @@ auto RSP::instructionEpilogue(u32 clocks) -> s32 {
   switch(branch.state) {
   case Branch::Step: ipu.pc += 4; return status.halted;
   case Branch::Take: ipu.pc += 4; branch.delaySlot(); return status.halted;
-  case Branch::DelaySlot: ipu.pc = branch.pc; branch.reset(); pipeline.stall(); return 1;
+  case Branch::DelaySlot:
+    ipu.pc = branch.pc;
+    branch.reset();
+    pipeline.stall();
+    if(branch.pc & 4) pipeline.singleIssue = 1;
+    return 1;
   }
 
   unreachable;
@@ -123,7 +142,7 @@ auto RSP::power(bool reset) -> void {
 
   if constexpr(Accuracy::RSP::Recompiler) {
     auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
-    recompiler.allocator.resize(64_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
+    recompiler.allocator.resize(64_MiB, bump_allocator::executable, buffer);
     recompiler.reset();
   }
 

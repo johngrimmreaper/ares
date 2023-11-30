@@ -58,10 +58,11 @@ auto Emulator::load(const string& location) -> bool {
   if(inode::exists(location)) locationQueue.append(location);
 
   if(!load()) return false;
-  setBoolean("Color Bleed", settings.video.colorBleed);
   setBoolean("Color Emulation", settings.video.colorEmulation);
+  setBoolean("Deep Black Boost", settings.video.deepBlackBoost);
   setBoolean("Interframe Blending", settings.video.interframeBlending);
   setOverscan(settings.video.overscan);
+  setColorBleed(settings.video.colorBleed);
 
   latch = {};
   root->power();
@@ -162,6 +163,15 @@ auto Emulator::setOverscan(bool value) -> bool {
   return false;
 }
 
+auto Emulator::setColorBleed(bool value) -> bool {
+  if(auto screen = root->scan<ares::Node::Video::Screen>("Screen")) {
+    screen->setColorBleed(screen->height() < 720 ? value : false);  //only apply to sub-HD content
+    return true;
+  }
+
+  return false;
+}
+
 auto Emulator::error(const string& text) -> void {
   MessageDialog().setTitle("Error").setText(text).setAlignment(presentation).error();
 }
@@ -206,7 +216,7 @@ auto Emulator::input(ares::Node::Input::Input input) -> void {
         }
         if(auto rumble = input->cast<ares::Node::Input::Rumble>()) {
           if(auto target = dynamic_cast<InputRumble*>(inputNode.mapping)) {
-            return target->rumble(rumble->enable());
+            return target->rumble(rumble->strongValue(), rumble->weakValue());
           }
         }
       }

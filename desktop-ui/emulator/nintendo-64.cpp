@@ -1,12 +1,15 @@
 struct Nintendo64 : Emulator {
   Nintendo64();
   auto load() -> bool override;
+  auto load(Menu) -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
   shared_pointer<mia::Pak> gamepad;
   shared_pointer<mia::Pak> disk;
+  shared_pointer<mia::Pak> gb;
   u32 regionID = 0;
+  Timer diskInsertTimer;
 };
 
 Nintendo64::Nintendo64() {
@@ -98,6 +101,7 @@ auto Nintendo64::load() -> bool {
 #endif
   ares::Nintendo64::option("Disable Video Interface Processing", settings.video.disableVideoInterfaceProcessing);
   ares::Nintendo64::option("Weave Deinterlacing", settings.video.weaveDeinterlacing);
+  ares::Nintendo64::option("Homebrew Mode", settings.general.homebrewMode);
 
   if(!ares::Nintendo64::load(root, {"[Nintendo] ", name, " (", region, ")"})) return false;
 
@@ -119,16 +123,39 @@ auto Nintendo64::load() -> bool {
     if(auto port = root->find<ares::Node::Port>({"Controller Port ", 1 + id})) {
       auto peripheral = port->allocate("Gamepad");
       port->connect();
+      bool transferPakConnected = false;
       if(auto port = peripheral->find<ares::Node::Port>("Pak")) {
-        if(id == 0 && game->pak->attribute("cpak").boolean()) {
-          gamepad = mia::Pak::create("Nintendo 64");
-          gamepad->pak->append("save.pak", 32_KiB);
-          gamepad->load("save.pak", ".pak", game->location);
-          port->allocate("Controller Pak");
+        if(id == 0 && game->pak->attribute("tpak").boolean()) {
+          #if defined(CORE_GB)
+          auto transferPak = port->allocate("Transfer Pak");
           port->connect();
-        } else if(game->pak->attribute("rpak").boolean()) {
-          port->allocate("Rumble Pak");
-          port->connect();
+
+          if(auto slot = transferPak->find<ares::Node::Port>("Cartridge Slot")) {
+            gb = mia::Medium::create("Game Boy");
+            string tmpPath;
+            if(gb->load(Emulator::load(gb, tmpPath))) {
+              slot->allocate();
+              slot->connect();
+              transferPakConnected = true;
+            } else {
+              port->disconnect();
+              gb.reset();
+            }
+          }
+          #endif
+        }
+
+        if(!transferPakConnected) {
+          if(id == 0 && game->pak->attribute("cpak").boolean()) {
+            gamepad = mia::Pak::create("Nintendo 64");
+            gamepad->pak->append("save.pak", 32_KiB);
+            gamepad->load("save.pak", ".pak", game->location);
+            port->allocate("Controller Pak");
+            port->connect();
+          } else if(game->pak->attribute("rpak").boolean()) {
+            port->allocate("Rumble Pak");
+            port->connect();
+          }
         }
       }
     }
@@ -137,12 +164,37 @@ auto Nintendo64::load() -> bool {
   return true;
 }
 
+auto Nintendo64::load(Menu menu) -> void {
+  if(disk) {
+    MenuItem changeDisk{&menu};
+    changeDisk.setIcon(Icon::Device::Optical);
+    changeDisk.setText("Change Disk").onActivate([&] {
+      save();
+      auto drive = root->find<ares::Node::Port>("Nintendo 64DD/Disk Drive");
+      drive->disconnect();
+
+      if(!disk->load(Emulator::load(disk, configuration.game))) {
+        return;
+      }
+
+      //give the emulator core a few seconds to notice an empty drive state before reconnecting
+      diskInsertTimer.onActivate([&] {
+        diskInsertTimer.setEnabled(false);
+        auto drive = root->find<ares::Node::Port>("Nintendo 64DD/Disk Drive");
+        drive->allocate();
+        drive->connect();
+      }).setInterval(3000).setEnabled();
+    });
+  }
+}
+
 auto Nintendo64::save() -> bool {
   root->save();
   system->save(system->location);
   game->save(game->location);
   if(disk) disk->save(disk->location);
   if(gamepad) gamepad->save("save.pak", ".pak", game->location);
+  if(gb) gb->save(gb->location);
   return true;
 }
 
@@ -150,6 +202,8 @@ auto Nintendo64::pak(ares::Node::Object node) -> shared_pointer<vfs::directory> 
   if(node->name() == "Nintendo 64") return system->pak;
   if(node->name() == "Nintendo 64 Cartridge") return game->pak;
   if(node->name() == "Nintendo 64DD Disk" && disk) return disk->pak;
+  if(node->name() == "Game Boy Cartridge") return gb->pak;
+  if(node->name() == "Game Boy Color Cartridge") return gb->pak;
   if(node->name() == "Gamepad") return gamepad->pak;
   return {};
 }

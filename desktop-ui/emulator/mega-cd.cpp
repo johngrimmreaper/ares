@@ -1,19 +1,21 @@
 struct MegaCD : Emulator {
   MegaCD();
   auto load() -> bool override;
+  auto load(Menu) -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
   u32 regionID = 0;
+  Timer discTrayTimer;
 };
 
 MegaCD::MegaCD() {
   manufacturer = "Sega";
   name = "Mega CD";
 
-  firmware.append({"BIOS", "US"});      //NTSC-U
-  firmware.append({"BIOS", "Japan"});   //NTSC-J
-  firmware.append({"BIOS", "Europe"});  //PAL
+  firmware.append({"BIOS", "US", "fb477cdbf94c84424c2feca4fe40656d85393fe7b7b401911b45ad2eb991258c"});      //NTSC-U
+  firmware.append({"BIOS", "Japan", "7133fc2dd2fe5b7d0acd53a5f10f3d00b5d31270239ad20d74ef32393e24af88"});   //NTSC-J
+  firmware.append({"BIOS", "Europe", "fe608a2a07676a23ab5fd5eee2f53c9e2526d69a28aa16ccd85c0ec42e6933cb"});  //PAL
 
   for(auto id : range(2)) {
     InputPort port{string{"Controller Port ", 1 + id}};
@@ -42,6 +44,15 @@ MegaCD::MegaCD() {
     device.digital("Z",     virtualPorts[id].pad.r_bumper);
     device.digital("Mode",  virtualPorts[id].pad.select);
     device.digital("Start", virtualPorts[id].pad.start);
+    port.append(device); }
+
+  { InputDevice device{"Mega Mouse"};
+    device.relative("X",      virtualPorts[id].mouse.x);
+    device.relative("Y",      virtualPorts[id].mouse.y);
+    device.digital ("Left",   virtualPorts[id].mouse.left);
+    device.digital ("Right",  virtualPorts[id].mouse.right);
+    device.digital ("Middle", virtualPorts[id].mouse.middle);
+    device.digital ("Start",  virtualPorts[id].mouse.extra);
     port.append(device); }
 
     ports.append(port);
@@ -91,6 +102,28 @@ auto MegaCD::load() -> bool {
   }
 
   return true;
+}
+
+auto MegaCD::load(Menu menu) -> void {
+  MenuItem changeDisc{&menu};
+  changeDisc.setIcon(Icon::Device::Optical);
+  changeDisc.setText("Change Disc").onActivate([&] {
+    save();
+    auto tray = root->find<ares::Node::Port>("Mega CD/Disc Tray");
+    tray->disconnect();
+
+    if(!game->load(Emulator::load(game, configuration.game))) {
+      return;
+    }
+
+    //give the emulator core a few seconds to notice an empty drive state before reconnecting
+    discTrayTimer.onActivate([&] {
+      discTrayTimer.setEnabled(false);
+      auto tray = root->find<ares::Node::Port>("Mega CD/Disc Tray");
+      tray->allocate();
+      tray->connect();
+    }).setInterval(3000).setEnabled();
+  });
 }
 
 auto MegaCD::save() -> bool {
