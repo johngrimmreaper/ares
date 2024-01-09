@@ -1,8 +1,10 @@
-ares (134-1) UNRELEASED; urgency=medium
+ares (134+dfsg-1) unstable; urgency=medium
 
+  * Team Upload
   * fails to build on many architectures (Closes: #1054169, LP: #2039708)
+  * unvendor libchdr, build with new libchdr0/libchdr-dev package
 
- -- Alexandre Detiste <alexandre.detiste@gmail.com>  Wed, 18 Oct 2023 18:51:26 +0200
+ -- Alexandre Detiste <tchet@debian.org>  Tue, 09 Jan 2024 22:41:33 +0100
 
 ares (133-1) unstable; urgency=medium
 

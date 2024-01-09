@@ -1,6 +1,9 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ares
 Source: https://ares-emu.net
+Files-Excluded:
+ thirdparty/libchdr/*
+ #mia/Firmware/*
 
 Files: *
 Copyright: Copyright (c) 2004-2021 ares team, Near et al
@@ -23,27 +26,6 @@ Copyright: Copyright (c) 2015-2021 The Khronos Group Inc.
  Copyright (c) 2015-2017 Valve Corporation
  Copyright (c) 2015-2017 LunarG, Inc.
 License: Apache-2.0
-
-Files: thirdparty/libchdr/*
-Copyright: Rommain Tisserand
-License: BSD-3-Clause
-
-Files: thirdparty/libchdr/deps/lzma*/*
-Copyright: Copyright (c) 2013-2022 Igor Pavlov
-License: LZMA
-  LZMA SDK is placed in the public domain.
-  .
-  Anyone is free to copy, modify, publish, use, compile, sell, or distribute
-  the original LZMA SDK code, either in source code form or as a compiled binary,
-  for any purpose, commercial or non-commercial, and by any means.
-
-Files: thirdparty/libchdr/deps/zlib*/*
-Copyright: Copyright (C) 1995-2017 Jean-loup Gailly and Mark Adler
-License: Zlib
-
-Files: thirdparty/libchdr/include/dr_libs/*
-Copyright: Copyright (c) 2020-2022 David Reid mackron@gmail.com
-License: MIT-0
 
 Files: thirdparty/sljit/*
 Copyright: Copyright (c) 2012-2022 Zoltan Herczeg (hzmester@freemail.hu)
