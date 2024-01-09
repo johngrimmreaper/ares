@@ -5,7 +5,8 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/desktop-ui/GNUmakefile
 +++ b/desktop-ui/GNUmakefile
-@@ -4,6 +4,6 @@
+@@ -3,7 +3,7 @@
+ threaded := true
  openmp := false
  vulkan := true
 -local := true
@@ -13,7 +14,7 @@ Author: Tobias Hansen <thansen@debian.org>
  lto := true
  flags += -I. -I.. -I../ares -I../thirdparty -DMIA_LIBRARY
  
-@@ -36,7 +36,7 @@
+@@ -39,7 +39,7 @@
  include $(hiro.path)/GNUmakefile
  
  profile := performance

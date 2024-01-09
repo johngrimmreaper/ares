@@ -5,8 +5,8 @@ Author: Tobias Hansen <thansen@debian.org>
 
 --- a/nall/intrinsics.hpp
 +++ b/nall/intrinsics.hpp
-@@ -239,7 +239,16 @@
-     static constexpr bool ppc32 = 1;
+@@ -286,7 +286,16 @@
+     static constexpr bool rv32  = 1;
    };
  #else
 -  #error "unable to detect architecture"
