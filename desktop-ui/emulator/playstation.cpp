@@ -1,13 +1,14 @@
 struct PlayStation : Emulator {
   PlayStation();
-  auto load() -> bool override;
+  auto load() -> LoadResult override;
   auto load(Menu) -> void override;
+  auto unload() -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
   shared_pointer<mia::Pak> memoryCard;
   u32 regionID = 0;
-  Timer discTrayTimer;
+  sTimer discTrayTimer;
 };
 
 PlayStation::PlayStation() {
@@ -74,9 +75,12 @@ PlayStation::PlayStation() {
   }
 }
 
-auto PlayStation::load() -> bool {
+auto PlayStation::load() -> LoadResult {
   game = mia::Medium::create("PlayStation");
-  if(!game->load(Emulator::load(game, configuration.game))) return false;
+  string location = Emulator::load(game, configuration.game);
+  if(!location) return noFileSelected;
+  LoadResult result = game->load(location);
+  if(result != successful) return result;
 
   auto region = Emulator::region();
   //if statements below are ordered by lowest to highest priority
@@ -85,9 +89,18 @@ auto PlayStation::load() -> bool {
   if(region == "NTSC-U") regionID = 0;
 
   system = mia::System::create("PlayStation");
-  if(!system->load(firmware[regionID].location)) return errorFirmware(firmware[regionID]), false;
+  result = system->load(firmware[regionID].location);
+  if(result != successful) {
+    result.firmwareSystemName = "PlayStation";
+    result.firmwareType = firmware[regionID].type;
+    result.firmwareRegion = firmware[regionID].region;
+    result.result = noFirmware;
+    return result;
+  }
 
-  if(!ares::PlayStation::load(root, {"[Sony] PlayStation (", region, ")"})) return false;
+  ares::PlayStation::option("Recompiler", !settings.general.forceInterpreter);
+
+  if(!ares::PlayStation::load(root, {"[Sony] PlayStation (", region, ")"})) return otherError;
 
   if(auto fastBoot = root->find<ares::Node::Setting::Boolean>("Fast Boot")) {
     fastBoot->setValue(settings.boot.fast);
@@ -116,29 +129,38 @@ auto PlayStation::load() -> bool {
     port->connect();
   }
 
-  return true;
+  discTrayTimer = Timer{};
+
+  return successful;
 }
 
 auto PlayStation::load(Menu menu) -> void {
   MenuItem changeDisc{&menu};
   changeDisc.setIcon(Icon::Device::Optical);
   changeDisc.setText("Change Disc").onActivate([&] {
+    Program::Guard guard;
     save();
     auto tray = root->find<ares::Node::Port>("PlayStation/Disc Tray");
     tray->disconnect();
 
-    if(!game->load(Emulator::load(game, configuration.game))) {
+    if(game->load(Emulator::load(game, configuration.game)) != successful) {
       return;
     }
 
     //give the emulator core a few seconds to notice an empty drive state before reconnecting
-    discTrayTimer.onActivate([&] {
-      discTrayTimer.setEnabled(false);
+    discTrayTimer->onActivate([&] {
+      Program::Guard guard;
+      discTrayTimer->setEnabled(false);
       auto tray = root->find<ares::Node::Port>("PlayStation/Disc Tray");
       tray->allocate();
       tray->connect();
     }).setInterval(3000).setEnabled();
   });
+}
+
+auto PlayStation::unload() -> void {
+  Emulator::unload();
+  discTrayTimer.reset();
 }
 
 auto PlayStation::save() -> bool {

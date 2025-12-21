@@ -14,6 +14,17 @@ auto APU::serialize(serializer& s) -> void {
   s(io.headphonesEnable);
   s(io.headphonesConnected);
   s(io.masterVolume);
+
+  s(io.seqDbgHold);
+  s(io.seqDbgOutputForce55);
+  s(io.seqDbgChForce4);
+  s(io.seqDbgChForce2);
+  s(io.seqDbgNoise);
+  s(io.seqDbgSweepClock);
+  s(io.seqDbgUnknown);
+  
+  s(io.output.left);
+  s(io.output.right);
   s(state.sweepClock);
   s(state.apuClock);
 }
@@ -39,8 +50,6 @@ auto APU::Channel1::serialize(serializer& s) -> void {
   s(io.enable);
   s(state.period);
   s(state.sampleOffset);
-  s(output.left);
-  s(output.right);
 }
 
 auto APU::Channel2::serialize(serializer& s) -> void {
@@ -55,8 +64,6 @@ auto APU::Channel2::serialize(serializer& s) -> void {
   s(io.voiceEnableRightFull);
   s(state.period);
   s(state.sampleOffset);
-  s(output.left);
-  s(output.right);
 }
 
 auto APU::Channel3::serialize(serializer& s) -> void {
@@ -70,8 +77,6 @@ auto APU::Channel3::serialize(serializer& s) -> void {
   s(state.period);
   s(state.sampleOffset);
   s(state.sweepCounter);
-  s(output.left);
-  s(output.right);
 }
 
 auto APU::Channel4::serialize(serializer& s) -> void {
@@ -79,7 +84,6 @@ auto APU::Channel4::serialize(serializer& s) -> void {
   s(io.volumeLeft);
   s(io.volumeRight);
   s(io.noiseMode);
-  s(io.noiseReset);
   s(io.noiseUpdate);
   s(io.enable);
   s(io.noise);
@@ -87,8 +91,6 @@ auto APU::Channel4::serialize(serializer& s) -> void {
   s(state.sampleOffset);
   s(state.noiseOutput);
   s(state.noiseLFSR);
-  s(output.left);
-  s(output.right);
 }
 
 auto APU::Channel5::serialize(serializer& s) -> void {
@@ -97,10 +99,13 @@ auto APU::Channel5::serialize(serializer& s) -> void {
   s(io.speed);
   s(io.enable);
   s(io.unknown);
-  s(io.leftEnable);
-  s(io.rightEnable);
+  s(io.mode);
   s(state.clock);
-  s(state.data);
+  s(state.channel);
+  s(state.left);
+  s(state.right);
+  s(state.leftChanged);
+  s(state.rightChanged);
   s(output.left);
   s(output.right);
 }

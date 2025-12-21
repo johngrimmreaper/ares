@@ -1,11 +1,10 @@
 auto CPU::serialize(serializer& s) -> void {
   Thread::serialize(s);
 
-  s(pipeline.address);
-  s(pipeline.instruction);
-
-  s(branch.pc);
-  s(branch.state);
+  s(pipeline.pc);
+  s(pipeline.nextpc);
+  s(pipeline.state);
+  s(pipeline.nstate);
 
   s(context.endian);
   s(context.physMask);
@@ -117,6 +116,7 @@ auto CPU::serialize(serializer& s) -> void {
   s(scc.epcError);
   s(scc.latch);
   s(scc.nmiPending);
+  s(scc.sysadFrozen);
 
   for(auto& r : fpu.r) s(r.u64);
   s(fpu.csr.roundMode);

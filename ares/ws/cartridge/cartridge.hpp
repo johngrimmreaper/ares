@@ -32,6 +32,7 @@ struct Cartridge : IO, Thread {
     n1 rtc;
     n1 flash;
     n1 karnak;
+    n1 wordWidth;
   } has;
 
   auto title() const { return information.title; }
@@ -50,8 +51,6 @@ struct Cartridge : IO, Thread {
 
   //memory.cpp
   auto readROM(n20 address) -> n8;
-  auto writeROM(n20 address, n8 data) -> void;
-
   auto readRAM(n20 address) -> n8;
   auto writeRAM(n20 address, n8 data) -> void;
 
@@ -95,6 +94,7 @@ struct Cartridge : IO, Thread {
 
     n4 command;
     n1 active;
+    n1 ready;
     n4 index;
     n8 fetchedData;
     n15 counter;
@@ -150,6 +150,8 @@ struct Cartridge : IO, Thread {
     n8 gpoData;
     n1 flashEnable;
   } io;
+
+  n16 openbus;
 };
 
 #include "slot.hpp"

@@ -7,7 +7,12 @@ auto InputManager::createHotkeys() -> void {
     program.videoFullScreenToggle();
   }));
 
+  hotkeys.append(InputHotkey("Toggle Pseudo-Fullscreen").onPress([&] {
+    program.videoPseudoFullScreenToggle();
+  }));
+
   hotkeys.append(InputHotkey("Toggle Mouse Capture").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     if(!ruby::input.acquired()) {
       ruby::input.acquire();
@@ -17,12 +22,14 @@ auto InputManager::createHotkeys() -> void {
   }));
 
   hotkeys.append(InputHotkey("Toggle Keyboard Capture").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     program.keyboardCaptured = !program.keyboardCaptured;
     print("Keyboard capture: ", program.keyboardCaptured, "\n");
   }));
 
   hotkeys.append(InputHotkey("Fast Forward").onPress([&] {
+    Program::Guard guard;
     if(!emulator || program.rewinding) return;
     program.fastForwarding = true;
     fastForwardVideoBlocking = ruby::video.blocking();
@@ -32,6 +39,7 @@ auto InputManager::createHotkeys() -> void {
     ruby::audio.setBlocking(false);
     ruby::audio.setDynamic(false);
   }).onRelease([&] {
+    Program::Guard guard;
     if(!emulator) return;
     program.fastForwarding = false;
     ruby::video.setBlocking(fastForwardVideoBlocking);
@@ -40,6 +48,7 @@ auto InputManager::createHotkeys() -> void {
   }));
 
   hotkeys.append(InputHotkey("Toggle Fast Forward").onPress([&] {
+    Program::Guard guard;
     if(!emulator || program.rewinding) return;
     program.fastForwarding = !program.fastForwarding;
 
@@ -59,6 +68,7 @@ auto InputManager::createHotkeys() -> void {
   }));
 
   hotkeys.append(InputHotkey("Rewind").onPress([&] {
+    Program::Guard guard;
     if(!emulator || program.fastForwarding) return;
     if(program.rewind.frequency == 0) {
       return program.showMessage("Please enable rewind support in the emulator settings first.");
@@ -72,22 +82,26 @@ auto InputManager::createHotkeys() -> void {
   }));
 
   hotkeys.append(InputHotkey("Frame Advance").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     if(!program.paused) program.pause(true);
     program.requestFrameAdvance = true;
   }));
 
   hotkeys.append(InputHotkey("Capture Screenshot").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     program.requestScreenshot = true;
   }));
 
   hotkeys.append(InputHotkey("Save State").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     program.stateSave(program.state.slot);
   }));
 
   hotkeys.append(InputHotkey("Load State").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     program.stateLoad(program.state.slot);
   }));
@@ -107,21 +121,25 @@ auto InputManager::createHotkeys() -> void {
   }));
 
   hotkeys.append(InputHotkey("Pause Emulation").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     program.pause(!program.paused);
   }));
 
   hotkeys.append(InputHotkey("Reset System").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     emulator->root->power(true);
   }));
 
   hotkeys.append(InputHotkey("Reload Current Game").onPress([&] {
+    Program::Guard guard;
     if(!emulator) return;
     program.load(emulator, emulator->game->location);
   }));
 
   hotkeys.append(InputHotkey("Quit Emulator").onPress([&] {
+    Program::Guard guard;
     program.quit();
   }));
 
@@ -144,7 +162,7 @@ auto InputManager::createHotkeys() -> void {
 auto InputManager::pollHotkeys() -> void {
   if(Application::modal()) return;
 
-  if(!driverSettings.inputDefocusAllow.checked()) {
+  if(settings.input.defocus != "Allow") {
     if (!presentation.focused() && !ruby::video.fullScreen()) return;
   }
 

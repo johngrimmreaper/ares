@@ -1,41 +1,33 @@
-#!/bin/bash
+#!/usr/bin/env sh
 set -euo pipefail
 
-if ! command -v lipo >/dev/null; then
-    echo "Command lipo not found; please install XCode"
-    exit 1
-fi
-
-if ! command -v gmake >/dev/null; then
-    echo "Please install make via Homebrew (brew install make)"
-    exit 1
-fi
-
-# Change to parent directory (top-level)
 cd "$(dirname "$0")"/.. || exit 1
 
-echo "Building for amd64..."
-gmake arch=amd64 object.path=obj-amd64 output.path=out-amd64 "$@"
+otherArgs=()
 
-echo "Building for arm64..."
-gmake arch=arm64 object.path=obj-arm64 output.path=out-arm64 "$@"
-
-echo "Assembling universal binary"
-rm -rf desktop-ui/out
-cp -a desktop-ui/out-amd64 desktop-ui/out
-lipo -create -output desktop-ui/out/ares.app/Contents/MacOS/ares \
-    desktop-ui/out-amd64/ares.app/Contents/MacOS/ares \
-    desktop-ui/out-arm64/ares.app/Contents/MacOS/ares
-
-if [ "${MACOS_KEYCHAIN_PASSWORD:-}" != "" ]; then
-    security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$MACOS_KEYCHAIN_NAME"
+if [ "${MACOS_CERTIFICATE_NAME:-}" != "" ]; then
+  echo "Signing using certificate: ${MACOS_CERTIFICATE_NAME}"
+  otherArgs+=("-DARES_CODESIGN_IDENTITY=${MACOS_CERTIFICATE_NAME}")
 fi
 
-if [ "${MACOS_CERTIFICATE_NAME:-}" == "" ]; then
-    echo "Signing using self-signed"
-    ENTITLEMENTS=desktop-ui/resource/ares.selfsigned.entitlements
+if [ "${MACOS_NOTARIZATION_TEAMID:-}" != "" ]; then
+  echo "Signing with team ID: ${MACOS_NOTARIZATION_TEAMID}"
+  otherArgs+=("-DARES_CODESIGN_TEAM=${MACOS_NOTARIZATION_TEAMID}")
+fi
+
+cmake --preset macos "${@:-}" "${otherArgs:-}"
+
+pushd build_macos
+
+if ! command -v xcbeautify >/dev/null; then
+    xcodebuild build -quiet -configuration RelWithDebInfo \
+              DEBUG_INFORMATION_FORMAT="dwarf-with-dsym"
 else
-    echo "Signing using certificate: ${MACOS_CERTIFICATE_NAME}"
-    ENTITLEMENTS=desktop-ui/resource/ares.entitlements
+    xcodebuild -configuration RelWithDebInfo \
+              DEBUG_INFORMATION_FORMAT="dwarf-with-dsym" \
+              2>&1 | xcbeautify --renderer terminal
 fi
-codesign --force --deep --options runtime --entitlements "${ENTITLEMENTS}" --sign "${MACOS_CERTIFICATE_NAME:--}" desktop-ui/out/ares.app
+
+open ./desktop-ui/RelWithDebInfo
+
+popd

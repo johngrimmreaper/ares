@@ -10,6 +10,8 @@ struct Presentation : Window {
   auto loadShaders() -> void;
   auto refreshSystemMenu() -> void;
 
+  vector<string> shaderDirectories;
+
   MenuBar menuBar{this};
     Menu loadMenu{&menuBar};
     Menu systemMenu{&menuBar};
@@ -17,15 +19,17 @@ struct Presentation : Window {
       Menu videoSizeMenu{&settingsMenu};
         Group videoSizeGroup;
       Menu videoOutputMenu{&settingsMenu};
-        MenuRadioItem videoOutputPixelPerfect{&videoOutputMenu};
-        MenuRadioItem videoOutputFixedScale{&videoOutputMenu};
-        MenuRadioItem videoOutputIntegerScale{&videoOutputMenu};
         MenuRadioItem videoOutputScale{&videoOutputMenu};
+        MenuRadioItem videoOutputIntegerScale{&videoOutputMenu};
         MenuRadioItem videoOutputStretch{&videoOutputMenu};
-        Group videoOutputGroup{&videoOutputPixelPerfect, &videoOutputFixedScale, &videoOutputIntegerScale,
-                               &videoOutputScale, &videoOutputStretch};
+        Group videoOutputGroup{&videoOutputIntegerScale, &videoOutputScale, &videoOutputStretch};
         MenuSeparator videoOutputSeparator{&videoOutputMenu};
-        MenuCheckItem videoAspectCorrection{&videoOutputMenu};
+        MenuRadioItem videoAspectCorrectionNone{&videoOutputMenu};
+        MenuRadioItem videoAspectCorrectionStandard{&videoOutputMenu};
+        MenuRadioItem videoAspectCorrectionAnamorphic{&videoOutputMenu};
+        Group videoAspectCorrectionGroup{&videoAspectCorrectionNone, &videoAspectCorrectionStandard, 
+                                         &videoAspectCorrectionAnamorphic};
+        MenuSeparator videoOutputSeparator2{&videoOutputMenu};
         MenuCheckItem videoAdaptiveSizing{&videoOutputMenu};
         MenuCheckItem videoAutoCentering{&videoOutputMenu};
       Menu videoShaderMenu{&settingsMenu};
@@ -33,11 +37,15 @@ struct Presentation : Window {
         MenuCheckItem fastBoot{&bootOptionsMenu};
         MenuCheckItem launchDebugger{&bootOptionsMenu};
         MenuSeparator bootOptionsSeparator{&bootOptionsMenu};
-        MenuRadioItem preferNTSCU{&bootOptionsMenu};
-        MenuRadioItem preferNTSCJ{&bootOptionsMenu};
-        MenuRadioItem preferPAL{&bootOptionsMenu};
-        Group preferRegionGroup{&preferNTSCU, &preferNTSCJ, &preferPAL};
-      MenuSeparator groupSettingsSeparatpr{&settingsMenu};
+        Menu bootOptionsRegionMenu{&bootOptionsMenu};
+          MenuRadioItem regionUJE{&bootOptionsRegionMenu};
+          MenuRadioItem regionUEJ{&bootOptionsRegionMenu};
+          MenuRadioItem regionJUE{&bootOptionsRegionMenu};
+          MenuRadioItem regionJEU{&bootOptionsRegionMenu};
+          MenuRadioItem regionEUJ{&bootOptionsRegionMenu};
+          MenuRadioItem regionEJU{&bootOptionsRegionMenu};
+          Group preferRegionGroup{&regionUJE, &regionUEJ, &regionJUE, &regionJEU, &regionEUJ, &regionEJU};
+      MenuSeparator groupSettingsSeparator{&settingsMenu};
       MenuCheckItem muteAudioSetting{&settingsMenu};
       MenuCheckItem showStatusBarSetting{&settingsMenu};
       MenuSeparator audioSettingsSeparator{&settingsMenu};
@@ -63,10 +71,8 @@ struct Presentation : Window {
       MenuItem reloadGame{&toolsMenu};
       MenuSeparator toolsMenuSeparatorB{&toolsMenu};
       MenuItem manifestViewerAction{&toolsMenu};
-      #if !defined(PLATFORM_MACOS)
-      // Cocoa hiro is missing the hex editor widget
+      MenuItem cheatEditorAction{&toolsMenu};
       MenuItem memoryEditorAction{&toolsMenu};
-      #endif
       MenuItem graphicsViewerAction{&toolsMenu};
       MenuItem streamManagerAction{&toolsMenu};
       MenuItem propertiesViewerAction{&toolsMenu};
@@ -77,16 +83,15 @@ struct Presentation : Window {
   VerticalLayout layout{this};
     HorizontalLayout viewportLayout{&layout, Size{~0, ~0}, 0};
       Viewport viewport{&viewportLayout, Size{~0, ~0}, 0};
-      VerticalLayout iconLayout{&viewportLayout, Size{128, ~0}, 0};
-        Canvas iconSpacer{&iconLayout, Size{128, ~0}, 0};
-        HorizontalLayout iconHorizontal{&iconLayout, Size{128, 128}, 0};
-          Canvas iconCanvas{&iconHorizontal, Size{112, 128}, 0};
+      VerticalLayout iconLayout{&viewportLayout, Size{144, ~0}, 0};
+        Canvas iconSpacer{&iconLayout, Size{144, ~0}, 0};
+        HorizontalLayout iconHorizontal{&iconLayout, Size{144, 128}, 0};
+          Canvas iconCanvas{&iconHorizontal, Size{128, 128}, 0};
           Canvas iconPadding{&iconHorizontal, Size{16, 128}, 0};
-        Canvas iconBottom{&iconLayout, Size{128, 10}, 0};
+        Canvas iconBottom{&iconLayout, Size{144, 10}, 0};
     HorizontalLayout statusLayout{&layout, Size{~0, StatusHeight}, 0};
       Label spacerLeft{&statusLayout, Size{8, ~0}, 0};
       Label statusLeft{&statusLayout, Size{~0, ~0}, 0};
-      Label statusDebug{&statusLayout, Size{200, ~0}, 0};
       Label statusRight{&statusLayout, Size{90, ~0}, 0};
       Label spacerRight{&statusLayout, Size{8, ~0}, 0};
 };

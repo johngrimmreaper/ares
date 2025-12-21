@@ -1,6 +1,6 @@
 #if defined(Hiro_HorizontalScrollBar)
 
-@implementation CocoaHorizontalScrollBar : NSScroller
+@implementation CocoaHorizontalScrollBar
 
 -(id) initWith:(hiro::mHorizontalScrollBar&)horizontalScrollBarReference {
   if(self = [super initWithFrame:NSMakeRect(0, 0, 1, 0)]) {
@@ -9,7 +9,7 @@
     [self setTarget:self];
     [self setAction:@selector(scroll:)];
 
-    [self setControlSize:NSRegularControlSize];
+    [self setControlSize:NSControlSizeRegular];
     [self setScrollerStyle:NSScrollerStyleLegacy];
     [self setEnabled:YES];
 
@@ -30,13 +30,11 @@
   auto& state = horizontalScrollBar->state;
 
   switch([self hitPart]) {
-  case NSScrollerIncrementLine:
   case NSScrollerIncrementPage:
     if(state.position < state.length - 1) state.position++;
     [self update];
     break;
 
-  case NSScrollerDecrementLine:
   case NSScrollerDecrementPage:
     if(state.position) state.position--;
     [self update];
@@ -67,7 +65,7 @@ auto pHorizontalScrollBar::destruct() -> void {
 }
 
 auto pHorizontalScrollBar::minimumSize() const -> Size {
-  return {32, (s32)[NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy]};
+  return {32, (s32)[NSScroller scrollerWidthForControlSize:NSControlSizeRegular scrollerStyle:NSScrollerStyleLegacy]};
 }
 
 auto pHorizontalScrollBar::setLength(u32 length) -> void {

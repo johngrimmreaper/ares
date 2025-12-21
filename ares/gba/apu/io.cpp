@@ -1,4 +1,6 @@
 auto APU::readIO(n32 address) -> n8 {
+  cpu.synchronize(apu);
+
   switch(address) {
 
   //NR10
@@ -20,6 +22,10 @@ auto APU::readIO(n32 address) -> n8 {
   //NR21, NR22
   case 0x0400'0068: return square2.read(1);
   case 0x0400'0069: return square2.read(2);
+
+  //zero
+  case 0x0400'006a: return 0x00;
+  case 0x0400'006b: return 0x00;
 
   //NR23, NR24
   case 0x0400'006c: return square2.read(3);
@@ -136,11 +142,13 @@ auto APU::readIO(n32 address) -> n8 {
 
   }
 
-  if(cpu.context.dmaActive) return cpu.dmabus.data.byte(address & 3);
-  return cpu.pipeline.fetch.instruction.byte(address & 1);
+  return cpu.openBus.get(Byte, address);
 }
 
 auto APU::writeIO(n32 address, n8 data) -> void {
+  if(!sequencer.masterenable && (address < 0x0400'0080 || address >= 0x0400'00a0)) return;
+  cpu.synchronize(apu);
+
   switch(address) {
 
   //NR10
@@ -253,12 +261,12 @@ auto APU::writeIO(n32 address, n8 data) -> void {
   //FIFO_A_H
   case 0x0400'00a0: case 0x0400'00a1:
   case 0x0400'00a2: case 0x0400'00a3:
-    return fifo[0].write(data);
+    return fifo[0].write(address, data);
 
   //FIFO_B_L
   //FIFO_B_H
   case 0x0400'00a4: case 0x0400'00a5:
   case 0x0400'00a6: case 0x0400'00a7:
-    return fifo[1].write(data);
+    return fifo[1].write(address, data);
   }
 }

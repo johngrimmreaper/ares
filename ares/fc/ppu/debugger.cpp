@@ -25,6 +25,15 @@ auto PPU::Debugger::load(Node::Object parent) -> void {
   memory.oam->setWrite([&](u32 address, u8 data) -> void {
     ppu.oam[address] = data;
   });
+
+  memory.soam = parent->append<Node::Debugger::Memory>("PPU SOAM");
+  memory.soam->setSize(ppu.soam.size());
+  memory.soam->setRead([&](u32 address) -> u8 {
+    return ppu.soam[address];
+  });
+  memory.soam->setWrite([&](u32 address, u8 data) -> void {
+    ppu.soam[address] = data;
+  });
 }
 
 auto PPU::Debugger::unload() -> void {

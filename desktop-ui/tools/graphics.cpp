@@ -6,6 +6,7 @@ auto GraphicsViewer::construct() -> void {
   graphicsList.onChange([&] { eventChange(); });
   graphicsView.setAlignment({0.0, 0.0});
   exportButton.setText("Export").onActivate([&] {
+    Program::Guard guard;
     eventExport();
   });
   liveOption.setText("Live");

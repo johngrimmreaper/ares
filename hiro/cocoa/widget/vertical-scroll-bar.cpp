@@ -1,6 +1,6 @@
 #if defined(Hiro_VerticalScrollBar)
 
-@implementation CocoaVerticalScrollBar : NSScroller
+@implementation CocoaVerticalScrollBar
 
 -(id) initWith:(hiro::mVerticalScrollBar&)verticalScrollBarReference {
   if(self = [super initWithFrame:NSMakeRect(0, 0, 0, 1)]) {
@@ -9,7 +9,7 @@
     [self setTarget:self];
     [self setAction:@selector(scroll:)];
 
-    [self setControlSize:NSRegularControlSize];
+    [self setControlSize:NSControlSizeRegular];
     [self setScrollerStyle:NSScrollerStyleLegacy];
     [self setEnabled:YES];
 
@@ -30,13 +30,11 @@
   auto& state = verticalScrollBar->state;
 
   switch([self hitPart]) {
-  case NSScrollerIncrementLine:
   case NSScrollerIncrementPage:
     if(state.position < state.length - 1) state.position++;
     [self update];
     break;
 
-  case NSScrollerDecrementLine:
   case NSScrollerDecrementPage:
     if(state.position) state.position--;
     [self update];
@@ -67,7 +65,7 @@ auto pVerticalScrollBar::destruct() -> void {
 }
 
 auto pVerticalScrollBar::minimumSize() const -> Size {
-  return {(s32)[NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy], 32};
+  return {(s32)[NSScroller scrollerWidthForControlSize:NSControlSizeRegular scrollerStyle:NSScrollerStyleLegacy], 32};
 }
 
 auto pVerticalScrollBar::setLength(u32 length) -> void {

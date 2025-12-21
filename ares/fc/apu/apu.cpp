@@ -3,12 +3,14 @@
 namespace ares::Famicom {
 
 APU apu;
+#include "length.cpp"
 #include "envelope.cpp"
 #include "sweep.cpp"
 #include "pulse.cpp"
 #include "triangle.cpp"
 #include "noise.cpp"
 #include "dmc.cpp"
+#include "framecounter.cpp"
 #include "serialization.cpp"
 
 auto APU::load(Node::Object parent) -> void {
@@ -54,13 +56,20 @@ auto APU::main() -> void {
   u32 triangleOutput = triangle.clock();
   u32 noiseOutput = noise.clock();
   u32 dmcOutput = dmc.clock();
-  clockFrameCounterDivider();
+  frame.main();
 
   s32 output = 0;
   output += pulseDAC[pulseOutput];
   output += dmcTriangleNoiseDAC[dmcOutput][triangleOutput][noiseOutput];
 
   stream->frame(sclamp<16>(output) / 32768.0);
+
+  tick();
+}
+
+auto APU::tick() -> void {
+  Thread::step(rate());
+  Thread::synchronize(cpu);
 }
 
 auto APU::setIRQ() -> void {
@@ -68,28 +77,28 @@ auto APU::setIRQ() -> void {
 }
 
 auto APU::power(bool reset) -> void {
-  pulse1 = {};
-  pulse2 = {};
-  triangle = {};
-  noise = {};
-  dmc = {};
-  dmc.periodCounter = Region::PAL() ? dmcPeriodTablePAL[0] : dmcPeriodTableNTSC[0];
-  frame = {};
-  enabledChannels = 0;
+  Thread::create(system.frequency(), {&APU::main, this});
+
+  pulse1.power(reset);
+  pulse2.power(reset);
+  triangle.power(reset);
+  noise.power(reset);
+  dmc.power(reset);
+  frame.power(reset);
 
   setIRQ();
 }
 
 auto APU::readIO(n16 address) -> n8 {
-  n8 data = cpu.MDR;
+  n8 data = cpu.io.openBus;
 
   switch(address) {
 
   case 0x4015: {
-    data.bit(0) = (bool)pulse1.lengthCounter;
-    data.bit(1) = (bool)pulse2.lengthCounter;
-    data.bit(2) = (bool)triangle.lengthCounter;
-    data.bit(3) = (bool)noise.lengthCounter;
+    data.bit(0) = (bool)pulse1.length.counter;
+    data.bit(1) = (bool)pulse2.length.counter;
+    data.bit(2) = (bool)triangle.length.counter;
+    data.bit(3) = (bool)noise.length.counter;
     data.bit(4) = (bool)dmc.lengthCounter;
     data.bit(5) = 0;
     data.bit(6) = frame.irqPending;
@@ -111,6 +120,7 @@ auto APU::writeIO(n16 address, n8 data) -> void {
     pulse1.envelope.speed = data.bit(0,3);
     pulse1.envelope.useSpeedAsVolume = data.bit(4);
     pulse1.envelope.loopMode = data.bit(5);
+    pulse1.length.setHalt(frame.lengthClocking(), data.bit(5));
     pulse1.duty = data.bit(6,7);
     return;
   }
@@ -137,9 +147,7 @@ auto APU::writeIO(n16 address, n8 data) -> void {
     pulse1.dutyCounter = 0;
     pulse1.envelope.reloadDecay = true;
 
-    if(enabledChannels.bit(0)) {
-      pulse1.lengthCounter = lengthCounterTable[data.bit(3,7)];
-    }
+    pulse1.length.setCounter(frame.lengthClocking(), data.bit(3,7));
     return;
   }
 
@@ -147,6 +155,7 @@ auto APU::writeIO(n16 address, n8 data) -> void {
     pulse2.envelope.speed = data.bit(0,3);
     pulse2.envelope.useSpeedAsVolume = data.bit(4);
     pulse2.envelope.loopMode = data.bit(5);
+    pulse2.length.setHalt(frame.lengthClocking(), data.bit(5));
     pulse2.duty = data.bit(6,7);
     return;
   }
@@ -173,15 +182,13 @@ auto APU::writeIO(n16 address, n8 data) -> void {
     pulse2.dutyCounter = 0;
     pulse2.envelope.reloadDecay = true;
 
-    if(enabledChannels.bit(1)) {
-      pulse2.lengthCounter = lengthCounterTable[data.bit(3,7)];
-    }
+    pulse2.length.setCounter(frame.lengthClocking(), data.bit(3,7));
     return;
   }
 
   case 0x4008: {
     triangle.linearLength = data.bit(0,6);
-    triangle.haltLengthCounter = data.bit(7);
+    triangle.length.setHalt(frame.lengthClocking(), data.bit(7));
     return;
   }
 
@@ -195,15 +202,14 @@ auto APU::writeIO(n16 address, n8 data) -> void {
 
     triangle.reloadLinear = true;
 
-    if(enabledChannels.bit(2)) {
-      triangle.lengthCounter = lengthCounterTable[data.bit(3,7)];
-    }
+    triangle.length.setCounter(frame.lengthClocking(), data.bit(3,7));
     return;
   }
 
   case 0x400c: {
     noise.envelope.speed = data.bit(0,3);
     noise.envelope.useSpeedAsVolume = data.bit(4);
+    noise.length.setHalt(frame.lengthClocking(), data.bit(5));
     noise.envelope.loopMode = data.bit(5);
     return;
   }
@@ -217,9 +223,7 @@ auto APU::writeIO(n16 address, n8 data) -> void {
   case 0x400f: {
     noise.envelope.reloadDecay = true;
 
-    if(enabledChannels.bit(3)) {
-      noise.lengthCounter = lengthCounterTable[data.bit(3,7)];
-    }
+    noise.length.setCounter(frame.lengthClocking(), data.bit(3, 7));
     return;
   }
 
@@ -249,77 +253,42 @@ auto APU::writeIO(n16 address, n8 data) -> void {
   }
 
   case 0x4015: {
-    if(data.bit(0) == 0) pulse1.lengthCounter = 0;
-    if(data.bit(1) == 0) pulse2.lengthCounter = 0;
-    if(data.bit(2) == 0) triangle.lengthCounter = 0;
-    if(data.bit(3) == 0) noise.lengthCounter = 0;
-    if(data.bit(4) == 0) dmc.stop();
-    if(data.bit(4) == 1) dmc.start();
+    pulse1.length.setEnable(data.bit(0));
+    pulse2.length.setEnable(data.bit(1));
+    triangle.length.setEnable(data.bit(2));
+    noise.length.setEnable(data.bit(3));
+    if (data.bit(4) == 0) dmc.stop();
+    if (data.bit(4) == 1) dmc.start();
 
     dmc.irqPending = false;
     setIRQ();
-    enabledChannels = data.bit(0,4);
     return;
   }
 
-  case 0x4017: {
-    frame.mode = data.bit(6,7);
-
-    frame.counter = 0;
-    if(frame.mode.bit(1)) {
-      clockFrameCounter();
-    }
-    if(frame.mode.bit(0)) {
-      frame.irqPending = false;
-      setIRQ();
-    }
-    frame.divider = FrameCounter::NtscPeriod;
-    return;
-  }
-
+  case 0x4017: return frame.write(data);
   }
 }
 
-auto APU::clockFrameCounter() -> void {
-  frame.counter++;
+auto APU::clockQuarterFrame() -> void {
+  pulse1.envelope.clock();
+  pulse2.envelope.clock();
+  triangle.clockLinearLength();
+  noise.envelope.clock();
+}
 
-  if(frame.counter.bit(0)) {
-    pulse1.clockLength();
-    pulse1.sweep.clock(0);
-    pulse2.clockLength();
-    pulse2.sweep.clock(1);
-    triangle.clockLength();
-    noise.clockLength();
-  }
+auto APU::clockHalfFrame() -> void {
+  pulse1.length.main();
+  pulse1.sweep.clock(0);
+  pulse2.length.main();
+  pulse2.sweep.clock(1);
+  triangle.length.main();
+  noise.length.main();
 
   pulse1.envelope.clock();
   pulse2.envelope.clock();
   triangle.clockLinearLength();
   noise.envelope.clock();
-
-  if(frame.counter == 0) {
-    if(frame.mode.bit(1)) {
-      frame.divider += FrameCounter::NtscPeriod;
-    }
-    if(frame.mode == 0) {
-      frame.irqPending = true;
-      setIRQ();
-    }
-  }
 }
-
-auto APU::clockFrameCounterDivider() -> void {
-  frame.divider -= 2;
-  if(frame.divider <= 0) {
-    clockFrameCounter();
-    frame.divider += FrameCounter::NtscPeriod;
-  }
-}
-
-const n8 APU::lengthCounterTable[32] = {
-  0x0a,0xfe,0x14,0x02,0x28,0x04,0x50,0x06,0xa0,0x08,0x3c,0x0a,0x0e,0x0c,0x1a,0x0e,
-  0x0c,0x10,0x18,0x12,0x30,0x14,0x60,0x16,0xc0,0x18,0x48,0x1a,0x10,0x1c,0x20,0x1e,
-};
 
 const n16 APU::noisePeriodTableNTSC[16] = {
   4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,

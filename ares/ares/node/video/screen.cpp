@@ -7,6 +7,8 @@ Screen::Screen(string name, u32 width, u32 height) : Video(name) {
     _inputB = new u32[width * height]();
     _output = new u32[width * height]();
     _rotate = new u32[width * height]();
+    _lineOverrideActive.resize(width * height, false);
+    _lineOverride.resize(width * height, nullptr);
 
     if constexpr(ares::Video::Threaded) {
       _thread = nall::thread::create({&Screen::main, this});
@@ -24,12 +26,17 @@ Screen::~Screen() {
 }
 
 auto Screen::main(uintptr_t) -> void {
+  thread::setName("dev.ares.screen");
   while(!_kill) {
-    usleep(1);
-    if(_frame) {
+    unique_lock<mutex> lock(_frameMutex);
+
+    auto timeout = std::chrono::milliseconds(10);
+    if(_frameCondition.wait_for(lock, timeout, [&] { return _frame.load(); })) {
       refresh();
       _frame = false;
     }
+
+    if(_kill) break;
   }
 }
 
@@ -45,6 +52,8 @@ auto Screen::power() -> void {
   memory::fill<u32>(_inputB.data(), _canvasWidth * _canvasHeight, _fillColor);
   memory::fill<u32>(_output.data(), _canvasWidth * _canvasHeight, _fillColor);
   memory::fill<u32>(_rotate.data(), _canvasWidth * _canvasHeight, _fillColor);
+  memory::fill<n1>(_lineOverrideActive.data(), _canvasWidth * _canvasHeight, false);
+  memory::fill<const u32*>(_lineOverride.data(), _canvasWidth * _canvasHeight, nullptr);
 }
 
 auto Screen::pixels(bool frame) -> array_span<u32> {
@@ -56,6 +65,7 @@ auto Screen::pixels(bool frame) -> array_span<u32> {
 auto Screen::resetPalette() -> void {
   lock_guard<recursive_mutex> lock(_mutex);
   _palette.reset();
+  refreshPalette();
 }
 
 auto Screen::resetSprites() -> void {
@@ -68,12 +78,26 @@ auto Screen::setRefresh(function<void ()> refresh) -> void {
   _refresh = refresh;
 }
 
+auto Screen::refreshRateHint(double pixelFrequency, int dotsPerLine, int linesPerFrame) -> void {
+  refreshRateHint(1.0f / ((double)(dotsPerLine * linesPerFrame) / pixelFrequency));
+}
+
+auto Screen::refreshRateHint(double refreshRate) -> void {
+  lock_guard<recursive_mutex> lock(_mutex);
+  platform->refreshRateHint(refreshRate);
+}
+
 auto Screen::setViewport(u32 x, u32 y, u32 width, u32 height) -> void {
   lock_guard<recursive_mutex> lock(_mutex);
   _viewportX = x;
   _viewportY = y;
   _viewportWidth  = width;
   _viewportHeight = height;
+}
+
+auto Screen::setOverscan(bool overscan) -> void {
+  lock_guard<recursive_mutex> lock(_mutex);
+  _overscan = overscan;
 }
 
 auto Screen::setSize(u32 width, u32 height) -> void {
@@ -98,18 +122,21 @@ auto Screen::setSaturation(f64 saturation) -> void {
   lock_guard<recursive_mutex> lock(_mutex);
   _saturation = saturation;
   _palette.reset();
+  refreshPalette();
 }
 
 auto Screen::setGamma(f64 gamma) -> void {
   lock_guard<recursive_mutex> lock(_mutex);
   _gamma = gamma;
   _palette.reset();
+  refreshPalette();
 }
 
 auto Screen::setLuminance(f64 luminance) -> void {
   lock_guard<recursive_mutex> lock(_mutex);
   _luminance = luminance;
   _palette.reset();
+  refreshPalette();
 }
 
 auto Screen::setFillColor(u32 fillColor) -> void {
@@ -168,6 +195,7 @@ auto Screen::colors(u32 colors, function<n64 (n32)> color) -> void {
   _colors = colors;
   _color = color;
   _palette.reset();
+  refreshPalette();
 }
 
 auto Screen::frame() -> void {
@@ -176,10 +204,12 @@ auto Screen::frame() -> void {
 
   lock_guard<recursive_mutex> lock(_mutex);
   _inputA.swap(_inputB);
-  _frame = true;
   if constexpr(!ares::Video::Threaded) {
     refresh();
     _frame = false;
+  } else {
+    _frame = true;
+    _frameCondition.notify_one();
   }
 }
 
@@ -205,7 +235,13 @@ auto Screen::refresh() -> void {
     auto source = input  + y * pitch;
     auto target = output + y * width;
 
-    if(_interlace) {
+    if (_lineOverrideActive[y]) {
+      auto source = _lineOverride[y];
+      for(u32 x : range(width)) {
+        auto color = *source++;
+        *target++ = color;
+      }
+    } else if(_interlace) {
       if((_interlaceField & 1) == (y & 1)) {
         for(u32 x : range(width)) {
           auto color = _palette[*source++];
@@ -311,6 +347,20 @@ auto Screen::refresh() -> void {
 
   platform->video(shared(), output + viewX + viewY * width, width * sizeof(u32), viewWidth, viewHeight);
   memory::fill<u32>(_inputB.data(), width * height, _fillColor);
+}
+
+auto Screen::lookupPalette(u32 index) -> u32 {
+  return _palette[index];
+}
+
+auto Screen::overrideLineDraw(u32 y, const u32* source) -> void {
+  _lineOverride[y] = source;
+  _lineOverrideActive[y] = true;
+}
+
+auto Screen::clearOverrideLineDraw(u32 y) -> void {
+  _lineOverrideActive[y] = false;
+  _lineOverride[y] = nullptr;
 }
 
 auto Screen::refreshPalette() -> void {

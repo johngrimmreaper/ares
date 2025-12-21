@@ -63,7 +63,7 @@ auto Player::frame() -> void {
   && !cpu.serial.transferEnableReceive
   &&  cpu.serial.transferEnableSend
   &&  cpu.serial.startBit
-  &&  cpu.serial.transferLength
+  &&  cpu.serial.mode == 0x1
   &&  cpu.serial.irqEnable
   ) {
     status.packet = (status.packet + 1) % 17;
@@ -86,7 +86,7 @@ auto Player::frame() -> void {
     case 15: status.send = 0x30000003; break;
     case 16: status.send = 0x30000003; break;
     }
-    cpu.irq.flag |= CPU::Interrupt::Serial;
+    cpu.setInterruptFlag(CPU::Interrupt::Serial);
   }
 }
 

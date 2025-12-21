@@ -18,7 +18,7 @@ auto load(Node::System& node, string name) -> bool {
 }
 
 auto option(string name, string value) -> bool {
-  if(name == "Pixel Accuracy") vdp.setAccurate(value.boolean());
+  if(name == "Pixel Accuracy") vdp.setAccurate(true); // Forced: scanline renderer is too buggy
   return true;
 }
 
@@ -74,6 +74,7 @@ auto System::load(Node::System& root, string name) -> bool {
   }
 
   node = Node::System::create(information.name);
+  node->setAttribute("configuration", name);
   node->setGame({&System::game, this});
   node->setRun({&System::run, this});
   node->setPower({&System::power, this});

@@ -37,6 +37,17 @@ auto CPU::main() -> void {
   }
 
   vi.refreshed = false;
+  queue.remove(Queue::GDB_Poll);
+  if(GDB::server.hasClient()) {
+    queue.insert(Queue::GDB_Poll, (93750000*2)/60/240);
+  }
+}
+
+auto CPU::gdbPoll() -> void {
+  if(GDB::server.hasClient()) {
+    GDB::server.updateLoop();
+    queue.insert(Queue::GDB_Poll, (93750000*2)/60/240);
+  }
 }
 
 auto CPU::synchronize() -> void {
@@ -56,7 +67,6 @@ auto CPU::synchronize() -> void {
 
   queue.step(clocks, [](u32 event) {
     switch(event) {
-    case Queue::RSP_DMA:       return rsp.dmaTransferStep();
     case Queue::PI_DMA_Read:   return pi.dmaFinished();
     case Queue::PI_DMA_Write:  return pi.dmaFinished();
     case Queue::PI_BUS_Write:  return pi.writeFinished();
@@ -68,6 +78,7 @@ auto CPU::synchronize() -> void {
     case Queue::DD_MECHA_Response:  return dd.mechaResponse();
     case Queue::DD_BM_Request:  return dd.bmRequest();
     case Queue::DD_Motor_Mode:  return dd.motorChange();
+    case Queue::GDB_Poll:      return cpu.gdbPoll();
     }
   });
 
@@ -91,62 +102,46 @@ auto CPU::instruction() -> void {
     step(1 * 2);
     return exception.nmi();
   }
+  if (scc.sysadFrozen) {
+    step(1 * 2);
+    return;
+  }
 
-  if constexpr(Accuracy::CPU::Recompiler) {
-    // Fast path: attempt to lookup previously compiled blocks with devirtualizeFast
-    // and fastFetchBlock, this skips exception handling, error checking, and
-    // code emitting pathways for maximum lookup performance.
-    // As memory writes cause recompiler block invalidation, this shouldn't be detectable.
-    if (auto address = devirtualizeFast(ipu.pc)) {
-      if(auto block = recompiler.fastFetchBlock(address)) {
-        block->execute(*this);
-        return;
-      }
-    }
+  auto access = devirtualize<Read, Word>(ipu.pc);
+  if(!access) return;
 
-    if (auto address = devirtualize(ipu.pc)) {
-      auto block = recompiler.block(ipu.pc, *address, GDB::server.hasBreakpoints());
+  if(Accuracy::CPU::Recompiler && recompiler.enabled && access.cache) {
+    if(vaddrAlignedError<Word>(access.vaddr, false)) return;
+    auto block = recompiler.block(ipu.pc, access.paddr, GDB::server.hasBreakpoints());
+    if(block) {
       block->execute(*this);
-    }
+      return;
+    } 
   }
 
-  if constexpr(Accuracy::CPU::Interpreter) {
-    pipeline.address = ipu.pc;
-    auto data = fetch(ipu.pc);
-    if (!data) return;
-    pipeline.instruction = *data;
-    debugger.instruction();
-    decoderEXECUTE();
-    instructionEpilogue();
-  }
+  auto data = fetch(access);
+  if (!data) return;
+  pipeline.begin();
+  instructionPrologue(ipu.pc, *data);
+  decoderEXECUTE(*data);
+  instructionEpilogue<0>();
+  pipeline.end();
 }
 
-auto CPU::instructionEpilogue() -> s32 {
-  if constexpr(Accuracy::CPU::Recompiler) {
-    //simulates timings without performing actual icache loads
-    icache.step(ipu.pc, devirtualizeFast(ipu.pc));
+auto CPU::instructionPrologue(u64 address, u32 instruction) -> void {
+  debugger.instruction(address, instruction);
+}
+
+template<bool Recompiled>
+auto CPU::instructionEpilogue() -> void {
+  if constexpr(!Recompiled) {
+    ipu.r[0].u64 = 0;
   }
-
-  ipu.r[0].u64 = 0;
-
-  switch(branch.state) {
-  case Branch::Step: ipu.pc += 4; return 0;
-  case Branch::Take: ipu.pc += 4; branch.delaySlot(true); return 0;
-  case Branch::NotTaken: ipu.pc += 4; branch.delaySlot(false); return 0;
-  case Branch::DelaySlotTaken: ipu.pc = branch.pc; branch.reset(); return 1;
-  case Branch::DelaySlotNotTaken: ipu.pc += 4; branch.reset(); return 0;
-  case Branch::Exception: branch.reset(); return 1;
-  case Branch::Discard: ipu.pc += 8; branch.reset(); return 1;
-  }
-
-  unreachable;
 }
 
 auto CPU::power(bool reset) -> void {
   Thread::reset();
 
-  pipeline = {};
-  branch = {};
   context.endian = Context::Endian::Big;
   context.mode = Context::Mode::Kernel;
   context.bits = 64;
@@ -159,7 +154,7 @@ auto CPU::power(bool reset) -> void {
   ipu.lo.u64 = 0;
   ipu.hi.u64 = 0;
   ipu.r[29].u64 = 0xffff'ffff'a400'1ff0ull;  //stack pointer
-  ipu.pc = 0xffff'ffff'bfc0'0000ull;
+  pipeline.setPc(0xffff'ffff'bfc0'0000ull);
   scc = {};
   for(auto& r : fpu.r) r.u64 = 0;
   fpu.csr = {};
@@ -168,8 +163,8 @@ auto CPU::power(bool reset) -> void {
   context.setMode();
 
   if constexpr(Accuracy::CPU::Recompiler) {
-    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
-    recompiler.allocator.resize(64_MiB, bump_allocator::executable, buffer);
+    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(63_MiB);
+    recompiler.allocator.resize(63_MiB, bump_allocator::executable, buffer);
     recompiler.reset();
   }
 }

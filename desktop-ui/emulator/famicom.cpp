@@ -1,6 +1,6 @@
 struct Famicom : Emulator {
   Famicom();
-  auto load() -> bool override;
+  auto load() -> LoadResult override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 };
@@ -24,19 +24,30 @@ Famicom::Famicom() {
     device.digital("Microphone", virtualPorts[id].pad.north);
     port.append(device); }
 
+  { InputDevice device{"Zapper"};
+    device.relative("X",         virtualPorts[id].mouse.x);
+    device.relative("Y",         virtualPorts[id].mouse.y);
+    device.digital ("Trigger",   virtualPorts[id].mouse.left);
+    port.append(device);
+    }
+
     ports.append(port);
   }
 }
 
-auto Famicom::load() -> bool {
+auto Famicom::load() -> LoadResult {
   game = mia::Medium::create("Famicom");
-  if(!game->load(Emulator::load(game, configuration.game))) return false;
+  string location = Emulator::load(game, configuration.game);
+  if(!location) return noFileSelected;
+  LoadResult result = game->load(location);
+  if(result != successful) return result;
 
   system = mia::System::create("Famicom");
-  if(!system->load()) return false;
+  result = system->load();
+  if(result != successful) return result;
 
   auto region = Emulator::region();
-  if(!ares::Famicom::load(root, {"[Nintendo] Famicom (", region, ")"})) return false;
+  if(!ares::Famicom::load(root, {"[Nintendo] Famicom (", region, ")"})) return otherError;
 
   if(auto port = root->find<ares::Node::Port>("Cartridge Slot")) {
     port->allocate();
@@ -60,7 +71,7 @@ auto Famicom::load() -> bool {
     }
   }
 
-  return true;
+  return successful;
 }
 
 auto Famicom::save() -> bool {

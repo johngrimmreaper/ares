@@ -1,12 +1,13 @@
 struct MegaCD32X : Emulator {
   MegaCD32X();
-  auto load() -> bool override;
+  auto load() -> LoadResult override;
   auto load(Menu) -> void override;
+  auto unload() -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
   u32 regionID = 0;
-  Timer discTrayTimer;
+  sTimer discTrayTimer;
 };
 
 MegaCD32X::MegaCD32X() {
@@ -31,13 +32,25 @@ MegaCD32X::MegaCD32X() {
     device.digital("Start", virtualPorts[id].pad.start);
     port.append(device); }
 
+  { InputDevice device{"Mega Mouse"};
+    device.relative("X",      virtualPorts[id].mouse.x);
+    device.relative("Y",      virtualPorts[id].mouse.y);
+    device.digital ("Left",   virtualPorts[id].mouse.left);
+    device.digital ("Right",  virtualPorts[id].mouse.right);
+    device.digital ("Middle", virtualPorts[id].mouse.middle);
+    device.digital ("Start",  virtualPorts[id].mouse.extra);
+    port.append(device); }
+
     ports.append(port);
   }
 }
 
-auto MegaCD32X::load() -> bool {
+auto MegaCD32X::load() -> LoadResult {
   game = mia::Medium::create("Mega CD");
-  if(!game->load(Emulator::load(game, configuration.game))) return false;
+  string location = Emulator::load(game, configuration.game);
+  if(!location) return noFileSelected;
+  LoadResult result = game->load(location);
+  if(result != successful) return result;
 
   auto region = Emulator::region();
   //if statements below are ordered by lowest to highest priority
@@ -50,12 +63,21 @@ auto MegaCD32X::load() -> bool {
   for(auto& emulator : emulators) {
     if(emulator->name == "Mega CD") firmware = emulator->firmware;
   }
-  if(!firmware) return false;  //should never occur
+  if(!firmware) return otherError;  //should never occur
 
   system = mia::System::create("Mega CD 32X");
-  if(!system->load(firmware[regionID].location)) return errorFirmware(firmware[regionID], "Mega CD"), false;
+  result = system->load(firmware[regionID].location);
+  if(result != successful) {
+    result.firmwareSystemName = "Mega CD";
+    result.firmwareType = firmware[regionID].type;
+    result.firmwareRegion = firmware[regionID].region;
+    result.result = noFirmware;
+    return result;
+  }
 
-  if(!ares::MegaDrive::load(root, {"[Sega] Mega CD 32X (", region, ")"})) return false;
+  ares::MegaDrive::option("Recompiler", !settings.general.forceInterpreter);
+
+  if(!ares::MegaDrive::load(root, {"[Sega] Mega CD 32X (", region, ")"})) return otherError;
 
   if(auto port = root->find<ares::Node::Port>("Cartridge Slot")) {
     port->allocate();
@@ -84,7 +106,9 @@ auto MegaCD32X::load() -> bool {
     }
   }
 
-  return true;
+  discTrayTimer = Timer{};
+
+  return successful;
 }
 
 
@@ -92,17 +116,19 @@ auto MegaCD32X::load(Menu menu) -> void {
   MenuItem changeDisc{&menu};
   changeDisc.setIcon(Icon::Device::Optical);
   changeDisc.setText("Change Disc").onActivate([&] {
+    Program::Guard guard;
     save();
     auto tray = root->find<ares::Node::Port>("Mega CD/Disc Tray");
     tray->disconnect();
 
-    if(!game->load(Emulator::load(game, configuration.game))) {
+    if(game->load(Emulator::load(game, configuration.game)) != successful) {
       return;
     }
 
     //give the emulator core a few seconds to notice an empty drive state before reconnecting
-    discTrayTimer.onActivate([&] {
-      discTrayTimer.setEnabled(false);
+    discTrayTimer->onActivate([&] {
+      Program::Guard guard;
+      discTrayTimer->setEnabled(false);
       auto tray = root->find<ares::Node::Port>("Mega CD/Disc Tray");
       tray->allocate();
       tray->connect();
@@ -110,6 +136,10 @@ auto MegaCD32X::load(Menu menu) -> void {
   });
 }
 
+auto MegaCD32X::unload() -> void {
+  Emulator::unload();
+  discTrayTimer.reset();
+}
 
 auto MegaCD32X::save() -> bool {
   root->save();

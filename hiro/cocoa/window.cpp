@@ -1,12 +1,12 @@
 #if defined(Hiro_Window)
 
-@implementation CocoaWindow : NSWindow
+@implementation CocoaWindow
 
 -(id) initWith:(hiro::mWindow&)windowReference {
   window = &windowReference;
-
-  NSUInteger style = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
-  if(window->state.resizable) style |= NSResizableWindowMask;
+    
+  NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
+  if(window->state.resizable) style |= NSWindowStyleMaskResizable;
 
   if(self = [super initWithContentRect:NSMakeRect(0, 0, 640, 480) styleMask:style backing:NSBackingStoreBuffered defer:YES]) {
     [self setDelegate:self];
@@ -19,72 +19,9 @@
     NSString* applicationName = [dictionary objectForKey:@"CFBundleDisplayName"];
     string hiroName = hiro::Application::state().name ? hiro::Application::state().name : string{"hiro"};
     if(applicationName == nil) applicationName = [NSString stringWithUTF8String:hiroName];
-
-    menuBar = [[NSMenu alloc] init];
-
-    NSMenuItem* item;
-    string text;
-
-    rootMenu = [[NSMenu alloc] init];
-    item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-    [item setSubmenu:rootMenu];
-    [menuBar addItem:item];
-
-    item = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"About %@…", applicationName] action:@selector(menuAbout) keyEquivalent:@""];
-    [item setTarget:self];
-    [rootMenu addItem:item];
-    [rootMenu addItem:[NSMenuItem separatorItem]];
-
-    item = [[NSMenuItem alloc] initWithTitle:@"Preferences…" action:@selector(menuPreferences) keyEquivalent:@""];
-    [item setTarget:self];
-    item.keyEquivalentModifierMask = NSCommandKeyMask;
-    item.keyEquivalent = @",";
-    [rootMenu addItem:item];
-
-    string result = nall::execute("spctl", "--status").output.strip();
-    if(result != "assessments disabled") {
-      disableGatekeeper = [[NSMenuItem alloc] initWithTitle:@"Disable Gatekeeper" action:@selector(menuDisableGatekeeper) keyEquivalent:@""];
-      [disableGatekeeper setTarget:self];
-      [rootMenu addItem:disableGatekeeper];
-    }
-
-    [rootMenu addItem:[NSMenuItem separatorItem]];
-
-    NSMenu* servicesMenu = [[NSMenu alloc] initWithTitle:@"Services"];
-    item = [[NSMenuItem alloc] initWithTitle:@"Services" action:nil keyEquivalent:@""];
-    [item setTarget:self];
-    [item setSubmenu:servicesMenu];
-    [rootMenu addItem:item];
-    [rootMenu addItem:[NSMenuItem separatorItem]];
-    [NSApp setServicesMenu:servicesMenu];
-
-    item = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Hide %@", applicationName] action:@selector(hide:) keyEquivalent:@""];
-    [item setTarget:NSApp];
-    item.keyEquivalentModifierMask = NSCommandKeyMask;
-    item.keyEquivalent = @"h";
-    [rootMenu addItem:item];
-
-    item = [[NSMenuItem alloc] initWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@""];
-    [item setTarget:NSApp];
-    [item setTarget:NSApp];
-    item.keyEquivalentModifierMask = NSCommandKeyMask | NSAlternateKeyMask;
-    item.keyEquivalent = @"h";
-    [rootMenu addItem:item];
-
-    item = [[NSMenuItem alloc] initWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
-    [item setTarget:NSApp];
-    [rootMenu addItem:item];
-
-    [rootMenu addItem:[NSMenuItem separatorItem]];
-
-    item = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Quit %@", applicationName] action:@selector(menuQuit) keyEquivalent:@""];
-    [item setTarget:self];
-    item.keyEquivalentModifierMask = NSCommandKeyMask;
-    item.keyEquivalent = @"q";
-    [rootMenu addItem:item];
-
+      
     statusBar = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
-    [statusBar setAlignment:NSLeftTextAlignment];
+    [statusBar setAlignment:NSTextAlignmentLeft];
     [statusBar setBordered:YES];
     [statusBar setBezeled:YES];
     [statusBar setBezelStyle:NSTextFieldSquareBezel];
@@ -103,12 +40,6 @@
 
 -(BOOL) canBecomeMainWindow {
   return YES;
-}
-
--(void) windowDidBecomeMain:(NSNotification*)notification {
-  if(window->state.menuBar) {
-    [NSApp setMainMenu:menuBar];
-  }
 }
 
 -(void) windowDidMove:(NSNotification*)notification {
@@ -138,63 +69,7 @@
 }
 
 -(NSMenu*) menuBar {
-  return menuBar;
-}
-
--(void) menuAbout {
-  hiro::Application::Cocoa::doAbout();
-}
-
--(void) menuPreferences {
-  hiro::Application::Cocoa::doPreferences();
-}
-
-//to hell with gatekeepers
--(void) menuDisableGatekeeper {
-  NSAlert* alert = [[NSAlert alloc] init];
-  [alert setMessageText:@"Disable Gatekeeper"];
-
-  AuthorizationRef authorization;
-  OSStatus status = AuthorizationCreate(nullptr, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &authorization);
-  if(status == errAuthorizationSuccess) {
-    AuthorizationItem items = {kAuthorizationRightExecute, 0, nullptr, 0};
-    AuthorizationRights rights = {1, &items};
-    status = AuthorizationCopyRights(authorization, &rights, nullptr,
-      kAuthorizationFlagDefaults
-    | kAuthorizationFlagInteractionAllowed
-    | kAuthorizationFlagPreAuthorize
-    | kAuthorizationFlagExtendRights, nullptr);
-    if(status == errAuthorizationSuccess) {
-      { char program[] = "/usr/sbin/spctl";
-        char* arguments[] = {"--master-disable", nullptr};
-        FILE* pipe = nullptr;
-        AuthorizationExecuteWithPrivileges(authorization, program, kAuthorizationFlagDefaults, arguments, &pipe);
-      }
-      { char program[] = "/usr/bin/defaults";
-        char* arguments[] = {"write /Library/Preferences/com.apple.security GKAutoRearm -bool NO"};
-        FILE* pipe = nullptr;
-        AuthorizationExecuteWithPrivileges(authorization, program, kAuthorizationFlagDefaults, arguments, &pipe);
-      }
-    }
-    AuthorizationFree(authorization, kAuthorizationFlagDefaults);
-  }
-
-  string result = nall::execute("spctl", "--status").output.strip();
-  if(result == "assessments disabled") {
-    [alert setAlertStyle:NSInformationalAlertStyle];
-    [alert setInformativeText:@"Gatekeeper has been successfully disabled."];
-    [disableGatekeeper setHidden:YES];
-  } else {
-    [alert setAlertStyle:NSWarningAlertStyle];
-    [alert setInformativeText:@"Error: failed to disable Gatekeeper."];
-  }
-
-  [alert addButtonWithTitle:@"Ok"];
-  [alert runModal];
-}
-
--(void) menuQuit {
-  hiro::Application::Cocoa::doQuit();
+  return [NSApp mainMenu];
 }
 
 -(NSTextField*) statusBar {
@@ -215,12 +90,6 @@ namespace hiro {
 
 auto pWindow::construct() -> void {
   cocoaWindow = [[CocoaWindow alloc] initWith:self()];
-
-  static bool once = true;
-  if(once) {
-    once = false;
-    [NSApp setMainMenu:[cocoaWindow menuBar]];
-  }
 }
 
 auto pWindow::destruct() -> void {
@@ -357,14 +226,14 @@ auto pWindow::setModal(bool modal) -> void {
     [NSApp runModalForWindow:cocoaWindow];
   } else {
     [NSApp stopModal];
-    NSEvent* event = [NSEvent otherEventWithType:NSApplicationDefined location:NSMakePoint(0, 0) modifierFlags:0 timestamp:0.0 windowNumber:0 context:nil subtype:0 data1:0 data2:0];
+    NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSMakePoint(0, 0) modifierFlags:0 timestamp:0.0 windowNumber:0 context:nil subtype:0 data1:0 data2:0];
     [NSApp postEvent:event atStart:true];
   }
 }
 
 auto pWindow::setResizable(bool resizable) -> void {
-  NSUInteger style = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
-  if(resizable) style |= NSResizableWindowMask;
+  NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
+  if(resizable) style |= NSWindowStyleMaskResizable;
   [cocoaWindow setStyleMask:style];
 }
 

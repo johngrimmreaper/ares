@@ -1,10 +1,38 @@
-inline auto CPU::Timer::run() -> void {
-  if(pending) {
-    pending = false;
-    if(enable) period = reload;
-    return;
+auto CPU::Timer::stepLatch() -> void {
+  if(latch.reloadFlags.bit(0)) {
+    reload.byte(0) = latch.reload.byte(0);
+    latch.reloadFlags.bit(0) = 0;
   }
+  
+  if(latch.reloadFlags.bit(1)) {
+    reload.byte(1) = latch.reload.byte(1);
+    latch.reloadFlags.bit(1) = 0;
+  }
+  
+  if(latch.controlFlag) {
+    n1 wasEnabled = enable;
 
+    frequency = latch.control.bit(0,1);
+    irq       = latch.control.bit(6);
+    enable    = latch.control.bit(7);
+
+    if(id != 0) cascade = latch.control.bit(2);
+
+    if(!wasEnabled && enable) {  //0->1 transition
+      pending = true;
+    }
+    latch.controlFlag = 0;
+  }
+}
+
+inline auto CPU::Timer::reloadLatch() -> void {
+  if(pending) {
+    period = reload;
+    pending = false;
+  }
+}
+
+inline auto CPU::Timer::run() -> void {
   if(!enable || cascade) return;
 
   static const u32 mask[] = {0, 63, 255, 1023};
@@ -15,7 +43,7 @@ auto CPU::Timer::step() -> void {
   if(++period == 0) {
     period = reload;
 
-    if(irq) cpu.irq.flag |= CPU::Interrupt::Timer0 << id;
+    if(irq) cpu.setInterruptFlag(CPU::Interrupt::Timer0 << id);
 
     if(apu.fifo[0].timer == id) cpu.runFIFO(0);
     if(apu.fifo[1].timer == id) cpu.runFIFO(1);
@@ -29,14 +57,14 @@ auto CPU::Timer::step() -> void {
 auto CPU::runFIFO(u32 n) -> void {
   synchronize(apu);
   apu.fifo[n].read();
-  if(apu.fifo[n].size > 16) return;
+  if(apu.fifo[n].size() > 3) return;
 
-  auto& dma = this->dma[1 + n];
-  if(dma.enable && dma.timingMode == 3) {
-    dma.active = true;
-    dma.waiting = 2;
-    dma.targetMode = 2;
-    dma.size = 1;
-    dma.latch.length.data = 4;
+  auto& channel = this->dmac.channel[1 + n];
+  if(channel.enable && channel.timingMode == 3) {
+    channel.active = true;
+    channel.waiting = 2;
+    channel.targetMode = 2;
+    channel.size = 1;
+    channel.latch.length.data = 4;
   }
 }

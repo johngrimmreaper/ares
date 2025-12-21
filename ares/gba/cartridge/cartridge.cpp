@@ -8,17 +8,17 @@ Cartridge& cartridge = cartridgeSlot.cartridge;
 #include "sram.cpp"
 #include "eeprom.cpp"
 #include "flash.cpp"
+#include "gpio.cpp"
+#include "rtc.cpp"
 #include "serialization.cpp"
 
 Cartridge::Cartridge() {
-  mrom.data = new n8[mrom.size = 32 * 1024 * 1024];
   sram.data = new n8[sram.size = 32 * 1024];
   eeprom.data = new n8[eeprom.size = 8 * 1024];
   flash.data = new n8[flash.size = 128 * 1024];
 }
 
 Cartridge::~Cartridge() {
-  delete[] mrom.data;
   delete[] sram.data;
   delete[] eeprom.data;
   delete[] flash.data;
@@ -37,7 +37,9 @@ auto Cartridge::connect() -> void {
 
   if(auto fp = pak->read("program.rom")) {
     mrom.size = min(32_MiB, fp->size());
-    fp->read({mrom.data, mrom.size});
+    mrom.data.allocate(mrom.size >> 1);
+    mrom.data.load(fp);
+    mrom.mirror = pak->attribute("mirror").boolean();
   }
 
   if(auto fp = pak->read("save.ram")) {
@@ -56,7 +58,7 @@ auto Cartridge::connect() -> void {
     eeprom.mask = mrom.size > 16 * 1024 * 1024 ? 0x0fffff00 : 0x0f000000;
     eeprom.test = mrom.size > 16 * 1024 * 1024 ? 0x0dffff00 : 0x0d000000;
     for(auto n : range(eeprom.size)) eeprom.data[n] = 0xff;
-    fp->read({eeprom.data, eeprom.size});
+    if(!fp->end()) fp->read({eeprom.data, eeprom.size});  //only load save file if already present
   }
 
   if(auto fp = pak->read("save.flash")) {
@@ -74,15 +76,23 @@ auto Cartridge::connect() -> void {
     fp->read({flash.data, flash.size});
   }
 
+  if(auto fp = pak->read("time.rtc")) {
+    has.rtc = true;
+    for(auto n : range(rtc.size)) rtc.data[n] = 0x00;
+    if(!fp->end()) fp->read({rtc.data, rtc.size});  //only load save file if already present
+    rtc.load();
+  }
+
   power();
 }
 
 auto Cartridge::disconnect() -> void {
   if(!node) return;
-  memory::fill<u8>(mrom.data, mrom.size);
+  mrom.data.reset();
   memory::fill<u8>(sram.data, sram.size);
   memory::fill<u8>(eeprom.data, eeprom.size);
   memory::fill<u8>(flash.data, flash.size);
+  memory::fill<u8>(rtc.data, rtc.size);
   has = {};
   pak.reset();
   node.reset();
@@ -103,34 +113,17 @@ auto Cartridge::save() -> void {
   if(auto fp = pak->write("save.flash")) {
     fp->write({flash.data, flash.size});
   }
+
+  if(auto fp = pak->write("time.rtc")) {
+    rtc.save();
+    fp->write({rtc.data, rtc.size});
+  }
 }
 
 auto Cartridge::power() -> void {
   eeprom.power();
   flash.power();
-}
-
-#define RAM_ANALYZE
-
-auto Cartridge::read(u32 mode, n32 address) -> n32 {
-  if(address < 0x0e00'0000) {
-    if(has.eeprom && (address & eeprom.mask) == eeprom.test) return eeprom.read();
-    return mrom.read(mode, address);
-  } else {
-    if(has.sram) return sram.read(mode, address);
-    if(has.flash) return flash.read(address);
-    return cpu.pipeline.fetch.instruction;
-  }
-}
-
-auto Cartridge::write(u32 mode, n32 address, n32 word) -> void {
-  if(address < 0x0e00'0000) {
-    if(has.eeprom && (address & eeprom.mask) == eeprom.test) return eeprom.write(word & 1);
-    return mrom.write(mode, address, word);
-  } else {
-    if(has.sram) return sram.write(mode, address, word);
-    if(has.flash) return flash.write(address, word);
-  }
+  if(has.rtc) rtc.power();
 }
 
 }

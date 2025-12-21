@@ -1,6 +1,6 @@
 #if defined(Hiro_RadioLabel)
 
-@implementation CocoaRadioLabel : NSButton
+@implementation CocoaRadioLabel
 
 -(id) initWith:(hiro::mRadioLabel&)radioLabelReference {
   if(self = [super initWithFrame:NSMakeRect(0, 0, 0, 0)]) {
@@ -8,7 +8,7 @@
 
     [self setTarget:self];
     [self setAction:@selector(activate:)];
-    [self setButtonType:NSRadioButton];
+    [self setButtonType:NSButtonTypeRadio];
   }
   return self;
 }
@@ -60,7 +60,7 @@ auto pRadioLabel::setGroup(sGroup group) -> void {
     if(auto object = weak.acquire()) {
       if(auto self = object->self()) {
         if(auto p = dynamic_cast<pRadioLabel*>(self)) {
-          auto state = p->state().checked ? NSOnState : NSOffState;
+          auto state = p->state().checked ? NSControlStateValueOn : NSControlStateValueOff;
           [(CocoaRadioLabel*)p->cocoaView setState:state];
         }
       }

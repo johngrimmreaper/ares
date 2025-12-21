@@ -1,125 +1,97 @@
-auto CPU::DataCache::Line::hit(u32 address) const -> bool {
-  return valid && tag == (address & ~0x0000'0fff);
+auto CPU::DataCache::Line::hit(u32 paddr) const -> bool {
+  return valid && tag == (paddr & ~0x0000'0fff);
 }
 
-template<u32 Size> auto CPU::DataCache::Line::fill(u32 address, u64 data) -> void {
+auto CPU::DataCache::Line::fill(u32 paddr) -> void {
   cpu.step(40 * 2);
-  valid = 1;
-  dirty = 1;
-  tag   = address & ~0x0000'0fff;
-  //read words according to critical doubleword first scheme
-  switch(address & 8) {
-  case 0:
-    if constexpr(Size != Dual) {
-      words[0] = cpu.busRead<Word>(tag | index | 0x0);
-      words[1] = cpu.busRead<Word>(tag | index | 0x4);
-    }
-    write<Size>(address, data);
-    words[2] = cpu.busRead<Word>(tag | index | 0x8);
-    words[3] = cpu.busRead<Word>(tag | index | 0xc);
-    break;
-  case 8:
-    if constexpr(Size != Dual) {
-      words[2] = cpu.busRead<Word>(tag | index | 0x8);
-      words[3] = cpu.busRead<Word>(tag | index | 0xc);
-    }
-    write<Size>(address, data);
-    words[0] = cpu.busRead<Word>(tag | index | 0x0);
-    words[1] = cpu.busRead<Word>(tag | index | 0x4);
-    break;
-  }
-}
-
-auto CPU::DataCache::Line::fill(u32 address) -> void {
-  cpu.step(40 * 2);
-  valid = 1;
-  dirty = 0;
-  tag   = address & ~0x0000'0fff;
-  //read words according to critical doubleword first scheme
-  switch(address & 8) {
-  case 0:
-    words[0] = cpu.busRead<Word>(tag | index | 0x0);
-    words[1] = cpu.busRead<Word>(tag | index | 0x4);
-    words[2] = cpu.busRead<Word>(tag | index | 0x8);
-    words[3] = cpu.busRead<Word>(tag | index | 0xc);
-    break;
-  case 8:
-    words[2] = cpu.busRead<Word>(tag | index | 0x8);
-    words[3] = cpu.busRead<Word>(tag | index | 0xc);
-    words[0] = cpu.busRead<Word>(tag | index | 0x0);
-    words[1] = cpu.busRead<Word>(tag | index | 0x4);
-    break;
-  }
+  valid  = 1;
+  dirty  = 0;
+  tag    = paddr & ~0x0000'0fff;
+  fillPc = cpu.ipu.pc;
+  cpu.busReadBurst<DCache>(tag | index, words);
 }
 
 auto CPU::DataCache::Line::writeBack() -> void {
   cpu.step(40 * 2);
   dirty = 0;
-  cpu.busWrite<Word>(tag | index | 0x0, words[0]);
-  cpu.busWrite<Word>(tag | index | 0x4, words[1]);
-  cpu.busWrite<Word>(tag | index | 0x8, words[2]);
-  cpu.busWrite<Word>(tag | index | 0xc, words[3]);
+  cpu.busWriteBurst<DCache>(tag | index, words);
 }
 
-auto CPU::DataCache::line(u32 vaddr) -> Line& {
+auto CPU::DataCache::line(u64 vaddr) -> Line& {
   return lines[vaddr >> 4 & 0x1ff];
 }
 
 template<u32 Size>
-auto CPU::DataCache::Line::read(u32 address) const -> u64 {
-  if constexpr(Size == Byte) { return bytes[address >> 0 & 15 ^ 3]; }
-  if constexpr(Size == Half) { return halfs[address >> 1 &  7 ^ 1]; }
-  if constexpr(Size == Word) { return words[address >> 2 &  3 ^ 0]; }
+auto CPU::DataCache::Line::read(u32 paddr) const -> u64 {
+  if constexpr(Size == Byte) { return bytes[paddr >> 0 & 15 ^ 3]; }
+  if constexpr(Size == Half) { return halfs[paddr >> 1 &  7 ^ 1]; }
+  if constexpr(Size == Word) { return words[paddr >> 2 &  3 ^ 0]; }
   if constexpr(Size == Dual) {
-    u64 upper = words[address >> 2 & 2 | 0];
-    u64 lower = words[address >> 2 & 2 | 1];
+    u64 upper = words[paddr >> 2 & 2 | 0];
+    u64 lower = words[paddr >> 2 & 2 | 1];
     return upper << 32 | lower << 0;
   }
 }
 
 template<u32 Size>
-auto CPU::DataCache::Line::write(u32 address, u64 data) -> void {
-  if constexpr(Size == Byte) { bytes[address >> 0 & 15 ^ 3] = data; }
-  if constexpr(Size == Half) { halfs[address >> 1 &  7 ^ 1] = data; }
-  if constexpr(Size == Word) { words[address >> 2 &  3 ^ 0] = data; }
+auto CPU::DataCache::Line::write(u32 paddr, u64 data) -> void {
+  if constexpr(Size == Byte) { bytes[paddr >> 0 & 15 ^ 3] = data; }
+  if constexpr(Size == Half) { halfs[paddr >> 1 &  7 ^ 1] = data; }
+  if constexpr(Size == Word) { words[paddr >> 2 &  3 ^ 0] = data; }
   if constexpr(Size == Dual) {
-    words[address >> 2 & 2 | 0] = data >> 32;
-    words[address >> 2 & 2 | 1] = data >>  0;
+    words[paddr >> 2 & 2 | 0] = data >> 32;
+    words[paddr >> 2 & 2 | 1] = data >>  0;
   }
-  dirty = 1;
+  dirty |= ((1 << Size) - 1) << (paddr & 0xF);
+  dirtyPc = cpu.ipu.pc;
 }
 
 template<u32 Size>
-auto CPU::DataCache::read(u32 vaddr, u32 address) -> u64 {
+auto CPU::DataCache::read(u64 vaddr, u32 paddr) -> u64 {
   auto& line = this->line(vaddr);
-  if(!line.hit(address)) {
+  if(!line.hit(paddr)) {
     if(line.valid && line.dirty) line.writeBack();
-    line.fill(address);
+    line.fill(paddr);
   } else {
     cpu.step(1 * 2);
   }
-  return line.read<Size>(address);
+  return line.read<Size>(paddr);
 }
 
-auto CPU::DataCache::readDebug(u32 vaddr, u32 address) -> u8 {
+template<u32 Size>
+auto CPU::DataCache::readDebug(u64 vaddr, u32 paddr) -> u64 {
+  // This is used by the debugger to read memory through the cache but without
+  // actually causing side effects that modify the cache state (eg: no line fill)
   auto& line = this->line(vaddr);
-  if(!line.hit(address)) {
+  if(!line.hit(paddr)) {
     Thread dummyThread{};
-    return bus.read<Byte>(address, dummyThread);
+    return bus.read<Size>(paddr, dummyThread, "Ares Debugger");
   }
-  return line.read<Byte>(address);
+  return line.read<Size>(paddr);
 }
 
 template<u32 Size>
-auto CPU::DataCache::write(u32 vaddr, u32 address, u64 data) -> void {
+auto CPU::DataCache::write(u64 vaddr, u32 paddr, u64 data) -> void {
   auto& line = this->line(vaddr);
-  if(!line.hit(address)) {
+  if(!line.hit(paddr)) {
     if(line.valid && line.dirty) line.writeBack();
-    return line.fill<Size>(address, data);
+    line.fill(paddr);
   } else {
     cpu.step(1 * 2);
   }
-  line.write<Size>(address, data);
+  line.write<Size>(paddr, data);
+}
+
+template<u32 Size>
+auto CPU::DataCache::writeDebug(u64 vaddr, u32 paddr, u64 data) -> void {
+  // This is used by the debugger to write memory through the cache but without
+  // actually causing side effects that modify the cache state (eg: no line fill)
+  auto& line = this->line(vaddr);
+  if(!line.hit(paddr)) {
+    Thread dummyThread{};
+    return bus.write<Size>(paddr, data, dummyThread, "Ares Debugger");
+  }
+  line.write<Size>(paddr, data);
 }
 
 auto CPU::DataCache::power(bool reset) -> void {
@@ -133,5 +105,6 @@ auto CPU::DataCache::power(bool reset) -> void {
   }
 }
 
-template
-auto CPU::DataCache::Line::write<Byte>(u32 address, u64 data) -> void;
+template auto CPU::DataCache::Line::write<Byte>(u32 paddr, u64 data) -> void;
+template auto CPU::DataCache::writeDebug<Byte>(u64 vaddr, u32 paddr, u64 data) -> void;
+template auto CPU::DataCache::readDebug<Byte>(u64 vaddr, u32 paddr) -> u64;

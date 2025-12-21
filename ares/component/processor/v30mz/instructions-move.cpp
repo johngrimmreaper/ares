@@ -14,14 +14,14 @@ auto V30MZ::instructionMoveMemSeg() -> void {
   wait(1);
   modRM();
   setMemory<Word>(getSegment());
-  state.poll = 0;
 }
 
 auto V30MZ::instructionMoveSegMem() -> void {
   wait(2);
   modRM();
   setSegment(getMemory<Word>());
-  if((modrm.reg & 3) == 3) state.poll = 0;
+  // delay interrupt polling if stack segment changed
+  if((modrm.reg & 3) == 2) state.poll = 0;
 }
 
 template<u32 size> auto V30MZ::instructionMoveAccMem() -> void {
@@ -65,13 +65,13 @@ template<u32 size> auto V30MZ::instructionExchangeMemReg() -> void {
 
 auto V30MZ::instructionLoadEffectiveAddressRegMem() -> void {
   wait(1);
-  modRM();
+  modRM(true);
   setRegister<Word>(modrm.address);
 }
 
 auto V30MZ::instructionLoadSegmentMem(u16& segment) -> void {
   wait(4);
-  modRM();
+  modRM(true);
   setRegister<Word>(getMemory<Word>());
   segment = getMemory<Word>(2);
 }

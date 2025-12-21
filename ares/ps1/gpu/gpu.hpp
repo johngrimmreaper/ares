@@ -3,7 +3,6 @@
 struct GPU : Thread, Memory::Interface {
   Node::Object node;
   Node::Video::Screen screen;
-  Node::Setting::Boolean overscan;
   Memory::Writable vram;
 
   struct Debugger {
@@ -73,7 +72,6 @@ struct GPU : Thread, Memory::Interface {
 
   enum class Mode : u32 {
     Normal,
-    Status,
     CopyToVRAM,
     CopyFromVRAM,
   };
@@ -380,6 +378,7 @@ struct GPU : Thread, Memory::Interface {
     s32  ty;
     s32  tw;
     s32  th;
+    Memory::Writable vram; // Copy of vram for thread queued blit
   } blitter{*this};
 
   u16* vram2D[512];

@@ -8,40 +8,50 @@ function<string ()> homeLocation = [] { return string{Path::user(), "Emulation/S
 function<string ()> saveLocation = [] { return string{}; };
 vector<string> media;
 
-auto locate(const string& name) -> string {
-  // First, check the application directory
-  // This allows ares to function in 'portable' mode
-  string location = {Path::program(), name};
-  if(inode::exists(location)) return location;
+auto locate(const string &name) -> string {
+  // First check each path for the presence of the file we are looking for in the following order
+  // allowing users to override the default resources if they wish to do so.
 
-  // On macOS, also check the AppBundle Resource path
+  // 1. The application directory
+  string location = {Path::program(), name};
+  if (inode::exists(location)) return location;
+
+  // 2. The user data directory
+  location = {Path::userData(), "ares/", name};
+  if (inode::exists(location)) return location;
+
+  // 3. The shared data directory
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_BSD)
+  /// Unix-like systems have multiple notions of a 'shared data' directory. First, check for
+  /// an install prefix, as would be used by package managers that do not use `/usr/share`.
+  /// Secondly, look in `/usr/local/share` to cover software compiled by the user.
+  /// Lastly, look in the 'global' shared data directory, `/usr/share`.
+  location = {Path::prefixSharedData(), "ares/", name};
+  if (inode::exists(location)) return location;
+  
+  location = {Path::localSharedData(), "ares/", name};
+  if (inode::exists(location)) return location;
+#endif
+  
+  location = {Path::sharedData(), "ares/", name};
+  if (inode::exists(location)) return location;
+
+  // 4. The application bundle resource directory (macOS only)
 #if defined(PLATFORM_MACOS)
-  location = {Path::program(), "../Resources/", name};
+  location = {Path::resources(), name};
   if(inode::exists(location)) return location;
 #endif
 
-  // Check the userData directory, this is the default
-  // on non-windows platforms for any resouces that did not
-  // ship with the executable.
-  // On Windows, this allows settings from to be carried over
-  // from previous versions (pre-portable)
-  location = {Path::userData(), "ares/", name};
-  if(inode::exists(location)) return location;
-
-  // On non-windows platforms, this time check the shared
-  // data directory, on Windows, default to program dir
-  // this ensures Portable mode is the default on Windows platforms.
-#if !defined(PLATFORM_WINDOWS)
-  string shared_location = {Path::sharedData(), "ares/", name};
-  if(inode::exists(shared_location)) return shared_location;
-
-  // On non-windows platforms, after exhausting other options,
-  // default to userData
+  // If the file was not found in any of the above locations, we may be intending to create it
+#if defined(PLATFORM_WINDOWS)
+  // We must return a path to a user writable directory; on Windows, this is the executable directory
+  return {Path::program(), name};
+#else
+  // On other platforms, this is the "user data" directory
   directory::create({Path::userData(), "ares/"});
   return {Path::userData(), "ares/", name};
-#else
-  return {Path::program(), name};
 #endif
+
 }
 
 auto operator+=(string& lhs, const string& rhs) -> string& {
@@ -90,6 +100,7 @@ auto construct() -> void {
   media.append("Mega Drive");
   media.append("Mega 32X");
   media.append("Mega CD");
+  media.append("Mega LD");  
   media.append("MSX");
   media.append("MSX2");
   media.append("Neo Geo");
@@ -134,7 +145,7 @@ auto identify(const string& filename) -> string {
   for(auto& medium : media) {
     auto pak = mia::Medium::create(medium);
     if(pak->extensions().find(extension)) {
-      if(!pak->load(filename)) continue; // Skip medium that the system cannot load
+      if(pak->load(filename) != successful) continue; // Skip medium that the system cannot load
       if(pak->pak->attribute("audio").boolean()) continue; // Skip audio-only media to give the next system a chance to match
       return pak->name();
     }
@@ -144,7 +155,7 @@ auto identify(const string& filename) -> string {
 }
 
 auto import(shared_pointer<Pak> pak, const string& filename) -> bool {
-  if(pak->load(filename)) {
+  if(pak->load(filename) == successful) {
     string pathname = {Path::user(), "Emulation/", pak->name(), "/", Location::prefix(filename), ".", pak->extensions().first(), "/"};
     if(!directory::create(pathname)) return false;
     for(auto& node : *pak->pak) {
@@ -184,7 +195,7 @@ auto main(Arguments arguments) -> void {
     if(!pak) return;
 
     if(string manifest; arguments.take("--manifest", manifest)) {
-      if(pak->load(manifest)) {
+      if(pak->load(manifest) == successful) {
         if(auto fp = pak->pak->read("manifest.bml")) return print(fp->reads());
       }
       return;

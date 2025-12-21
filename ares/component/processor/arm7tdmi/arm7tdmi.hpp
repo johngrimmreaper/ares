@@ -6,21 +6,22 @@ namespace ares {
 
 struct ARM7TDMI {
   enum : u32 {
-    Nonsequential = 1 << 0,  //N cycle
-    Sequential    = 1 << 1,  //S cycle
+    Load          = 1 << 0,  //load operation
+    Store         = 1 << 1,  //store operation
     Prefetch      = 1 << 2,  //instruction fetch
     Byte          = 1 << 3,  // 8-bit access
     Half          = 1 << 4,  //16-bit access
     Word          = 1 << 5,  //32-bit access
-    Load          = 1 << 6,  //load operation
-    Store         = 1 << 7,  //store operation
-    Signed        = 1 << 8,  //sign-extend
+    Signed        = 1 << 6,  //sign-extend
   };
 
   virtual auto step(u32 clocks) -> void = 0;
   virtual auto sleep() -> void = 0;
   virtual auto get(u32 mode, n32 address) -> n32 = 0;
+  virtual auto getDebugger(u32 mode, n32 address) -> n32 { return get(mode, address); }
   virtual auto set(u32 mode, n32 address, n32 word) -> void = 0;
+  virtual auto lock() -> void { return; }
+  virtual auto unlock() -> void { return; }
 
   //arm7tdmi.cpp
   ARM7TDMI();
@@ -41,6 +42,7 @@ struct ARM7TDMI {
   auto load(u32 mode, n32 address) -> n32;
   auto write(u32 mode, n32 address, n32 word) -> void;
   auto store(u32 mode, n32 address, n32 word) -> void;
+  auto endBurst() -> void { nonsequential = true; return; }
 
   //algorithms.cpp
   auto ADD(n32, n32, bool) -> n32;
@@ -55,6 +57,7 @@ struct ARM7TDMI {
   auto TST(n4) -> bool;
 
   //instruction.cpp
+  auto reload() -> void;
   auto fetch() -> void;
   auto instruction() -> void;
   auto exception(u32 mode, n32 address) -> void;
@@ -62,25 +65,29 @@ struct ARM7TDMI {
   auto thumbInitialize() -> void;
 
   //instructions-arm.cpp
-  auto armALU(n4 mode, n4 target, n4 source, n32 data) -> void;
+  auto armALU(n4 mode, n4 target, n32 source, n32 data) -> void;
   auto armMoveToStatus(n4 field, n1 source, n32 data) -> void;
 
   auto armInstructionBranch(i24, n1) -> void;
-  auto armInstructionBranchExchangeRegister(n4) -> void;
+  auto armInstructionBranchExchangeRegister(n4, n4, n4, n1) -> void;
+  auto armInstructionCoprocessorDataProcessing(n4, n3, n4, n4, n4, n4) -> void;
   auto armInstructionDataImmediate(n8, n4, n4, n4, n1, n4) -> void;
   auto armInstructionDataImmediateShift(n4, n2, n5, n4, n4, n1, n4) -> void;
   auto armInstructionDataRegisterShift(n4, n2, n4, n4, n4, n1, n4) -> void;
-  auto armInstructionLoadImmediate(n8, n1, n4, n4, n1, n1, n1) -> void;
-  auto armInstructionLoadRegister(n4, n1, n4, n4, n1, n1, n1) -> void;
   auto armInstructionMemorySwap(n4, n4, n4, n1) -> void;
   auto armInstructionMoveHalfImmediate(n8, n4, n4, n1, n1, n1, n1) -> void;
   auto armInstructionMoveHalfRegister(n4, n4, n4, n1, n1, n1, n1) -> void;
   auto armInstructionMoveImmediateOffset(n12, n4, n4, n1, n1, n1, n1, n1) -> void;
   auto armInstructionMoveMultiple(n16, n4, n1, n1, n1, n1, n1) -> void;
   auto armInstructionMoveRegisterOffset(n4, n2, n5, n4, n4, n1, n1, n1, n1, n1) -> void;
+  auto armInstructionMoveSignedImmediate(n8, n1, n4, n4, n1, n1, n1, n1) -> void;
+  auto armInstructionMoveSignedRegister(n4, n1, n4, n4, n1, n1, n1, n1) -> void;
+  auto armInstructionMoveToCoprocessorFromRegister(n4, n3, n4, n4, n4, n3) -> void;
+  auto armInstructionMoveToRegisterFromCoprocessor(n4, n3, n4, n4, n4, n3) -> void;
+  auto armInstructionMoveToRegisterFromRegister(n4, n4) -> void;
   auto armInstructionMoveToRegisterFromStatus(n4, n1) -> void;
   auto armInstructionMoveToStatusFromImmediate(n8, n4, n4, n1) -> void;
-  auto armInstructionMoveToStatusFromRegister(n4, n4, n1) -> void;
+  auto armInstructionMoveToStatusFromRegister(n4, n2, n5, n4, n1) -> void;
   auto armInstructionMultiply(n4, n4, n4, n4, n1, n1) -> void;
   auto armInstructionMultiplyLong(n4, n4, n4, n4, n1, n1, n1) -> void;
   auto armInstructionSoftwareInterrupt(n24 immediate) -> void;
@@ -144,19 +151,29 @@ struct ARM7TDMI {
     };
 
     operator u32() const {
-      return m << 0 | t << 5 | f << 6 | i << 7 | v << 28 | c << 29 | z << 30 | n << 31;
+      return m << 0 | 1 << 4 | t << 5 | f << 6 | i << 7 | v << 28 | c << 29 | z << 30 | n << 31;
     }
 
     auto operator=(n32 data) -> PSR& {
-      m = data.bit(0,4);
-      t = data.bit(5);
-      f = data.bit(6);
-      i = data.bit(7);
-      v = data.bit(28);
-      c = data.bit(29);
-      z = data.bit(30);
-      n = data.bit(31);
+      set(0b1111, data);
       return *this;
+    }
+
+    auto set(n4 field, n32 data) -> void {
+      if(readonly) return;
+      if(field.bit(0)) {
+        m = data.bit(0,4) | 0x10;
+        t = data.bit(5);
+        f = data.bit(6);
+        i = data.bit(7);
+      }
+
+      if(field.bit(3)) {
+        v = data.bit(28);
+        c = data.bit(29);
+        z = data.bit(30);
+        n = data.bit(31);
+      }
     }
 
     //serialization.cpp
@@ -170,6 +187,8 @@ struct ARM7TDMI {
     b1 c;  //carry
     b1 z;  //zero
     b1 n;  //negative
+
+    b1 readonly;
   };
 
   struct Processor {
@@ -178,6 +197,8 @@ struct ARM7TDMI {
 
     GPR r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
     PSR cpsr;
+    GPR rNULL;  //read-only, used when no register is mapped to r(13) or r(14)
+    PSR spsrNULL;  //read-only, used when no SPSR is mapped
 
     struct FIQ {
       GPR r8, r9, r10, r11, r12, r13, r14;
@@ -213,10 +234,10 @@ struct ARM7TDMI {
       n32 address;
       n32 instruction;
       b1  thumb;  //not used by fetch stage
+      b1  irq;  //not used by fetch stage
     };
 
     n1 reload = 1;
-    n1 nonsequential = 1;
     Instruction fetch;
     Instruction decode;
     Instruction execute;
@@ -225,27 +246,41 @@ struct ARM7TDMI {
   n32 opcode;
   b1  carry;
   b1  irq;
+  b1  nonsequential;
 
   function<void (n32 opcode)> armInstruction[4096];
   function<void ()> thumbInstruction[65536];
 
+  //coprocessor.cpp
+  auto bindCDP(n4 id, function<void (n4 cm, n3 op2, n4 cd, n4 cn, n4 op1)> handler) -> void;
+  auto bindMCR(n4 id, function<void (n32 data, n4 cm, n3 op2, n4 cn, n3 op1)> handler) -> void;
+  auto bindMRC(n4 id, function<n32 (n4 cm, n3 op2, n4 cn, n3 op1)> handler) -> void;
+
+  function<void (n4 cm, n3 op2, n4 cd, n4 cn, n4 op1)> CDP[16];
+  function<void (n32 data, n4 cm, n3 op2, n4 cn, n3 op1)> MCR[16];
+  function<n32 (n4 cm, n3 op2, n4 cn, n3 op1)> MRC[16];
+
   //disassembler.cpp
   auto armDisassembleBranch(i24, n1) -> string;
-  auto armDisassembleBranchExchangeRegister(n4) -> string;
+  auto armDisassembleBranchExchangeRegister(n4, n4, n4, n1) -> string;
+  auto armDisassembleCoprocessorDataProcessing(n4, n3, n4, n4, n4, n4) -> string;
   auto armDisassembleDataImmediate(n8, n4, n4, n4, n1, n4) -> string;
   auto armDisassembleDataImmediateShift(n4, n2, n5, n4, n4, n1, n4) -> string;
   auto armDisassembleDataRegisterShift(n4, n2, n4, n4, n4, n1, n4) -> string;
-  auto armDisassembleLoadImmediate(n8, n1, n4, n4, n1, n1, n1) -> string;
-  auto armDisassembleLoadRegister(n4, n1, n4, n4, n1, n1, n1) -> string;
   auto armDisassembleMemorySwap(n4, n4, n4, n1) -> string;
   auto armDisassembleMoveHalfImmediate(n8, n4, n4, n1, n1, n1, n1) -> string;
   auto armDisassembleMoveHalfRegister(n4, n4, n4, n1, n1, n1, n1) -> string;
   auto armDisassembleMoveImmediateOffset(n12, n4, n4, n1, n1, n1, n1, n1) -> string;
   auto armDisassembleMoveMultiple(n16, n4, n1, n1, n1, n1, n1) -> string;
   auto armDisassembleMoveRegisterOffset(n4, n2, n5, n4, n4, n1, n1, n1, n1, n1) -> string;
+  auto armDisassembleMoveSignedImmediate(n8, n1, n4, n4, n1, n1, n1, n1) -> string;
+  auto armDisassembleMoveSignedRegister(n4, n1, n4, n4, n1, n1, n1, n1) -> string;
+  auto armDisassembleMoveToCoprocessorFromRegister(n4, n3, n4, n4, n4, n3) -> string;
+  auto armDisassembleMoveToRegisterFromCoprocessor(n4, n3, n4, n4, n4, n3) -> string;
+  auto armDisassembleMoveToRegisterFromRegister(n4, n4) -> string;
   auto armDisassembleMoveToRegisterFromStatus(n4, n1) -> string;
   auto armDisassembleMoveToStatusFromImmediate(n8, n4, n4, n1) -> string;
-  auto armDisassembleMoveToStatusFromRegister(n4, n4, n1) -> string;
+  auto armDisassembleMoveToStatusFromRegister(n4, n2, n5, n4, n1) -> string;
   auto armDisassembleMultiply(n4, n4, n4, n4, n1, n1) -> string;
   auto armDisassembleMultiplyLong(n4, n4, n4, n4, n1, n1, n1) -> string;
   auto armDisassembleSoftwareInterrupt(n24) -> string;

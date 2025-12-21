@@ -7,14 +7,21 @@ auto CPU::step() -> void {
 }
 
 auto CPU::step(u32 clocks) -> void {
+  //determine which bit of DIV is used to check timer state
+  n32 timerBit = 9;
+  if(status.timerClock != 0) timerBit = status.timerClock * 2 + 1;
+
   for(auto n : range(clocks)) {
     if(!r.stop) status.div++;
-    if((n4 )status.div == 0) timer262144hz();
-    if((n6 )status.div == 0)  timer65536hz();
-    if((n8 )status.div == 0)  timer16384hz();
-    if((n9 )status.div == 0)   timer8192hz();
-    if((n10)status.div == 0)   timer4096hz();
-    if((n12)status.div == 0)   timer1024hz();
+
+    //tick timer on falling edge
+    n1 timerLineNew = status.div.bit(timerBit) & status.timerEnable;
+    if(timerLineNew == 0 && status.timerLine == 1) timerTick();
+
+    if((n9 )status.div == 0) timer8192hz();  //serial
+    if((n12)status.div == 0) timer1024hz();  //joypad
+
+    status.timerLine = timerLineNew;
 
     Thread::step(1);
     Thread::synchronize();
@@ -25,30 +32,10 @@ auto CPU::step(u32 clocks) -> void {
   }
 }
 
-auto CPU::timer262144hz() -> void {
-  if(status.timerEnable && status.timerClock == 1) {
-    if(++status.tima == 0) {
-      status.tima = status.tma;
-      raise(Interrupt::Timer);
-    }
-  }
-}
-
-auto CPU::timer65536hz() -> void {
-  if(status.timerEnable && status.timerClock == 2) {
-    if(++status.tima == 0) {
-      status.tima = status.tma;
-      raise(Interrupt::Timer);
-    }
-  }
-}
-
-auto CPU::timer16384hz() -> void {
-  if(status.timerEnable && status.timerClock == 3) {
-    if(++status.tima == 0) {
-      status.tima = status.tma;
-      raise(Interrupt::Timer);
-    }
+auto CPU::timerTick() -> void {
+  if(++status.tima == 0) {
+    status.tima = status.tma;
+    raise(Interrupt::Timer);
   }
 }
 
@@ -63,31 +50,33 @@ auto CPU::timer8192hz() -> void {
   }
 }
 
-auto CPU::timer4096hz() -> void {
-  if(status.timerEnable && status.timerClock == 0) {
-    if(++status.tima == 0) {
-      status.tima = status.tma;
-      raise(Interrupt::Timer);
-    }
-  }
-}
-
 auto CPU::timer1024hz() -> void {
   joypPoll();
 }
 
-auto CPU::hblank() -> void {
-  status.hblankPending = 1;
+auto CPU::hblankIn() -> void {
+  hdmaTrigger(1, status.hdmaActive);
+  status.hblank = 1;
 }
 
-auto CPU::hblankTrigger() -> void {
-  if(status.hdmaActive && ppu.status.ly < 144) {
-    for(u32 loop : range(16)) {
-      writeDMA(status.dmaTarget++, readDMA(status.dmaSource++, 0xff));
-      if(loop & 1) step(1 << status.speedDouble);
-    }
-    if(status.dmaLength-- == 0) {
-      status.hdmaActive = 0;
-    }
+auto CPU::hblankOut() -> void {
+  status.hblank = 0;
+}
+
+auto CPU::hdmaTrigger(n1 hblank, n1 active) -> void {
+  //HDMA is triggered on rising edge of combined signal
+  n1 previousState = status.hdmaActive && status.hblank;
+  n1 newState = active && hblank;
+  status.hdmaPending = previousState == 0 && newState == 1;
+}
+
+auto CPU::performHdma() -> void {
+  step(4);
+  for(u32 loop : range(16)) {
+    writeDMA(status.dmaTarget++, readDMA(status.dmaSource++, 0xff));
+    step(2 << status.speedDouble);
+  }
+  if(status.dmaLength-- == 0) {
+    status.hdmaActive = 0;
   }
 }

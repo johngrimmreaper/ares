@@ -25,12 +25,7 @@ auto VDP::load(Node::Object parent) -> void {
   screen->setSize(1280, 480);
   screen->setScale(0.25, 0.5);
   screen->setAspect(32, 35);
-
-  overscan = screen->append<Node::Setting::Boolean>("Overscan", true, [&](auto value) {
-    if(value == 0) screen->setSize(1280, 448);
-    if(value == 1) screen->setSize(1280, 480);
-  });
-  overscan->setDynamic(true);
+  screen->refreshRateHint(system.frequency(), 3420, frameHeight());
 
   psg.load(node);
   debugger.load(node);
@@ -39,7 +34,6 @@ auto VDP::load(Node::Object parent) -> void {
 auto VDP::unload() -> void {
   debugger = {};
   psg.unload();
-  overscan.reset();
   screen->quit();
   node->remove(screen);
   screen.reset();

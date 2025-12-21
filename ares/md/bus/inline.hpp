@@ -1,4 +1,5 @@
 alwaysinline auto Bus::read(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
+  if(auto result = platform->cheat(address)) return *result;
   if(address >= 0x000000 && address <= 0x3fffff) {
     waitRefreshExternal();
     if(!cpu.io.romEnable) {
@@ -32,6 +33,7 @@ alwaysinline auto Bus::read(n1 upper, n1 lower, n24 address, n16 data) -> n16 {
 
   if(address >= 0xa00000 && address <= 0xa0ffff) {
     if(!apu.busgrantedCPU()) return data;
+    if(cpu.active()) cpu.wait(1); // wait cycle for cpu->apu bus access (prevents Pac-Man 2 audio driver crash)
     address.bit(15) = 0;  //a080000-a0ffff mirrors a00000-a07fff
     //word reads load the even input byte into both output bytes
     auto byte = apu.read(address | !upper);  //upper==0 only on odd byte reads
@@ -93,6 +95,7 @@ alwaysinline auto Bus::write(n1 upper, n1 lower, n24 address, n16 data) -> void 
 
   if(address >= 0xa00000 && address <= 0xa0ffff) {
     if(!apu.busgrantedCPU()) return;
+    if(cpu.active()) cpu.wait(1); // wait cycle for cpu->apu bus access (prevents Pac-Man 2 audio driver crash)
     address.bit(15) = 0;  //a08000-a0ffff mirrors a00000-a07fff
     //word writes store the upper input byte into the lower output byte
     return apu.write(address | !upper, data.byte(upper));  //upper==0 only on odd byte reads

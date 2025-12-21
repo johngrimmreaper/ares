@@ -7,39 +7,49 @@ namespace ruby {
 }
 
 auto locate(const string& name) -> string {
-  // First, check the application directory
-  // This allows ares to function in 'portable' mode
+  // First check each path for the presence of the file we are looking for in the following order
+  // allowing users to override the default resources if they wish to do so.
+
+  // 1. The application directory
   string location = {Path::program(), name};
   if(inode::exists(location)) return location;
 
-  // On macOS, also check the AppBundle Resource path
-  #if defined(PLATFORM_MACOS)
-    location = {Path::program(), "../Resources/", name};
-    if(inode::exists(location)) return location;
-  #endif
-
-  // Check the userData directory, this is the default
-  // on non-windows platforms for any resouces that did not
-  // ship with the executable.
-  // On Windows, this allows settings from to be carried over
-  // from previous versions (pre-portable)
+  // 2. The user data directory
   location = {Path::userData(), "ares/", name};
   if(inode::exists(location)) return location;
 
-  // On non-windows platforms, this time check the shared
-  // data directory, on Windows, default to program dir,
-  // this ensures Portable mode is the default on Windows platforms.
-  #if !defined(PLATFORM_WINDOWS)
-    string shared_location = {Path::sharedData(), "ares/", name};
-    if(inode::exists(shared_location)) return shared_location;
+  // 3. The shared data directory
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_BSD)
+  /// Unix-like systems have multiple notions of a 'shared data' directory. First, check for
+  /// an install prefix, as would be used by package managers that do not use `/usr/share`.
+  /// Secondly, look in `/usr/local/share` to cover software compiled by the user.
+  /// Lastly, look in the 'global' shared data directory, `/usr/share`.
+  location = {Path::prefixSharedData(), "ares/", name};
+  if(inode::exists(location)) return location;
+  
+  location = {Path::localSharedData(), "ares/", name};
+  if(inode::exists(location)) return location;
+#endif
 
-    // On non-windows platforms, after exhausting other options,
-    // default to userData.
-    directory::create({Path::userData(), "ares/"});
-    return {Path::userData(), "ares/", name};
-  #else 
-    return {Path::program(), name};
-  #endif
+  location = {Path::sharedData(), "ares/", name};
+  if(inode::exists(location)) return location;
+
+  // 4. The application bundle resource directory (macOS only)
+#if defined(PLATFORM_MACOS)
+  location = {Path::resources(), name};
+  if(inode::exists(location)) return location;
+#endif
+
+  // If the file was not found in any of the above locations, we may be intending to create it
+#if defined(PLATFORM_WINDOWS)
+  // We must return a path to a user writable directory; on Windows, this is the executable directory
+  return {Path::program(), name};
+#else
+  // On other platforms, this is the "user data" directory
+  directory::create({Path::userData(), "ares/"});
+  return {Path::userData(), "ares/", name};
+#endif
+
 }
 
 #include <nall/main.hpp>
@@ -141,16 +151,15 @@ auto nall::main(Arguments arguments) -> void {
 
   program.startGameLoad.reset();
   for(auto argument : arguments) {
-    if(file::exists(argument)) program.startGameLoad.append(argument);
+    if(file::exists(argument) || directory::exists(argument)) program.startGameLoad.append(argument);
   }
 
   Instances::presentation.construct();
   Instances::settingsWindow.construct();
-  Instances::toolsWindow.construct();
   Instances::gameBrowserWindow.construct();
+  Instances::toolsWindow.construct();
 
   program.create();
-  presentation.loadEmulators();
   Application::onMain({&Program::main, &program});
   Application::run();
 

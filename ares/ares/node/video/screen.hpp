@@ -16,6 +16,7 @@ struct Screen : Video {
   auto scaleY() const -> f64 { return _scaleY; }
   auto aspectX() const -> f64 { return _aspectX; }
   auto aspectY() const -> f64 { return _aspectY; }
+  auto overscan() const -> bool { return _overscan; }
   auto colors() const -> u32 { return _colors; }
   auto pixels(bool frame = 0) -> array_span<u32>;
 
@@ -33,10 +34,13 @@ struct Screen : Video {
 
   auto setRefresh(function<void ()> refresh) -> void;
   auto setViewport(u32 x, u32 y, u32 width, u32 height) -> void;
+  auto refreshRateHint(double refreshRate) -> void;
+  auto refreshRateHint(double pixelFrequency, int dotsPerLine, int linesPerFrame) -> void;
 
   auto setSize(u32 width, u32 height) -> void;
   auto setScale(f64 scaleX, f64 scaleY) -> void;
   auto setAspect(f64 aspectX, f64 aspectY) -> void;
+  auto setOverscan(bool overscan) -> void;
 
   auto setSaturation(f64 saturation) -> void;
   auto setGamma(f64 gamma) -> void;
@@ -57,6 +61,9 @@ struct Screen : Video {
   auto colors(u32 colors, function<n64 (n32)> color) -> void;
   auto frame() -> void;
   auto refresh() -> void;
+  auto lookupPalette(u32 index) -> u32;
+  auto overrideLineDraw(u32 y, const u32* source) -> void;
+  auto clearOverrideLineDraw(u32 y) -> void;
 
   auto serialize(string& output, string depth) -> void override;
   auto unserialize(Markup::Node node) -> void override;
@@ -79,8 +86,9 @@ protected:
   f64  _luminance = 1.0;
   u32  _fillColor = 0;
   bool _colorBleed = false;
-  bool _colorBleedWidth = 1;
+  u32  _colorBleedWidth = 1;
   bool _interframeBlending = false;
+  bool _overscan = true;
   u32  _rotation = 0;  //counter-clockwise (90 = left, 270 = right)
 
   function<n64 (n32)> _color;
@@ -89,11 +97,15 @@ protected:
   unique_pointer<u32[]> _output;
   unique_pointer<u32[]> _rotate;
   unique_pointer<u32[]> _palette;
+  vector<n1> _lineOverrideActive;
+  vector<const u32*> _lineOverride;
   vector<Node::Video::Sprite> _sprites;
 
 //unserialized:
   nall::thread _thread;
   recursive_mutex _mutex;
+  mutex _frameMutex;
+  condition_variable _frameCondition;
   atomic<bool> _kill = false;
   atomic<bool> _frame = false;
   function<void ()> _refresh;

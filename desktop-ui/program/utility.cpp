@@ -1,4 +1,5 @@
 auto Program::pause(bool state) -> void {
+  Program::Guard guard;
   if(paused == state) return;
   paused = state;
   presentation.pauseEmulation.setChecked(paused);
@@ -10,12 +11,15 @@ auto Program::pause(bool state) -> void {
 }
 
 auto Program::mute() -> void {
+  Program::Guard guard;
   settings.audio.mute = !settings.audio.mute;
   presentation.muteAudioSetting.setChecked(settings.audio.mute);
 }
 
 auto Program::paletteUpdate() -> void {
+  Program::Guard guard;
   if(!emulator) return;
+  if(!emulator->root) return;
   for(auto& screen : emulator->root->find<ares::Node::Video::Screen>()) {
     screen->setLuminance(settings.video.luminance);
     screen->setSaturation(settings.video.saturation);
@@ -24,10 +28,12 @@ auto Program::paletteUpdate() -> void {
 }
 
 auto Program::runAheadUpdate() -> void {
+  Program::Guard guard;
   runAhead = settings.general.runAhead;
   if(!emulator) return;
   if(emulator->name == "Game Boy Advance") runAhead = false;  //crashes immediately
   if(emulator->name == "Nintendo 64") runAhead = false;  //too demanding
+  if(emulator->name == "Nintendo 64DD") runAhead = false;  //too demanding
   if(emulator->name == "PlayStation") runAhead = false;  //too demanding
 }
 
@@ -41,6 +47,7 @@ auto Program::captureScreenshot(const u32* data, u32 pitch, u32 width, u32 heigh
 }
 
 auto Program::openFile(BrowserDialog& dialog) -> string {
+  Program::Guard guard;
   BrowserWindow window;
   window.setTitle(dialog.title());
   window.setPath(dialog.path());
@@ -52,6 +59,7 @@ auto Program::openFile(BrowserDialog& dialog) -> string {
 }
 
 auto Program::selectFolder(BrowserDialog& dialog) -> string {
+  Program::Guard guard;
   BrowserWindow window;
   window.setTitle(dialog.title());
   window.setPath(dialog.path());

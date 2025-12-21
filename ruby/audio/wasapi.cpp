@@ -7,11 +7,57 @@
 #include <functiondiscoverykeys_devpkey.h>
 
 #if defined(_MSC_VER)
-  #define CLSID_MMDeviceEnumerator __uuidof(MMDeviceEnumerator)
-  #define IID_IMMDeviceEnumerator  __uuidof(IMMDeviceEnumerator)
-  #define IID_IAudioClient         __uuidof(IAudioClient)
-  #define IID_IAudioRenderClient   __uuidof(IAudioRenderClient)
+  #define CLSID_MMDeviceEnumerator                     __uuidof(MMDeviceEnumerator)
+  #define IID_IMMDeviceEnumerator                      __uuidof(IMMDeviceEnumerator)
+  #define IID_IAudioClient                             __uuidof(IAudioClient)
+  #define IID_IAudioRenderClient                       __uuidof(IAudioRenderClient)
+  #define IID_IActivateAudioInterfaceCompletionHandler __uuidof(IActivateAudioInterfaceCompletionHandler)
 #endif
+
+struct ActivateAudioInterfaceHandler : public IActivateAudioInterfaceCompletionHandler {
+  ActivateAudioInterfaceHandler& self = *this;
+  HANDLE completionEvent;
+
+  ActivateAudioInterfaceHandler() : refCount(1) {
+    self.completionEvent = CreateEvent(nullptr, false, false, nullptr);
+  }
+
+  ~ActivateAudioInterfaceHandler() {
+    CloseHandle(self.completionEvent);
+  }
+
+  auto __stdcall QueryInterface(REFIID riid, void** ppv) -> HRESULT {
+    if(riid == IID_IUnknown || riid == IID_IAgileObject || riid == IID_IActivateAudioInterfaceCompletionHandler) {
+      *ppv = (IActivateAudioInterfaceCompletionHandler*)&self;
+    } else {
+      *ppv = NULL;
+      return E_NOINTERFACE;
+    }
+    self.AddRef();
+    return S_OK;
+  } 
+
+  auto __stdcall AddRef() -> ULONG {
+    return InterlockedIncrement(&self.refCount);
+  }
+
+  auto __stdcall Release() -> ULONG {
+    if(InterlockedDecrement(&self.refCount) == 0){
+        delete &self;
+        return 0;
+    }
+    return self.refCount;
+  }
+
+  auto __stdcall ActivateCompleted(IActivateAudioInterfaceAsyncOperation *activateOperation) -> HRESULT {
+    if(!self.completionEvent) return E_FAIL;
+    if(!SetEvent(self.completionEvent)) return E_FAIL;
+    return S_OK;
+  }
+
+private:
+  long refCount;
+};
 
 struct AudioWASAPI : AudioDriver {
   AudioWASAPI& self = *this;
@@ -31,7 +77,13 @@ struct AudioWASAPI : AudioDriver {
   auto driver() -> string override { return "WASAPI"; }
   auto ready() -> bool override { return self.isReady; }
 
-  auto hasExclusive() -> bool override { return true; }
+  auto hasExclusive() -> bool override { 
+    if(auto device = self.getDevice()) {
+      return !(*device).isDefault;
+    } else {
+      return false;
+    }
+  }
   auto hasBlocking() -> bool override { return true; }
 
   auto hasDevices() -> vector<string> override {
@@ -93,20 +145,59 @@ private:
   struct Device {
     string id;
     string name;
+    bool isDefault;
   };
   vector<Device> devices;
 
+  auto getDevice() -> maybe<Device&> {
+    if(auto index = self.devices.find([&](auto& device) { return device.name == self.device; })) {
+      return self.devices[*index];
+    } else {
+      return nothing;
+    }
+  }
+
+  using PActivateAudioInterfaceAsync = HRESULT(__stdcall *)(LPCWSTR, REFIID, PROPVARIANT*, IActivateAudioInterfaceCompletionHandler*, IActivateAudioInterfaceAsyncOperation**);
+  maybe<bool> defaultDeviceSupported;
+  PActivateAudioInterfaceAsync activateAudioInterfaceAsync;
+
+  auto isDefaultDeviceSupported() -> bool {
+    if(self.defaultDeviceSupported) {
+      return *self.defaultDeviceSupported;
+    }
+
+    OSVERSIONINFOEX info{};
+    info.dwOSVersionInfoSize = sizeof(info);
+    info.dwBuildNumber = 14393;
+
+    DWORDLONG conditionMask = 0;
+    VER_SET_CONDITION(conditionMask, VER_BUILDNUMBER, VER_GREATER_EQUAL);
+    if(VerifyVersionInfo(&info, VER_BUILDNUMBER, conditionMask)) {
+      auto audioLib = LoadLibrary(L"mmdevapi");
+      self.activateAudioInterfaceAsync = (PActivateAudioInterfaceAsync)GetProcAddress(audioLib, "ActivateAudioInterfaceAsync");
+      self.defaultDeviceSupported = true;
+    } else {
+      self.defaultDeviceSupported = false;
+    }
+
+    return *self.defaultDeviceSupported;
+  }
+
   auto construct() -> bool {
+    if(self.isDefaultDeviceSupported()) {
+      PWSTR defaultDeviceString;
+      if(StringFromIID(DEVINTERFACE_AUDIO_RENDER, &defaultDeviceString) != S_OK) return false;
+
+      Device defaultDevice{};
+      defaultDevice.id = (const char*)utf8_t(defaultDeviceString);
+      defaultDevice.name = "Default";
+      defaultDevice.isDefault = true;
+
+      self.devices.append(defaultDevice);
+      CoTaskMemFree(defaultDeviceString);
+    }
+
     if(CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&self.enumerator) != S_OK) return false;
-
-    IMMDevice* defaultDeviceContext = nullptr;
-    if(self.enumerator->GetDefaultAudioEndpoint(eRender, eConsole, &defaultDeviceContext) != S_OK) return false;
-
-    Device defaultDevice;
-    LPWSTR defaultDeviceString = nullptr;
-    defaultDeviceContext->GetId(&defaultDeviceString);
-    defaultDevice.id = (const char*)utf8_t(defaultDeviceString);
-    CoTaskMemFree(defaultDeviceString);
 
     IMMDeviceCollection* deviceCollection = nullptr;
     if(self.enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &deviceCollection) != S_OK) return false;
@@ -119,6 +210,8 @@ private:
       if(deviceCollection->Item(deviceIndex, &deviceContext) != S_OK) continue;
 
       Device device;
+      device.isDefault = false;
+
       LPWSTR deviceString = nullptr;
       deviceContext->GetId(&deviceString);
       device.id = (const char*)utf8_t(deviceString);
@@ -131,11 +224,7 @@ private:
       device.name = (const char*)utf8_t(propVariant.pwszVal);
       propertyStore->Release();
 
-      if(device.id == defaultDevice.id) {
-        self.devices.prepend(device);
-      } else {
-        self.devices.append(device);
-      }
+      self.devices.append(device);
     }
 
     deviceCollection->Release();
@@ -154,20 +243,35 @@ private:
   auto initialize() -> bool {
     terminate();
 
-    string deviceID;
-    if(auto index = self.devices.find([&](auto& device) { return device.name == self.device; })) {
-      deviceID = self.devices[*index].id;
+    Device selectedDevice;
+    if(auto device = self.getDevice()) {
+      selectedDevice = *device;
     } else {
       return false;
     }
 
-    utf16_t deviceString(deviceID);
-    if(self.enumerator->GetDevice(deviceString, &self.audioDevice) != S_OK) return false;
+    utf16_t deviceString(selectedDevice.id);
+    if(selectedDevice.isDefault) {
+      ActivateAudioInterfaceHandler* handler = new ActivateAudioInterfaceHandler;
+      IActivateAudioInterfaceAsyncOperation* asyncOp;
+      if(self.activateAudioInterfaceAsync(deviceString, IID_IAudioClient, nullptr, handler, &asyncOp) != S_OK) return false;
+      WaitForSingleObject(handler->completionEvent, INFINITE);
+      handler->Release();
 
-    if(self.audioDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&self.audioClient) != S_OK) return false;
+      HRESULT activateResult;
+      IUnknown* activatedInterface;
+      if(asyncOp->GetActivateResult(&activateResult, &activatedInterface) != S_OK) return false;
+      asyncOp->Release();
+      if(activateResult != S_OK) return false;
+      self.audioClient = (IAudioClient*)activatedInterface;
+    } else {
+      if(self.enumerator->GetDevice(deviceString, &self.audioDevice) != S_OK) return false;
+
+      if(self.audioDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&self.audioClient) != S_OK) return false;
+    }
 
     WAVEFORMATEXTENSIBLE waveFormat{};
-    if(self.exclusive) {
+    if(self.exclusive && !selectedDevice.isDefault) {
       IPropertyStore* propertyStore = nullptr;
       if(self.audioDevice->OpenPropertyStore(STGM_READ, &propertyStore) != S_OK) return false;
       PROPVARIANT propVariant;

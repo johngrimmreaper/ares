@@ -4,8 +4,9 @@ struct Pak {
   virtual ~Pak() = default;
   virtual auto type() -> string { return pak->attribute("type"); }
   virtual auto name() -> string { return pak->attribute("name"); }
+  virtual auto saveName() -> string { return name(); }
   virtual auto extensions() -> vector<string> { return {}; }
-  virtual auto load(string location = {}) -> bool { return true; }
+  virtual auto load(string location = {}) -> LoadResult { return successful; }
   virtual auto loadMultiple(vector<string> location = {}) -> bool { return true; }
   virtual auto save(string location = {}) -> bool { return true; }
 

@@ -13,24 +13,25 @@ struct Emulator {
   auto load(const string& location) -> bool;
   auto load(shared_pointer<mia::Pak> pak, string& path) -> string;
   auto loadFirmware(const Firmware&) -> shared_pointer<vfs::file>;
-  auto unload() -> void;
+  virtual auto unload() -> void;
   auto refresh() -> void;
   auto setBoolean(const string& name, bool value) -> bool;
   auto setOverscan(bool value) -> bool;
   auto setColorBleed(bool value) -> bool;
   auto error(const string& text) -> void;
-  auto errorFirmware(const Firmware&, string system = "") -> void;
   auto load(mia::Pak& node, string name) -> bool;
   auto save(mia::Pak& node, string name) -> bool;
   virtual auto input(ares::Node::Input::Input) -> void;
   auto inputKeyboard(string name) -> bool;
+  auto handleLoadResult(LoadResult result) -> void;
   virtual auto load(Menu) -> void {}
-  virtual auto load() -> bool = 0;
+  virtual auto load() -> LoadResult = 0;
   virtual auto save() -> bool { return true; }
   virtual auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> = 0;
   virtual auto notify(const string& message) -> void {}
   virtual auto arcade() -> bool { return false; }
   virtual auto group() -> string { return manufacturer; }
+  virtual auto portMenu(Menu& portMenu, ares::Node::Port port) -> void {}
 
   struct Firmware {
     string type;
@@ -46,6 +47,8 @@ struct Emulator {
   vector<Firmware> firmware;
   shared_pointer<mia::Pak> system;
   shared_pointer<mia::Pak> game;
+  shared_pointer<mia::Pak> gamepad;
+  shared_pointer<mia::Pak> gb;
   vector<InputPort> ports;
   vector<string> inputBlacklist;
   vector<string> portBlacklist;

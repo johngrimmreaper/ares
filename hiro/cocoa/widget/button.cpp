@@ -1,6 +1,6 @@
 #if defined(Hiro_Button)
 
-@implementation CocoaButton : NSButton
+@implementation CocoaButton
 
 -(id) initWith:(hiro::mButton&)buttonReference {
   if(self = [super initWithFrame:NSMakeRect(0, 0, 0, 0)]) {
@@ -8,7 +8,7 @@
     [self setTarget:self];
     [self setAction:@selector(activate:)];
     //NSRoundedBezelStyle has a fixed height; which breaks both icons and larger/smaller text
-    [self setBezelStyle:NSRegularSquareBezelStyle];
+    [self setBezelStyle:NSBezelStyleRegularSquare];
   }
   return self;
 }

@@ -34,66 +34,89 @@ VDP vdp;
 auto VDP::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("VDP");
 
-  screen = node->append<Node::Video::Screen>("Screen", 1280, 480);
+  screen = node->append<Node::Video::Screen>("Screen", 1495, visibleHeight() * 2);
   screen->colors(1 << 16, {&VDP::color, this});
-  screen->setSize(1280, 480);
+  screen->setSize(1495, visibleHeight() * 2);
   screen->setScale(0.25, 0.5);
-  screen->setAspect(32, 35);
-
-  overscan = screen->append<Node::Setting::Boolean>("Overscan", true, [&](auto value) {
-    if(value == 0) screen->setSize(1280, 448);
-    if(value == 1) screen->setSize(1280, 480);
-  });
-  overscan->setDynamic(true);
+  Region::PAL() ? screen->setAspect(41.0, 37.0) : screen->setAspect(32.0, 35.0);
+  screen->refreshRateHint(system.frequency(), 3420, frameHeight());
 
   psg.load(node);
   debugger.load(node);
-
-  generateCycleTimings();
 }
 
 auto VDP::unload() -> void {
   debugger.unload();
   psg.unload();
-  overscan.reset();
   screen->quit();
   node->remove(screen);
   screen.reset();
   node.reset();
 }
 
+auto VDP::updateScreenParams() -> void {
+  if(Region::NTSC() && v28()) { state.topline = 0x1e5; state.bottomline = 0x0ea; }
+  if(Region::NTSC() && v30()) { state.topline = 0x000; state.bottomline = 0x1ff; }
+  if(Region::PAL()  && v28()) { state.topline = 0x1ca; state.bottomline = 0x102; }
+  if(Region::PAL()  && v30()) { state.topline = 0x1d2; state.bottomline = 0x10a; }
+}
+
 auto VDP::pixels() -> u32* {
   u32* output = nullptr;
-  if(overscan->value() == 0 && latch.overscan == 0) {
-    if(vcounter() >= 224) return nullptr;
-    output = screen->pixels().data() + (vcounter() - 0) * 2 * 1280;
+  n9 y = vcounter();
+
+  // disregard blanked lines
+  if(Region::NTSC() &&                    y >= 0x0e8 && y < 0x1f5) return nullptr;
+  if(Region::PAL()  &&  latch.overscan && y >= 0x108 && y < 0x1e2) return nullptr;
+  if(Region::PAL()  && !latch.overscan && y >= 0x100 && y < 0x1da) return nullptr;
+
+  // adjust vcounter to account for vsync period & vcounter jump
+  if(Region::NTSC() && y >= 0x0e8) y -= (0x1f5 - 0x0e8);
+  if(Region::PAL()  && y >= 0x108) y -= (0x1e2 - 0x108);
+
+  // adjust for top border
+  if(Region::NTSC()) y += 11;
+  if(Region::PAL() ) y += 38 - 8 * latch.overscan;
+  y = y % visibleHeight();
+
+  auto yScale = latch.interlace ? 2 : 1;
+  output = screen->pixels().data() + y * yScale * 1495;
+  if(latch.interlace) output += field() * 1495;
+
+  size_t megaLDExtraOverscanBorder = 40;
+  if(h40()) {
+    // H40 mode has slightly shorter lines, so sides are blanked.
+    for(auto n: range(13+megaLDExtraOverscanBorder)) output[                                  n] = 0b101 << 9;
+    for(auto n: range(14+megaLDExtraOverscanBorder)) output[1495-14-megaLDExtraOverscanBorder+n] = 0b101 << 9;
+
+    return output+13+megaLDExtraOverscanBorder;
   }
-  if(overscan->value() == 0 && latch.overscan == 1) {
-    if(vcounter() <=   7) return nullptr;
-    if(vcounter() >= 232) return nullptr;
-    output = screen->pixels().data() + (vcounter() - 8) * 2 * 1280;
-  }
-  if(overscan->value() == 1 && latch.overscan == 0) {
-    if(vcounter() >= 0x1f8) { // top border
-      output = screen->pixels().data() + (vcounter() - 0x1f8) * 2 * 1280;
-    } else if(vcounter() >= 232) {
-      return nullptr;
-    } else {
-      output = screen->pixels().data() + (vcounter() + 8) * 2 * 1280;
-    }
-  }
-  if(overscan->value() == 1 && latch.overscan == 1) {
-    if(vcounter() >= 240) return nullptr;
-    output = screen->pixels().data() + (vcounter() + 0) * 2 * 1280;
-  }
-  if(latch.interlace) output += field() * 1280;
-  return output;
+  for(auto n: range(megaLDExtraOverscanBorder)) output[                               n] = 0b101 << 9;
+  for(auto n: range(megaLDExtraOverscanBorder)) output[1495-megaLDExtraOverscanBorder+n] = 0b101 << 9;
+
+  return output+megaLDExtraOverscanBorder;
 }
 
 auto VDP::frame() -> void {
-  if(latch.interlace == 0) screen->setProgressive(1);
+  if(latch.interlace == 0) screen->setProgressive(0);
   if(latch.interlace == 1) screen->setInterlace(field());
-  screen->setViewport(0, 0, screen->width(), screen->height());
+  auto yScale = latch.interlace ? 2 : 1;
+  screen->setScale(0.25, 1.0 / yScale);
+
+  size_t megaLDExtraOverscanBorder = 40;
+  if(screen->overscan()) {
+    screen->setSize(1495 - (!MegaLD() ? megaLDExtraOverscanBorder * 2 : 0), visibleHeight() * yScale);
+    screen->setViewport((!MegaLD() ? megaLDExtraOverscanBorder : 0), 0, screen->width(), screen->height());
+  } else {
+    int x = 13 * 5 + (!MegaLD() ? megaLDExtraOverscanBorder : 0);
+    int y = Region::PAL() ? 30 + 8 * v28() : 11;
+    int width = 1280;
+    int height = screenHeight();
+
+    screen->setSize(width, height * yScale);
+    screen->setViewport(x, y * yScale, width, height * yScale);
+  }
+
   screen->frame();
   scheduler.exit(Event::Frame);
 }
@@ -110,6 +133,8 @@ auto VDP::power(bool reset) -> void {
 
   vram.mode = 0;
   vram.refreshing = 0;
+  cram.bus.active = 0;
+  cram.bus.data = 0;
   command = {};
   io = {};
   test = {};

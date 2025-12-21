@@ -1,4 +1,5 @@
 auto Program::videoDriverUpdate() -> void {
+  Program::Guard guard;
   ruby::video.create(settings.video.driver);
   ruby::video.setContext(presentation.viewport.handle());
   videoMonitorUpdate();
@@ -7,6 +8,9 @@ auto Program::videoDriverUpdate() -> void {
   ruby::video.setBlocking(settings.video.blocking);
   ruby::video.setFlush(settings.video.flush);
   ruby::video.setShader(settings.video.shader);
+  ruby::video.setForceSRGB(settings.video.forceSRGB);
+  ruby::video.setThreadedRenderer(settings.video.threadedRenderer);
+  ruby::video.setNativeFullScreen(settings.video.nativeFullScreen);
 
   if(!ruby::video.ready()) {
     MessageDialog().setText({"Failed to initialize ", settings.video.driver, " video driver."}).setAlignment(presentation).error();
@@ -18,6 +22,7 @@ auto Program::videoDriverUpdate() -> void {
 }
 
 auto Program::videoMonitorUpdate() -> void {
+  Program::Guard guard;
   if(!ruby::video.hasMonitor(settings.video.monitor)) {
     settings.video.monitor = ruby::video.monitor();
   }
@@ -25,6 +30,7 @@ auto Program::videoMonitorUpdate() -> void {
 }
 
 auto Program::videoFormatUpdate() -> void {
+  Program::Guard guard;
   if(!ruby::video.hasFormat(settings.video.format)) {
     settings.video.format = ruby::video.format();
   }
@@ -32,6 +38,7 @@ auto Program::videoFormatUpdate() -> void {
 }
 
 auto Program::videoFullScreenToggle() -> void {
+  Program::Guard guard;
   if(!ruby::video.hasFullScreen()) return;
 
   ruby::video.clear();
@@ -51,9 +58,23 @@ auto Program::videoFullScreenToggle() -> void {
   }
 }
 
-//
+auto Program::videoPseudoFullScreenToggle() -> void {
+  Program::Guard guard;
+  if(ruby::video.fullScreen()) return;
+
+  if(!presentation.fullScreen()) {
+    presentation.setFullScreen(true);
+    presentation.menuBar.setVisible(false);
+    if(!ruby::input.acquired() && ruby::video.hasMonitors().size() == 1) ruby::input.acquire();
+  } else {
+    if(ruby::input.acquired()) ruby::input.release();
+    presentation.menuBar.setVisible(true);
+    presentation.setFullScreen(false);
+  }
+}
 
 auto Program::audioDriverUpdate() -> void {
+  Program::Guard guard;
   ruby::audio.create(settings.audio.driver);
   ruby::audio.setContext(presentation.viewport.handle());
   audioDeviceUpdate();
@@ -71,6 +92,7 @@ auto Program::audioDriverUpdate() -> void {
 }
 
 auto Program::audioDeviceUpdate() -> void {
+  Program::Guard guard;
   if(!ruby::audio.hasDevice(settings.audio.device)) {
     settings.audio.device = ruby::audio.device();
   }
@@ -78,6 +100,7 @@ auto Program::audioDeviceUpdate() -> void {
 }
 
 auto Program::audioFrequencyUpdate() -> void {
+  Program::Guard guard;
   if(!ruby::audio.hasFrequency(settings.audio.frequency)) {
     settings.audio.frequency = ruby::audio.frequency();
   }
@@ -89,6 +112,7 @@ auto Program::audioFrequencyUpdate() -> void {
 }
 
 auto Program::audioLatencyUpdate() -> void {
+  Program::Guard guard;
   if(!ruby::audio.hasLatency(settings.audio.latency)) {
     settings.audio.latency = ruby::audio.latency();
   }
@@ -98,6 +122,7 @@ auto Program::audioLatencyUpdate() -> void {
 //
 
 auto Program::inputDriverUpdate() -> void {
+  Program::Guard guard;
   ruby::input.create(settings.input.driver);
   ruby::input.setContext(presentation.viewport.handle());
   ruby::input.onChange({&InputManager::eventInput, &inputManager});

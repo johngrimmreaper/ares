@@ -4,7 +4,8 @@ struct TIA : Thread {
   Node::Audio::Stream stream;
 
   auto vlines() const -> u32 { return Region::NTSC() ? 262 : 312; }
-  auto displayHeight() const -> u32 { return Region::NTSC() ? 192 : 228; }
+  auto displayHeight() const -> u32 { return Region::PAL() ? 243 : 228; }
+  auto voffset() const -> s32 { return Region::PAL() ? 40 : 20; }
 
   //tia.cpp
   auto load(Node::Object) -> void;
@@ -18,7 +19,6 @@ struct TIA : Thread {
   auto pixel(n8 x) -> void;
 
   auto runPlayfield(n8 x) -> n1;
-  auto runBall(n8 x) -> n1;
   auto runPlayer(n8 x, n1 index) -> n1;
   auto runMissile(n8 x, n1 index) -> n1;
   auto runCollision() -> void;
@@ -66,7 +66,7 @@ struct TIA : Thread {
   struct {
     u9 vcounter;
     u8 hcounter;
-    u8 hmoveTriggered;
+    n1 hmoveTriggered;
 
     n1 vsync;
     n1 vblank;
@@ -85,29 +85,55 @@ struct TIA : Thread {
     n1 priority;
   } playfield;
 
-  struct {
+  struct Missile {
+    auto step(u8 cycles = 1) -> void;
+    auto start() -> void;
+    auto reset() -> void;
+    auto width() -> u8;
+    auto stepPixelCounter() -> void;
+    n1 enable;
+    n1 lockedToPlayer;
+    n2 size;
+    n4 offset;
+    i9 counter;
+    u8 startCounter;
+    u8 pixelCounter;
+    u8 widthCounter;
+    n1 starting;
+    n1 output;
+  } missile[2];
+
+  struct Player {
+    Missile& missile;
+    auto step(u8 cycles = 1) -> void;
+    auto start(n1 copy) -> void;
+    auto reset() -> void;
+    auto width() -> u8;
+    auto stepPixelCounter() -> void;
     n8 graphics[2];
     n1 reflect;
     n3 size;
-    i4 offset;
-    n8 position;
+    n4 offset;
     n1 delay;
-  } player[2];
+    i9 counter;
+    u8 startCounter;
+    u8 pixelCounter;
+    u8 widthCounter;
+    n1 starting;
+    n1 output;
+    n1 copy;
+  } player[2] {{missile[0]}, {missile[1]}};
 
-  struct {
-    n1 enable;
-    n1 reset;
-    n2 size;
-    i4 offset;
-    n8 position;
-  } missile[2];
+  struct Ball {
+    auto step(u8 cycles = 1) -> void;
+    auto reset() -> void;
 
-  struct {
     n1 enable[2];
     n2 size;
-    i4 offset;
+    n4 offset;
     n1 delay;
-    n8 position;
+    i9 counter;
+    n1 output;
   } ball;
 
   struct {

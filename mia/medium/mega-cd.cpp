@@ -1,18 +1,24 @@
 struct MegaCD : CompactDisc {
   auto name() -> string override { return "Mega CD"; }
-  auto extensions() -> vector<string> override { return {"cue", "chd"}; }
-  auto load(string location) -> bool override;
+  auto extensions() -> vector<string> override {
+#if defined(ARES_ENABLE_CHD)
+    return {"cue", "chd"};
+#else
+    return {"cue"};
+#endif
+  }
+  auto load(string location) -> LoadResult override;
   auto save(string location) -> bool override;
   auto analyze(string location) -> string;
 };
 
-auto MegaCD::load(string location) -> bool {
-  if(!inode::exists(location)) return false;
+auto MegaCD::load(string location) -> LoadResult {
+  if(!inode::exists(location)) return romNotFound;
 
   this->location = location;
   this->manifest = analyze(location);
   auto document = BML::unserialize(manifest);
-  if(!document) return false;
+  if(!document) return couldNotParseManifest;
 
   pak = new vfs::directory;
   pak->setAttribute("title",  document["game/title"].string());
@@ -27,7 +33,7 @@ auto MegaCD::load(string location) -> bool {
     pak->append("cd.rom", vfs::cdrom::open(location));
   }
 
-  return true;
+  return successful;
 }
 
 auto MegaCD::save(string location) -> bool {
@@ -39,11 +45,7 @@ auto MegaCD::save(string location) -> bool {
 auto MegaCD::analyze(string location) -> string {
   vector<u8> sector;
 
-  if(location.iendsWith(".cue")) {
-      sector = readDataSectorCUE(location, 0);
-  } else if (location.iendsWith(".chd")) {
-      sector = readDataSectorCHD(location, 0);
-  }
+  sector = readDataSector(location, 0);
 
   if(!sector || memory::compare(sector.data(), "SEGA", 4))
     return CompactDisc::manifestAudio(location);

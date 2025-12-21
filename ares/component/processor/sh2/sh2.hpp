@@ -7,6 +7,7 @@
 namespace ares {
 
 struct SH2 {
+  virtual auto instructionPrologue(u16 instruction) -> void = 0;
   virtual auto step(u32 clocks) -> void = 0;
   virtual auto busReadByte(u32 address) -> u32 = 0;
   virtual auto busReadWord(u32 address) -> u32 = 0;
@@ -189,7 +190,7 @@ struct SH2 {
 
   //disassembler.cpp
   template<typename... P> auto hint(P&&...) const -> string;
-  auto disassembleInstruction() -> string;
+  auto disassembleInstruction(u16 opcode) -> string;
   auto disassembleContext() -> string;
 
   static constexpr u32 undefined = 0;
@@ -248,6 +249,10 @@ struct SH2 {
   s32 cyclesUntilRecompilerExit = 0;
   s32 recompilerStepCycles = 0;
 
+  auto instructionPrologueTrampoline(u16 instruction) -> void {
+    return instructionPrologue(instruction);  //virtual function call
+  }
+
   struct Recompiler : recompiler::generic {
     SH2& self;
     Recompiler(SH2& self) : self(self), generic(allocator) {}
@@ -278,7 +283,8 @@ struct SH2 {
     auto reset() -> void {
       generation = 0;
       blocks.reset();
-      for(u32 index : range(1 << 24)) pools[index] = nullptr;
+      pools.reallocate(1 << 24);
+      pools.fill();
     }
 
     auto invalidateCached() -> void {
@@ -299,12 +305,14 @@ struct SH2 {
 
     static auto mask(u8 address, u8 size) -> u64;
 
+    bool enabled = false;
+    bool callInstructionPrologue = false;
     bool inDelaySlot;
     u32 generation;
     bump_allocator allocator;
     hashset<BlockHashPair> blocks;
     u16 instructions[1 << 7];
-    Pool* pools[1 << 24];
+    vector<Pool*> pools;
   } recompiler{*this};
 
   #include "sh7604/sh7604.hpp"

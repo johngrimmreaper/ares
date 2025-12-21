@@ -1,6 +1,6 @@
 #if defined(Hiro_MenuRadioItem)
 
-@implementation CocoaMenuRadioItem : NSMenuItem
+@implementation CocoaMenuRadioItem
 
 -(id) initWith:(hiro::mMenuRadioItem&)menuRadioItemReference {
   if(self = [super initWithTitle:@"" action:@selector(activate) keyEquivalent:@""]) {
@@ -40,7 +40,7 @@ auto pMenuRadioItem::setChecked() -> void {
       if(auto object = weak.acquire()) {
         if(auto self = object->self()) {
           if(auto p = dynamic_cast<pMenuRadioItem*>(self)) {
-            auto state = this == p ? NSOnState : NSOffState;
+            auto state = this == p ? NSControlStateValueOn : NSControlStateValueOff;
             [p->cocoaAction setState:state];
           }
         }

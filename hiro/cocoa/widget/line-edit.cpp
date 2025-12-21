@@ -1,6 +1,6 @@
 #if defined(Hiro_LineEdit)
 
-@implementation CocoaLineEdit : NSTextField
+@implementation CocoaLineEdit
 
 -(id) initWith:(hiro::mLineEdit&)lineEditReference {
   if(self = [super initWithFrame:NSMakeRect(0, 0, 0, 0)]) {
@@ -56,11 +56,11 @@ auto pLineEdit::setEditable(bool editable) -> void {
 }
 
 auto pLineEdit::setForegroundColor(SystemColor color) -> void {
-  [[(CocoaLineEdit*)cocoaView cell] setTextColor: NSMakeColor(color)?: NSMakeColor(hiro::SystemColor::Text)];
+  [[(CocoaLineEdit*)cocoaView cell] setTextColor: NSMakeColor(color)];
 }
 
 auto pLineEdit::setForegroundColor(Color color) -> void {
-  [[(CocoaLineEdit*)cocoaView cell] setTextColor: NSMakeColor(color)?: NSMakeColor(hiro::SystemColor::Text)];
+  [[(CocoaLineEdit*)cocoaView cell] setTextColor: color ? NSMakeColor(color) : NSMakeColor(hiro::SystemColor::Text)];
 }
 
 auto pLineEdit::setText(const string& text) -> void {

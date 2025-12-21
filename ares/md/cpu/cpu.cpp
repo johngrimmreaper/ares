@@ -65,7 +65,7 @@ auto CPU::step(u32 clocks) -> void {
   refresh.ram += clocks;
   refresh.external += clocks;
   Thread::step(clocks);
-  cyclesUntilSync -= clocks;
+  cyclesUntilFullSync -= clocks;
 }
 
 inline auto CPU::idle(u32 clocks) -> void {
@@ -74,8 +74,10 @@ inline auto CPU::idle(u32 clocks) -> void {
 
 auto CPU::wait(u32 clocks) -> void {
   step(clocks);
-  if (cyclesUntilSync <= 0) {
-    cyclesUntilSync = minCyclesBetweenSyncs;
+
+  Thread::synchronize(apu, cartridge, opn2, vdp);
+  if (cyclesUntilFullSync <= 0) {
+    cyclesUntilFullSync = minCyclesBetweenSyncs;
     Thread::synchronize();
   }  
 }
@@ -93,7 +95,7 @@ auto CPU::power(bool reset) -> void {
   M68000::power();
   Thread::create(system.frequency() / 7.0, {&CPU::main, this});
 
-  tmssEnable = system.tmss->value();
+  tmssEnable = system.tmss;
   if(!reset) ram.fill();
 
   io = {};

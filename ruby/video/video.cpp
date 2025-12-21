@@ -1,33 +1,30 @@
 #if defined(VIDEO_CGL)
+  #if defined(__APPLE__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  #endif
+
   #include <ruby/video/cgl.cpp>
+
+  #if defined(__APPLE__)
+    #pragma clang diagnostic pop
+  #endif
 #endif
 
 #if defined(VIDEO_DIRECT3D9)
   #include <ruby/video/direct3d9.cpp>
 #endif
 
-#if defined(VIDEO_GDI)
-  #include <ruby/video/gdi.cpp>
-#endif
-
 #if defined(VIDEO_GLX)
   #include <ruby/video/glx.cpp>
-#endif
-
-#if defined(VIDEO_GLX2)
-  #include <ruby/video/glx2.cpp>
 #endif
 
 #if defined(VIDEO_WGL)
   #include <ruby/video/wgl.cpp>
 #endif
 
-#if defined(VIDEO_XSHM)
-  #include <ruby/video/xshm.cpp>
-#endif
-
-#if defined(VIDEO_XVIDEO)
-  #include <ruby/video/xvideo.cpp>
+#if defined(VIDEO_METAL)
+  #include <ruby/video/metal/metal.cpp>
 #endif
 
 namespace ruby {
@@ -72,6 +69,30 @@ auto Video::setBlocking(bool blocking) -> bool {
   return true;
 }
 
+auto Video::setForceSRGB(bool forceSRGB) -> bool {
+  lock_guard<recursive_mutex> lock(mutex);
+  if(instance->forceSRGB == forceSRGB) return true;
+  if(!instance->hasForceSRGB()) return false;
+  if(!instance->setForceSRGB(instance->forceSRGB = forceSRGB)) return false;
+  return true;
+}
+
+auto Video::setThreadedRenderer(bool threadedRenderer) -> bool {
+  lock_guard<recursive_mutex> lock(mutex);
+  if(instance->threadedRenderer == threadedRenderer) return true;
+  if(!instance->hasThreadedRenderer()) return false;
+  if(!instance->setThreadedRenderer(instance->threadedRenderer = threadedRenderer)) return false;
+  return true;
+}
+
+auto Video::setNativeFullScreen(bool nativeFullScreen) -> bool {
+  lock_guard<recursive_mutex> lock(mutex);
+  if(instance->nativeFullScreen == nativeFullScreen) return true;
+  if(!instance->hasNativeFullScreen()) return false;
+  if(!instance->setNativeFullScreen(instance->nativeFullScreen = nativeFullScreen)) return false;
+  return true;
+}
+
 auto Video::setFlush(bool flush) -> bool {
   lock_guard<recursive_mutex> lock(mutex);
   if(instance->flush == flush) return true;
@@ -94,6 +115,11 @@ auto Video::setShader(string shader) -> bool {
   if(!instance->hasShader()) return false;
   if(!instance->setShader(instance->shader = shader)) return false;
   return true;
+}
+
+auto Video::refreshRateHint(double refreshRate) -> void {
+  lock_guard<recursive_mutex> lock(mutex);
+  instance->refreshRateHint(refreshRate);
 }
 
 //
@@ -164,28 +190,16 @@ auto Video::create(string driver) -> bool {
   if(driver == "Direct3D 9.0") self.instance = new VideoDirect3D9(*this);
   #endif
 
-  #if defined(VIDEO_GDI)
-  if(driver == "GDI") self.instance = new VideoGDI(*this);
-  #endif
-
   #if defined(VIDEO_GLX)
   if(driver == "OpenGL 3.2") self.instance = new VideoGLX(*this);
-  #endif
-
-  #if defined(VIDEO_GLX2)
-  if(driver == "OpenGL 2.0") self.instance = new VideoGLX2(*this);
   #endif
 
   #if defined(VIDEO_WGL)
   if(driver == "OpenGL 3.2") self.instance = new VideoWGL(*this);
   #endif
-
-  #if defined(VIDEO_XSHM)
-  if(driver == "XShm") self.instance = new VideoXShm(*this);
-  #endif
-
-  #if defined(VIDEO_XVIDEO)
-  if(driver == "XVideo") self.instance = new VideoXVideo(*this);
+  
+  #if defined(VIDEO_METAL)
+  if(driver == "Metal") self.instance = new VideoMetal(*this);
   #endif
 
   if(!self.instance) self.instance = new VideoDriver(*this);
@@ -204,10 +218,6 @@ auto Video::hasDrivers() -> vector<string> {
   "Direct3D 9.0",
   #endif
 
-  #if defined(VIDEO_GDI)
-  "GDI",
-  #endif
-
   #if defined(VIDEO_CGL)
   "OpenGL 3.2",
   #endif
@@ -215,17 +225,9 @@ auto Video::hasDrivers() -> vector<string> {
   #if defined(VIDEO_GLX)
   "OpenGL 3.2",
   #endif
-
-  #if defined(VIDEO_GLX2)
-  "OpenGL 2.0",
-  #endif
-
-  #if defined(VIDEO_XVIDEO)
-  "XVideo",
-  #endif
-
-  #if defined(VIDEO_XSHM)
-  "XShm",
+    
+  #if defined(VIDEO_METAL)
+    "Metal",
   #endif
 
   "None"};
@@ -234,20 +236,14 @@ auto Video::hasDrivers() -> vector<string> {
 auto Video::optimalDriver() -> string {
   #if defined(VIDEO_WGL)
   return "OpenGL 3.2";
-  #elif defined(VIDEO_DIRECT3D9)
-  return "Direct3D 9.0";
-  #elif defined(VIDEO_GDI)
-  return "GDI";
-  #elif defined(VIDEO_CGL)
-  return "OpenGL 3.2";
+  #elif defined(VIDEO_METAL)
+  return "Metal";
   #elif defined(VIDEO_GLX)
   return "OpenGL 3.2";
-  #elif defined(VIDEO_GLX2)
-  return "OpenGL 2.0";
-  #elif defined(VIDEO_XVIDEO)
-  return "XVideo";
-  #elif defined(VIDEO_XSHM)
-  return "XShm";
+  #elif defined(VIDEO_DIRECT3D9)
+  return "Direct3D 9.0";
+  #elif defined(VIDEO_CGL)
+  return "OpenGL 3.2";
   #else
   return "None";
   #endif
@@ -258,18 +254,12 @@ auto Video::safestDriver() -> string {
   return "Direct3D 9.0";
   #elif defined(VIDEO_WGL)
   return "OpenGL 3.2";
-  #elif defined(VIDEO_GDI)
-  return "GDI";
   #elif defined(VIDEO_CGL)
   return "OpenGL 3.2";
-  #elif defined(VIDEO_XSHM)
-  return "XShm";
-  #elif defined(VIDEO_XVIDEO)
-  return "XVideo";
-  #elif defined(VIDEO_GLX2)
-  return "OpenGL 2.0";
   #elif defined(VIDEO_GLX)
   return "OpenGL 3.2";
+  #elif defined(VIDEO_METAL)
+  return "Metal";
   #else
   return "None";
   #endif
@@ -327,28 +317,33 @@ auto Video::hasMonitors() -> vector<Monitor> {
       monitor.y = rectangle.origin.y;
       monitor.width = rectangle.size.width;
       monitor.height = rectangle.size.height;
-      //getting the name of the monitor on macOS: "Think Different"
-      auto screenDictionary = [screen deviceDescription];
-      auto screenID = [screenDictionary objectForKey:@"NSScreenNumber"];
-      auto displayID = [screenID unsignedIntValue];
-      CFUUIDRef displayUUID = CGDisplayCreateUUIDFromDisplayID(displayID);
-      io_service_t displayPort = CGDisplayGetDisplayIDFromUUID(displayUUID);
-      auto dictionary = IODisplayCreateInfoDictionary(displayPort, 0);
-      CFRetain(dictionary);
-      if(auto names = (CFDictionaryRef)CFDictionaryGetValue(dictionary, CFSTR(kDisplayProductName))) {
-        auto languageKeys = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
-        CFDictionaryApplyFunction(names, MonitorKeyArrayCallback, (void*)languageKeys);
-        auto orderLanguageKeys = CFBundleCopyPreferredLocalizationsFromArray(languageKeys);
-        CFRelease(languageKeys);
-        if(orderLanguageKeys && CFArrayGetCount(orderLanguageKeys)) {
-          auto languageKey = CFArrayGetValueAtIndex(orderLanguageKeys, 0);
-          auto localName = CFDictionaryGetValue(names, languageKey);
-          monitor.name = {1 + monitors.size(), ": ", [(__bridge NSString*)localName UTF8String]};
-          CFRelease(localName);
+      monitor.nativeHandle = (uintptr)screen;
+      if (@available(macOS 10.15, *)) {
+        monitor.name = {1 + monitors.size(), ": ", screen.localizedName.UTF8String};
+      } else {
+        //getting the name of the monitor on macOS: "Think Different"
+        auto screenDictionary = [screen deviceDescription];
+        id screenID = [screenDictionary objectForKey:@"NSScreenNumber"];
+        auto displayID = [screenID unsignedIntValue];
+        CFUUIDRef displayUUID = CGDisplayCreateUUIDFromDisplayID(displayID);
+        io_service_t displayPort = CGDisplayGetDisplayIDFromUUID(displayUUID);
+        auto dictionary = IODisplayCreateInfoDictionary(displayPort, 0);
+        CFRetain(dictionary);
+        if(auto names = (CFDictionaryRef)CFDictionaryGetValue(dictionary, CFSTR(kDisplayProductName))) {
+          auto languageKeys = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+          CFDictionaryApplyFunction(names, MonitorKeyArrayCallback, (void*)languageKeys);
+          auto orderLanguageKeys = CFBundleCopyPreferredLocalizationsFromArray(languageKeys);
+          CFRelease(languageKeys);
+          if(orderLanguageKeys && CFArrayGetCount(orderLanguageKeys)) {
+            auto languageKey = CFArrayGetValueAtIndex(orderLanguageKeys, 0);
+            auto localName = CFDictionaryGetValue(names, languageKey);
+            monitor.name = {1 + monitors.size(), ": ", [(__bridge NSString*)localName UTF8String]};
+            CFRelease(localName);
+          }
+          CFRelease(orderLanguageKeys);
         }
-        CFRelease(orderLanguageKeys);
+        CFRelease(dictionary);
       }
-      CFRelease(dictionary);
       monitors.append(monitor);
     }
   }

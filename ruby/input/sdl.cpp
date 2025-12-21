@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #if defined(PLATFORM_WINDOWS)
 #include "shared/rawinput.cpp"
@@ -6,7 +6,7 @@
 #include "mouse/rawinput.cpp"
 #elif defined(PLATFORM_MACOS)
 #include "keyboard/quartz.cpp"
-#include "joypad/iokit.cpp"
+#include "mouse/nsmouse.cpp"
 #else
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -88,7 +88,7 @@ private:
   InputMouseRawInput mouse;
 #elif defined(PLATFORM_MACOS)
   InputKeyboardQuartz keyboard;
-  InputJoypadIOKit joypad;
+  InputMouseNS mouse;
 #else
   InputKeyboardXlib keyboard;
   InputMouseXlib mouse;

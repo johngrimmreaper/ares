@@ -5,6 +5,7 @@ namespace ares::SuperFamicom {
 PPUBase ppu;
 PPU ppuImpl;
 
+#undef ppu
 #define ppu ppuImpl
 
 #include "main.cpp"
@@ -32,11 +33,18 @@ auto PPUBase::setAccurate(bool value) -> void {
 auto PPU::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("PPU");
 
-  screen = node->append<Node::Video::Screen>("Screen", 512, 480);
+  screen = node->append<Node::Video::Screen>("Screen", 564, height() * 2);
+
+  deepBlackBoost = screen->append<Node::Setting::Boolean>("Deep Black Boost", true, [&](auto value) {
+    screen->resetPalette();
+  });
+  deepBlackBoost->setDynamic(true);
+
   screen->colors(1 << 19, {&PPU::color, this});
-  screen->setSize(512, 480);
+  screen->setSize(564, height() * 2);
   screen->setScale(0.5, 0.5);
-  screen->setAspect(8.0, 7.0);
+  Region::PAL() ? screen->setAspect(55.0, 43.0) :screen->setAspect(8.0, 7.0);
+  screen->refreshRateHint(system.cpuFrequency(), 1364, Region::PAL() ? 312 : 262);
 
   versionPPU1 = node->append<Node::Setting::Natural>("PPU1 Version", 1);
   versionPPU1->setAllowedValues({1});
@@ -47,17 +55,6 @@ auto PPU::load(Node::Object parent) -> void {
   vramSize = node->append<Node::Setting::Natural>("VRAM", 64_KiB);
   vramSize->setAllowedValues({64_KiB, 128_KiB});
 
-  overscanEnable = screen->append<Node::Setting::Boolean>("Overscan", true, [&](auto value) {
-    if(value == 0) screen->setSize(512, 448);
-    if(value == 1) screen->setSize(512, 480);
-  });
-  overscanEnable->setDynamic(true);
-
-  deepBlackBoost = screen->append<Node::Setting::Boolean>("Deep Black Boost", true, [&](auto value) {
-    screen->resetPalette();
-  });
-  deepBlackBoost->setDynamic(true);
-
   debugger.load(node);
 }
 
@@ -66,7 +63,6 @@ auto PPU::unload() -> void {
   versionPPU1.reset();
   versionPPU2.reset();
   vramSize.reset();
-  overscanEnable.reset();
   deepBlackBoost.reset();
   screen->quit();
   node->remove(screen);

@@ -1,7 +1,15 @@
+auto PPU::Objects::setEnable(n1 status) -> void {
+  io.enable[3] = status;
+  for(auto& flag : io.enable) flag &= status;
+}
+
 auto PPU::Objects::scanline(u32 y) -> void {
+  if(y >= 160) return;
+
   mosaicOffset = 0;
+  auto& buffer = lineBuffers[y & 1];
   for(auto& pixel : buffer) pixel = {};
-  if(ppu.blank() || !io.enable) return;
+  if(ppu.io.forceBlank[1] || cpu.stopped() || !io.enable[1]) return;  //checks if display conditions will be met next scanline
 
   for(auto& object : ppu.object) {
     n8 py = y - object.y;
@@ -56,12 +64,12 @@ auto PPU::Objects::scanline(u32 y) -> void {
           }
         } else if(!buffer[bx].enable || object.priority < buffer[bx].priority) {
           buffer[bx].priority = object.priority;  //updated regardless of transparency
+          buffer[bx].mosaic = object.mosaic;  //updated regardless of transparency
           if(color) {
             if(object.colors == 0) color = object.palette * 16 + color;
             buffer[bx].enable = true;
-            buffer[bx].color = ppu.pram[256 + color];
+            buffer[bx].color = 256 + color;
             buffer[bx].translucent = object.mode == 1;
-            buffer[bx].mosaic = object.mosaic;
           }
         }
       }
@@ -72,25 +80,31 @@ auto PPU::Objects::scanline(u32 y) -> void {
   }
 }
 
-auto PPU::Objects::run(u32 x, u32 y) -> void {
+auto PPU::Objects::outputPixel(u32 x, u32 y) -> void {
   output = {};
-  if(ppu.blank() || !io.enable) {
+  if(ppu.blank() || !io.enable[0]) {
     mosaic = {};
     return;
   }
 
+  auto& buffer = lineBuffers[y & 1];
   output = buffer[x];
-
+  
   //horizontal mosaic
-  if(!output.mosaic || ++mosaicOffset >= 1 + io.mosaicWidth) {
-    mosaicOffset = 0;
+  if(!mosaicOffset) {
+    mosaicOffset = 1 + io.mosaicWidth;
+    mosaic = output;
+  } else if(!mosaic.mosaic || !output.mosaic) {
     mosaic = output;
   }
+  mosaicOffset--;
 }
 
 auto PPU::Objects::power() -> void {
   io = {};
-  for(auto& pixel : buffer) pixel = {};
+  for(auto& buffer : lineBuffers) {
+    for(auto& pixel : buffer) pixel = {};
+  }
   output = {};
   mosaic = {};
   mosaicOffset = 0;

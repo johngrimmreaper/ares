@@ -1,6 +1,6 @@
 #if defined(Hiro_TableView)
 
-@implementation CocoaTableView : NSScrollView
+@implementation CocoaTableView
 
 -(id) initWith:(hiro::mTableView&)tableViewReference {
   if(self = [super initWithFrame:NSMakeRect(0, 0, 0, 0)]) {
@@ -159,24 +159,24 @@
 }
 
 -(NSMenu*) menuForEvent:(NSEvent*)event {
-  //macOS doesn't set focus to right-clicked items, but this is neccesary for context menus:
-  //todo: select the current column as well so that doContext(cell) works correctly
-  NSInteger row = [self rowAtPoint:[self convertPoint:event.locationInWindow fromView:nil]];
-  if(row >= 0 && ![self isRowSelected:row]) {
+  NSPoint localPoint = [self convertPoint:event.locationInWindow fromView:nil];
+  NSInteger row = [self rowAtPoint:localPoint];
+  NSInteger column = [self columnAtPoint:localPoint];
+  
+  if (row < 0 || row >= tableView->state.items.size()) {
+    return nil;
+  }
+
+  if (row >= 0 && ![self isRowSelected:row]) {
     [self selectRowIndexes:[NSIndexSet indexSetWithIndex:row] byExtendingSelection:NO];
   }
 
-#if 0 // breaks the build
-  s32 row = [content clickedRow];
-  if(row >= 0 && _row < tableView->state.items.size()) {
-    s32 column = [content clickedColumn];
-    if(column >= 0 && column < tableView->state.columns.size()) {
-      auto item = tableView->state.items[row];
-      auto cell = item->cell(column);
-      tableView->doContext(cell);
-    }
+  if(column >= 0 && column < tableView->state.columns.size()) {
+    auto item = tableView->state.items[row];
+    auto cell = item->cell(column);
+    tableView->doContext(cell);
   }
-#endif
+
   return nil;
 }
 
@@ -202,8 +202,8 @@
   if(self = [super initTextCell:@""]) {
     tableView = &tableViewReference;
     buttonCell = [[NSButtonCell alloc] initTextCell:@""];
-    [buttonCell setButtonType:NSSwitchButton];
-    [buttonCell setControlSize:NSSmallControlSize];
+    [buttonCell setButtonType:NSButtonTypeSwitch];
+    [buttonCell setControlSize:NSControlSizeSmall];
     [buttonCell setRefusesFirstResponder:YES];
     [buttonCell setTarget:self];
     textCell = [[NSTextFieldCell alloc] init];
@@ -222,7 +222,7 @@
     if(auto tableViewCell = tableViewItem->cell([view columnAtPoint:frame.origin])) {
       if(tableViewCell->state.checkable) {
         [buttonCell setHighlighted:YES];
-        [buttonCell setState:(tableViewCell->state.checked ? NSOnState : NSOffState)];
+        [buttonCell setState:(tableViewCell->state.checked ? NSControlStateValueOn : NSControlStateValueOff)];
         [buttonCell drawWithFrame:frame inView:view];
         frame.origin.x += frame.size.height + 2;
         frame.size.width -= frame.size.height + 2;
@@ -236,7 +236,7 @@
         NSRect targetRect = NSMakeRect(frame.origin.x + 2, frame.origin.y + (frame.size.height - image.size.height) / 2,
                                        image.size.width, image.size.height);
         NSRect sourceRect = NSMakeRect(0, 0, image.size.width, image.size.height);
-        [image drawInRect:targetRect fromRect:sourceRect operation:NSCompositeSourceOver fraction:1.0 respectFlipped:YES hints:nil];
+        [image drawInRect:targetRect fromRect:sourceRect operation:NSCompositingOperationSourceOver fraction:1.0 respectFlipped:YES hints:nil];
         [[NSGraphicsContext currentContext] restoreGraphicsState];
         frame.origin.x += image.size.width + 4;
         frame.size.width -= image.size.width + 4;
@@ -276,11 +276,11 @@
 //so instead, I have to run a modal loop on events until the mouse button is released
 -(BOOL) trackMouse:(NSEvent*)event inRect:(NSRect)frame ofView:(NSView*)_view untilMouseUp:(BOOL)flag {
   NSTableView* view = (NSTableView*)_view;
-  if([event type] == NSLeftMouseDown) {
+  if([event type] == NSEventTypeLeftMouseDown) {
     NSWindow* window = [view window];
     NSEvent* nextEvent;
-    while((nextEvent = [window nextEventMatchingMask:(NSLeftMouseDragged | NSLeftMouseUp)])) {
-      if([nextEvent type] == NSLeftMouseUp) {
+    while((nextEvent = [window nextEventMatchingMask:(NSEventTypeLeftMouseDragged | NSEventTypeLeftMouseUp)])) {
+      if([nextEvent type] == NSEventTypeLeftMouseUp) {
         NSPoint point = [view convertPoint:[nextEvent locationInWindow] fromView:nil];
         NSRect rect = NSMakeRect(frame.origin.x, frame.origin.y, frame.size.height, frame.size.height);
         if(NSMouseInRect(point, rect, [view isFlipped])) {

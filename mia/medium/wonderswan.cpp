@@ -1,30 +1,31 @@
 struct WonderSwan : Cartridge {
   auto name() -> string override { return "WonderSwan"; }
   auto extensions() -> vector<string> override { return {"ws"}; }
-  auto load(string location) -> bool override;
+  auto load(string location) -> LoadResult override;
   auto save(string location) -> bool override;
   auto analyze(vector<u8>& rom) -> string;
   virtual auto mapper(vector<u8>& rom) -> string;
 };
 
-auto WonderSwan::load(string location) -> bool {
+auto WonderSwan::load(string location) -> LoadResult {
   vector<u8> rom;
   if(directory::exists(location)) {
     append(rom, {location, "program.rom"});
   } else if(file::exists(location)) {
     rom = Cartridge::read(location);
   }
-  if(!rom) return false;
+  if(!rom) return romNotFound;
 
   this->location = location;
   this->manifest = analyze(rom);
   auto document = BML::unserialize(manifest);
-  if(!document) return false;
+  if(!document) return couldNotParseManifest;
 
   pak = new vfs::directory;
   pak->setAttribute("title", document["game/title"].string());
   pak->setAttribute("orientation", document["game/orientation"].string());
   pak->setAttribute("board", document["game/board"].string());
+  pak->setAttribute("width", document["game/board/memory(content=Program)/width"].string());
   pak->append("manifest.bml", manifest);
   if(auto node = document["game/board/memory(type=Flash,content=Program)"]) {
     pak->append("program.flash", rom);
@@ -43,7 +44,7 @@ auto WonderSwan::load(string location) -> bool {
     Medium::load(node, ".rtc");
   }
 
-  return true;
+  return successful;
 }
 
 auto WonderSwan::save(string location) -> bool {
@@ -84,7 +85,7 @@ auto WonderSwan::analyze(vector<u8>& rom) -> string {
   string ramType;
   u32 ramSize = 0;
   switch(metadata[11]) {
-  case 0x01: ramType = "RAM";    ramSize =    8_KiB; break;
+  case 0x01: ramType = "RAM";    ramSize =   32_KiB; break;
   case 0x02: ramType = "RAM";    ramSize =   32_KiB; break;
   case 0x03: ramType = "RAM";    ramSize =  128_KiB; break;
   case 0x04: ramType = "RAM";    ramSize =  256_KiB; break;
@@ -95,7 +96,8 @@ auto WonderSwan::analyze(vector<u8>& rom) -> string {
   }
 
   bool orientation = metadata[12] & 1;  //0 = horizontal; 1 = vertical
-  bool hasRTC = metadata[13] & 1;
+  bool isWideBus = metadata[12] & 4;    //0 = 8-bit; 1 = 16-bit
+  bool hasRTC = metadata[13] == 1;
   bool isWonderWitch = rom.size() == 0x80000
     && rom[0x70000] == 'E'   // FreyaBIOS header
     && rom[0x70001] == 'L'
@@ -119,6 +121,8 @@ auto WonderSwan::analyze(vector<u8>& rom) -> string {
   if(!isWonderWitch) s += "      type: ROM\n";
   if(isWonderWitch)  s += "      type: Flash\n";
   s +={"      size: 0x", hex(rom.size()), "\n"};
+  if(!isWideBus)     s += "      width: 8\n";
+  if(isWideBus)      s += "      width: 16\n";
   s += "      content: Program\n";
 
   if(ramType && ramSize) {

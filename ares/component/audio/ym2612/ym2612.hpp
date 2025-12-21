@@ -45,6 +45,7 @@ protected:
     auto run() -> void;
 
     n1  enable = 0;
+    n1  enableLatch = 0;
     n1  irq = 0;
     n1  line = 0;
     n10 period = 0;
@@ -56,6 +57,7 @@ protected:
     auto run() -> void;
 
     n1 enable = 0;
+    n1 enableLatch = 0;
     n1 irq = 0;
     n1 line = 0;
     n8 period = 0;
@@ -106,7 +108,8 @@ protected:
 
       n1 keyOn = 0;
       n1 keyLine = 0;
-      n1 lfoEnable = 0;
+      n1 tremoloEnable = 0;
+      n5 keyScale = 0;
       n3 detune = 0;
       n4 multiple = 0;
       n7 totalLevel = 0;
@@ -140,7 +143,7 @@ protected:
         n32 steps = 0;
         n10 value = 0x3ff;
 
-        n2  keyScale = 0;
+        n2  rateScaling = 0;
         n5  attackRate = 0;
         n5  decayRate = 0;
         n5  sustainRate = 0;

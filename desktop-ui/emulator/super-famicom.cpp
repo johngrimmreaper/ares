@@ -1,6 +1,6 @@
 struct SuperFamicom : Emulator {
   SuperFamicom();
-  auto load() -> bool override;
+  auto load() -> LoadResult override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
@@ -29,6 +29,22 @@ SuperFamicom::SuperFamicom() {
     device.digital("Start",  virtualPorts[id].pad.start);
     port.append(device); }
 
+  { InputDevice device{"Rumble Gamepad"};
+    device.digital("Up",     virtualPorts[id].pad.up);
+    device.digital("Down",   virtualPorts[id].pad.down);
+    device.digital("Left",   virtualPorts[id].pad.left);
+    device.digital("Right",  virtualPorts[id].pad.right);
+    device.digital("B",      virtualPorts[id].pad.south);
+    device.digital("A",      virtualPorts[id].pad.east);
+    device.digital("Y",      virtualPorts[id].pad.west);
+    device.digital("X",      virtualPorts[id].pad.north);
+    device.digital("L",      virtualPorts[id].pad.l_bumper);
+    device.digital("R",      virtualPorts[id].pad.r_bumper);
+    device.digital("Select", virtualPorts[id].pad.select);
+    device.digital("Start",  virtualPorts[id].pad.start);
+    device.rumble("Rumble",  virtualPorts[id].pad.rumble);
+    port.append(device); }
+
   { InputDevice device{"Justifier"};
     device.relative("X",       virtualPorts[id].mouse.x);
     device.relative("Y",       virtualPorts[id].mouse.y);
@@ -41,6 +57,36 @@ SuperFamicom::SuperFamicom() {
     device.relative("Y",     virtualPorts[id].mouse.y);
     device.digital ("Left",  virtualPorts[id].mouse.left);
     device.digital ("Right", virtualPorts[id].mouse.right);
+    port.append(device); }
+
+  { InputDevice device{"NTT Data Keypad"};
+    device.digital("Up", virtualPorts[id].pad.up);
+    device.digital("Down", virtualPorts[id].pad.down);
+    device.digital("Left", virtualPorts[id].pad.left);
+    device.digital("Right", virtualPorts[id].pad.right);
+    device.digital("B", virtualPorts[id].pad.south);
+    device.digital("A", virtualPorts[id].pad.east);
+    device.digital("Y", virtualPorts[id].pad.west);
+    device.digital("X", virtualPorts[id].pad.north);
+    device.digital("L", virtualPorts[id].pad.l_bumper);
+    device.digital("R", virtualPorts[id].pad.r_bumper);
+    device.digital("Back", virtualPorts[id].pad.select);
+    device.digital("Next", virtualPorts[id].pad.start);
+    device.digital("1", virtualPorts[id].pad.one);
+    device.digital("2", virtualPorts[id].pad.two);
+    device.digital("3", virtualPorts[id].pad.three);
+    device.digital("4", virtualPorts[id].pad.four);
+    device.digital("5", virtualPorts[id].pad.five);
+    device.digital("6", virtualPorts[id].pad.six);
+    device.digital("7", virtualPorts[id].pad.seven);
+    device.digital("8", virtualPorts[id].pad.eight);
+    device.digital("9", virtualPorts[id].pad.nine);
+    device.digital("0", virtualPorts[id].pad.zero);
+    device.digital("*", virtualPorts[id].pad.star);
+    device.digital("C", virtualPorts[id].pad.clear);
+    device.digital("#", virtualPorts[id].pad.pound);
+    device.digital(".", virtualPorts[id].pad.point);
+    device.digital("End", virtualPorts[id].pad.end);
     port.append(device); }
 
   { InputDevice device{"Super Scope"};
@@ -60,20 +106,24 @@ SuperFamicom::SuperFamicom() {
     ports.append(port);
   }
 
-  inputBlacklist = {"Justifiers", "NTT Data Keypad", "Super Multitap"};
+  inputBlacklist = {"Justifiers", "Super Multitap"};
 }
 
-auto SuperFamicom::load() -> bool {
+auto SuperFamicom::load() -> LoadResult {
   game = mia::Medium::create("Super Famicom");
-  if(!game->load(Emulator::load(game, configuration.game))) return false;
+  string location = Emulator::load(game, configuration.game);
+  if(!location) return noFileSelected;
+  LoadResult result = game->load(location);
+  if(result != successful) return result;
 
   system = mia::System::create("Super Famicom");
-  if(!system->load()) return false;
+  result = system->load();
+  if(result != successful) return result;
 
   ares::SuperFamicom::option("Pixel Accuracy", settings.video.pixelAccuracy);
 
   auto region = Emulator::region();
-  if(!ares::SuperFamicom::load(root, {"[Nintendo] Super Famicom (", region, ")"})) return false;
+  if(!ares::SuperFamicom::load(root, {"[Nintendo] Super Famicom (", region, ")"})) return otherError;
 
   if(auto port = root->find<ares::Node::Port>("Cartridge Slot")) {
     auto cartridge = port->allocate();
@@ -81,7 +131,7 @@ auto SuperFamicom::load() -> bool {
 
     if(auto slot = cartridge->find<ares::Node::Port>("Super Game Boy/Cartridge Slot")) {
       gb = mia::Medium::create("Game Boy");
-      if(gb->load(Emulator::load(gb, settings.paths.superFamicom.gameBoy))) {
+      if(gb->load(Emulator::load(gb, settings.paths.superFamicom.gameBoy)) == successful) {
         slot->allocate();
         slot->connect();
       } else {
@@ -91,7 +141,7 @@ auto SuperFamicom::load() -> bool {
 
     if(auto slot = cartridge->find<ares::Node::Port>("BS Memory Slot")) {
       bs = mia::Medium::create("BS Memory");
-      if(bs->load(Emulator::load(bs, settings.paths.superFamicom.bsMemory))) {
+      if(bs->load(Emulator::load(bs, settings.paths.superFamicom.bsMemory)) == successful) {
         slot->allocate();
         slot->connect();
       } else {
@@ -101,7 +151,7 @@ auto SuperFamicom::load() -> bool {
 
     if(auto slot = cartridge->find<ares::Node::Port>("Sufami Turbo Slot A")) {
       stA = mia::Medium::create("Sufami Turbo");
-      if(stA->load(Emulator::load(stA, settings.paths.superFamicom.sufamiTurbo))) {
+      if(stA->load(Emulator::load(stA, settings.paths.superFamicom.sufamiTurbo)) == successful) {
         slot->allocate();
         slot->connect();
       } else {
@@ -111,7 +161,7 @@ auto SuperFamicom::load() -> bool {
 
     if(auto slot = cartridge->find<ares::Node::Port>("Sufami Turbo Slot B")) {
       stB = mia::Medium::create("Sufami Turbo");
-      if(stB->load(Emulator::load(stB, settings.paths.superFamicom.sufamiTurbo))) {
+      if(stB->load(Emulator::load(stB, settings.paths.superFamicom.sufamiTurbo)) == successful) {
         slot->allocate();
         slot->connect();
       } else {
@@ -130,7 +180,7 @@ auto SuperFamicom::load() -> bool {
     port->connect();
   }
 
-  return true;
+  return successful;
 }
 
 auto SuperFamicom::save() -> bool {

@@ -1,12 +1,13 @@
 struct MegaCD : Emulator {
   MegaCD();
-  auto load() -> bool override;
+  auto load() -> LoadResult override;
   auto load(Menu) -> void override;
+  auto unload() -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
   u32 regionID = 0;
-  Timer discTrayTimer;
+  sTimer discTrayTimer;
 };
 
 MegaCD::MegaCD() {
@@ -59,9 +60,12 @@ MegaCD::MegaCD() {
   }
 }
 
-auto MegaCD::load() -> bool {
+auto MegaCD::load() -> LoadResult {
   game = mia::Medium::create("Mega CD");
-  if(!game->load(Emulator::load(game, configuration.game))) return false;
+  string location = Emulator::load(game, configuration.game);
+  if(!location) return noFileSelected;
+  LoadResult result = game->load(location);
+  if(result != successful) return result;
 
   auto region = Emulator::region();
   //if statements below are ordered by lowest to highest priority
@@ -70,9 +74,16 @@ auto MegaCD::load() -> bool {
   if(region == "NTSC-U") regionID = 0;
 
   system = mia::System::create("Mega CD");
-  if(!system->load(firmware[regionID].location)) return errorFirmware(firmware[regionID]), false;
+  result = system->load(firmware[regionID].location);
+  if(result != successful) {
+    result.firmwareSystemName = "Mega CD";
+    result.firmwareType = firmware[regionID].type;
+    result.firmwareRegion = firmware[regionID].region;
+    result.result = noFirmware;
+    return result;
+  }
 
-  if(!ares::MegaDrive::load(root, {"[Sega] Mega CD (", region, ")"})) return false;
+  if(!ares::MegaDrive::load(root, {"[Sega] Mega CD (", region, ")"})) return otherError;
 
   if(auto port = root->find<ares::Node::Port>("Cartridge Slot")) {
     port->allocate();
@@ -101,29 +112,38 @@ auto MegaCD::load() -> bool {
     }
   }
 
-  return true;
+  discTrayTimer = Timer{};
+
+  return successful;
 }
 
 auto MegaCD::load(Menu menu) -> void {
   MenuItem changeDisc{&menu};
   changeDisc.setIcon(Icon::Device::Optical);
   changeDisc.setText("Change Disc").onActivate([&] {
+    Program::Guard guard;
     save();
     auto tray = root->find<ares::Node::Port>("Mega CD/Disc Tray");
     tray->disconnect();
 
-    if(!game->load(Emulator::load(game, configuration.game))) {
+    if(game->load(Emulator::load(game, configuration.game)) != successful) {
       return;
     }
 
     //give the emulator core a few seconds to notice an empty drive state before reconnecting
-    discTrayTimer.onActivate([&] {
-      discTrayTimer.setEnabled(false);
+    discTrayTimer->onActivate([&] {
+      Program::Guard guard;
+      discTrayTimer->setEnabled(false);
       auto tray = root->find<ares::Node::Port>("Mega CD/Disc Tray");
       tray->allocate();
       tray->connect();
     }).setInterval(3000).setEnabled();
   });
+}
+
+auto MegaCD::unload() -> void {
+  Emulator::unload();
+  discTrayTimer.reset();
 }
 
 auto MegaCD::save() -> bool {

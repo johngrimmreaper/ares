@@ -48,6 +48,7 @@ auto HotkeySettings::refresh() -> void {
 }
 
 auto HotkeySettings::eventChange() -> void {
+  Program::Guard guard;
   assignButton.setEnabled(inputList.batched().size() == 1);
   clearButton.setEnabled(inputList.batched().size() >= 1);
 }

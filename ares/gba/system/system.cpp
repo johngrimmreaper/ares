@@ -14,6 +14,13 @@ auto load(Node::System& node, string name) -> bool {
   return system.load(node, name);
 }
 
+auto option(string name, string value) -> bool {
+  if(name == "Pixel Accuracy") {
+    ppu.setAccurate(value.boolean());
+  }
+  return true;
+}
+
 Scheduler scheduler;
 BIOS bios;
 System system;
@@ -39,15 +46,14 @@ auto System::load(Node::System& root, string name) -> bool {
 
   information = {};
   if(name.find("Game Boy Advance")) {
-    information.name = "Game Boy Advance";
     information.model = Model::GameBoyAdvance;
   }
   if(name.find("Game Boy Player")) {
-    information.name = "Game Boy Player";
     information.model = Model::GameBoyPlayer;
   }
 
   node = Node::System::create(information.name);
+  node->setAttribute("configuration", name);
   node->setGame({&System::game, this});
   node->setRun({&System::run, this});
   node->setPower({&System::power, this});
@@ -64,6 +70,7 @@ auto System::load(Node::System& root, string name) -> bool {
   cpu.load(node);
   ppu.load(node);
   apu.load(node);
+  display.load(node);
   cartridgeSlot.load(node);
   return true;
 }
@@ -80,6 +87,7 @@ auto System::unload() -> void {
   cpu.unload();
   ppu.unload();
   apu.unload();
+  display.unload();
   cartridgeSlot.unload();
   pak.reset();
   node.reset();
@@ -93,6 +101,7 @@ auto System::power(bool reset) -> void {
   cpu.power();
   ppu.power();
   apu.power();
+  display.power();
   cartridge.power();
   scheduler.power(cpu);
 }

@@ -51,14 +51,11 @@ auto M32X::power(bool reset) -> void {
   shs.power(reset);
   vdp.power(reset);
   pwm.power(reset);
+  n32 vec4 = io.vectorLevel4;
   io = {};
+  if(reset) io.vectorLevel4 = vec4;
   dreq = {};
   for(auto& word : communication) word = 0;
-
-  io.vectorLevel4.byte(3) = vectors[0x70 >> 1].byte(1);
-  io.vectorLevel4.byte(2) = vectors[0x70 >> 1].byte(0);
-  io.vectorLevel4.byte(1) = vectors[0x72 >> 1].byte(1);
-  io.vectorLevel4.byte(0) = vectors[0x72 >> 1].byte(0);
 
   //connect interfaces
   shm.sci.link = shs;
@@ -76,6 +73,13 @@ auto M32X::vblank(bool line) -> void {
 }
 
 auto M32X::hblank(bool line) -> void {
+  if(vdp.hblank > line) {
+    // TODO: VDP regs should be latched 192 MClks (~82 cycles) before end of hblank (according to official docs)
+    vdp.latch.mode = vdp.mode;
+    vdp.latch.lines = vdp.lines;
+    vdp.latch.priority = vdp.priority;
+    vdp.latch.dotshift = vdp.dotshift;
+  }
   vdp.hblank = line;
   shm.irq.hint.active = 0;
   shs.irq.hint.active = 0;

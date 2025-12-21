@@ -64,6 +64,7 @@ struct WDC65816 {
   auto pullN() -> n8;
   auto pushN(n8 data) -> void;
   auto readDirect(u32 address) -> n8;
+  auto readDirectX(u32 address, u32 offset) -> n8;
   auto writeDirect(u32 address, n8 data) -> void;
   auto readDirectN(u32 address) -> n8;
   auto readBank(u32 address) -> n8;
@@ -234,9 +235,9 @@ struct WDC65816 {
   auto serialize(serializer&) -> void;
 
   //disassembler.cpp
-  noinline auto disassembleInstruction(n24 address, bool e, bool m, bool x) -> string;
-  noinline auto disassembleInstruction() -> string;
-  noinline auto disassembleContext(maybe<bool> e = {}) -> string;
+  NALL_NOINLINE auto disassembleInstruction(n24 address, bool e, bool m, bool x) -> string;
+  NALL_NOINLINE auto disassembleInstruction() -> string;
+  NALL_NOINLINE auto disassembleContext(maybe<bool> e = {}) -> string;
 
   struct f8 {
     bool c = 0;  //carry

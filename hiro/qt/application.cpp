@@ -34,6 +34,7 @@ auto pApplication::quit() -> void {
   QApplication::quit();
   qtApplication = nullptr;  //note: deleting QApplication will crash libQtGui
 
+  #if defined(DISPLAY_XORG)
   if(state().display) {
     if(state().screenSaverXDG && state().screenSaverWindow) {
       //this needs to run synchronously, so that XUnmapWindow() won't happen before xdg-screensaver is finished
@@ -44,6 +45,7 @@ auto pApplication::quit() -> void {
     XCloseDisplay(state().display);
     state().display = nullptr;
   }
+  #endif
 }
 
 auto pApplication::setScreenSaver(bool screenSaver) -> void {
@@ -121,6 +123,11 @@ auto pApplication::initialize() -> void {
   static char* argv[] = {name.get(), nullptr};
   static char** argvp = argv;
   qtApplication = new QApplication(argc, argvp);
+
+  // Creating the QApplication causes Qt to set the locale from the environment.
+  // Set the locale for LC_NUMERIC back to "C". It is expected to be "C" for
+  // the purpose of various string formatting and parsing operations.
+  setlocale(LC_NUMERIC, "C");
 
   pKeyboard::initialize();
 }
