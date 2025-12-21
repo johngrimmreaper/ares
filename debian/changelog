@@ -1,3 +1,9 @@
+ares (146+dfsg-1) UNRELEASED; urgency=medium
+
+  * Updated d/watch to version 5
+
+ -- David James <davidjamescastor215@proton.me>  Sun, 21 Dec 2025 16:19:14 +0000
+
 ares (134+dfsg-1) unstable; urgency=medium
 
   * Team Upload
