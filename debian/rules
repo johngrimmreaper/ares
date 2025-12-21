@@ -1,38 +1,46 @@
 #!/usr/bin/make -f
 
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all qa=+all
+
 DEB_BUILD_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
 
-ifeq (,$(findstring $(DEB_BUILD_ARCH_CPU),"amd64 i386 powerpc"))
-	export DEB_BUILD_MAINT_OPTIONS=hardening=-fortify
+# DEB_VERSION
+include /usr/share/dpkg/pkg-info.mk
+
+CMAKE_OPTIONS := \
+	-DARES_BUILD_LOCAL=OFF \
+	-DARES_ENABLE_MINIMUM_CPU=OFF \
+	-DARES_SKIP_DEPS=ON \
+	-DARES_VERSION_OVERRIDE="v$(DEB_VERSION)" \
+	-DWITH_SYSTEM_ZLIB=ON
+
+cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec
+# Reimplementation of older disable-md-on-32bit.patch
+ifneq ($(shell $(CXX) -E -dM - < /dev/null | grep INT128),)
+	cores += ;md
 endif
 
 ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
-    BUILDOPT=build=optimized
+    BUILDOPT=RelWithDebInfo
 else
-    BUILDOPT=build=debug
+    BUILDOPT=Debug
 endif
 
-
-ifeq ($(DEB_BUILD_ARCH_CPU),i386)
-    ares_arch := x86
-else ifeq ($(DEB_BUILD_ARCH_CPU),armhf)
-    ares_arch := arm32
-else ifeq ($(DEB_BUILD_ARCH_CPU),ppc64el)
-    ares_arch := ppc64
-else
-    ares_arch := $(DEB_BUILD_ARCH_CPU)
+# Enforce Debian microarchitecture baseline on amd64
+# Reimplementation of no-optional-extensions.patch
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
+	export DEB_CFLAGS_MAINT_APPEND=-march=x86-64
+	export DEB_CXXFLAGS_MAINT_APPEND=-march=x86-64
 endif
 
 %:
-	dh $@ --sourcedirectory=desktop-ui
+	dh $@
 
-override_dh_auto_clean:
-	dh_auto_clean -- arch='$(ares_arch)'
-
-override_dh_auto_build:
-	dh_auto_build -- $(BUILDOPT) compiler='$(CXX)' arch='$(ares_arch)'
+override_dh_auto_configure:
+	dh_auto_configure -- \
+	$(CMAKE_OPTIONS) \
+	-DCMAKE_BUILD_TYPE=$(BUILDOPT) \
+	-DARES_CORES="$(cores)"
 
 override_dh_auto_install:
-	dh_auto_install -- prefix=../debian/tmp/usr
-
-override_dh_auto_test:
+	dh_auto_install --destdir=debian/tmp
