@@ -38,7 +38,6 @@ auto M32X::SH7604::main() -> void {
     #undef raise
   }
 
-  debugger.instruction();
   SH2::instruction();
   SH2::intc.run();
   SH2::dmac.run();
@@ -46,31 +45,51 @@ auto M32X::SH7604::main() -> void {
   if(m32x.shs.active()) m32x.shs.dmac.dreq[1] = 0;
 }
 
-auto M32X::SH7604::step(u32 clocks) -> void {
-  if(clocks > 0) {
-    auto cycles = clocks;
-    while (--cycles) {
-      SH2::frt.run();
-      SH2::wdt.run();
-    }
+auto M32X::SH7604::instructionPrologue(u16 instruction) -> void {
+  debugger.instruction(instruction);
+}
+
+auto M32X::SH7604::internalStep(u32 clocks) -> void {
+  if(SH2::Accuracy::Recompiler && m32x.shm.recompiler.enabled) {
+    regs.CCR += clocks;
+    return;
   }
 
-  Thread::step(clocks);
-  cyclesUntilSh2Sync -= clocks;
-  cyclesUntilFullSync -= clocks;
+  step(clocks);
+}
 
-  if(cyclesUntilFullSync <= 0) {
-    cyclesUntilFullSync = minCyclesBetweenFullSyncs;
-    if(m32x.shm.active()) Thread::synchronize(m32x.shs, cpu);
-    if(m32x.shs.active()) Thread::synchronize(m32x.shm, cpu);
+auto M32X::SH7604::step(u32 clocks) -> void {
+  SH2::frt.run(clocks);
+  SH2::wdt.run(clocks);
+  Thread::step(clocks);
+
+  cyclesUntilSh2Sync -= clocks;
+  cyclesUntilM68kSync -= clocks;
+
+  m32x.vdp.framebufferWait -= min(clocks, m32x.vdp.framebufferWait);
+
+  if(cyclesUntilSh2Sync <= 0) {
+    cyclesUntilSh2Sync = minCyclesBetweenSh2Syncs;
+    if (m32x.shm.active()) Thread::synchronize(m32x.shs);
+    if (m32x.shs.active()) Thread::synchronize(m32x.shm);
+  }
+
+  if(cyclesUntilM68kSync <= 0) {
+    cyclesUntilM68kSync = minCyclesBetweenM68kSyncs;
+    Thread::synchronize(cpu);
   }
 }
 
 auto M32X::SH7604::power(bool reset) -> void {
-  Thread::create(23'000'000, {&M32X::SH7604::main, this});
-  SH2::recompilerStepCycles = 20;  // Minimum cycles for recompiler to run for each batch of instructions
-  minCyclesBetweenFullSyncs = 200; // Minimum cycles between full sync with the M68K/MD side
-  minCyclesBetweenSh2Syncs  = 5;   // Minimum Cycles between sync with the other SH2 (syncOtherSh2)
+  Thread::create((system.frequency() / 7.0) * 3.0, {&M32X::SH7604::main, this});
+
+  //When tweaking these values, make sure to test the following problematic games:
+  // Brutal  - Check for hang in attract mode
+  // Chaotix - Check for hang on intro screen or level loading transitions
+
+  SH2::recompilerStepCycles =  200; //Recompiler will force an exit after at least N cycles have passed
+  minCyclesBetweenSh2Syncs  =   10; //Do not sync SH2s more than once every N cycles
+  minCyclesBetweenM68kSyncs =   50; //Do not sync M68K more than once every N cycles
   SH2::power(reset);
   irq = {};
   irq.vres.enable = 1;
@@ -83,12 +102,35 @@ auto M32X::SH7604::restart() -> void {
   Thread::restart({&M32X::SH7604::main, this});
 }
 
-auto M32X::SH7604::syncOtherSh2() -> void {
-  // avoid synchronizing if we recently have
-  if(cyclesUntilSh2Sync > 0) return;
-  if(m32x.shm.active()) Thread::synchronize(m32x.shs);
-  if(m32x.shs.active()) Thread::synchronize(m32x.shm);
-  cyclesUntilSh2Sync = minCyclesBetweenSh2Syncs;
+auto M32X::SH7604::syncAll(bool force) -> void {
+  SH2::cyclesUntilRecompilerExit = 0;
+
+  if(SH2::Accuracy::Recompiler && m32x.shm.recompiler.enabled && force) {
+    cyclesUntilSh2Sync = 0;
+    cyclesUntilM68kSync = 0;
+    step(regs.CCR);
+    regs.CCR = 0;
+  }
+}
+
+auto M32X::SH7604::syncOtherSh2(bool force) -> void {
+  SH2::cyclesUntilRecompilerExit = 0;
+
+  if(SH2::Accuracy::Recompiler && m32x.shm.recompiler.enabled && force) {
+    cyclesUntilSh2Sync = 0;
+    step(regs.CCR);
+    regs.CCR = 0;
+  }
+}
+
+auto M32X::SH7604::syncM68k(bool force) -> void {
+  SH2::cyclesUntilRecompilerExit = 0;
+
+  if(SH2::Accuracy::Recompiler && m32x.shm.recompiler.enabled && force) {
+    cyclesUntilM68kSync = 0;
+    step(regs.CCR);
+    regs.CCR = 0;
+  }
 }
 
 auto M32X::SH7604::busReadByte(u32 address) -> u32 {

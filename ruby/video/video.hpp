@@ -13,6 +13,9 @@ struct VideoDriver {
   virtual auto hasExclusive() -> bool { return false; }
   virtual auto hasContext() -> bool { return false; }
   virtual auto hasBlocking() -> bool { return false; }
+  virtual auto hasForceSRGB() -> bool { return false; }
+  virtual auto hasThreadedRenderer() -> bool { return false; }
+  virtual auto hasNativeFullScreen() -> bool { return false; }
   virtual auto hasFlush() -> bool { return false; }
   virtual auto hasFormats() -> vector<string> { return {"ARGB24"}; }
   virtual auto hasShader() -> bool { return false; }
@@ -24,9 +27,13 @@ struct VideoDriver {
   virtual auto setExclusive(bool exclusive) -> bool { return true; }
   virtual auto setContext(uintptr context) -> bool { return true; }
   virtual auto setBlocking(bool blocking) -> bool { return true; }
+  virtual auto setForceSRGB(bool forceSRGB) -> bool { return true; }
+  virtual auto setThreadedRenderer(bool threadedRenderer) -> bool { return true; }
+  virtual auto setNativeFullScreen(bool nativeFullScreen) -> bool { return true; }
   virtual auto setFlush(bool flush) -> bool { return true; }
   virtual auto setFormat(string format) -> bool { return true; }
   virtual auto setShader(string shader) -> bool { return true; }
+  virtual auto refreshRateHint(double refreshRate) -> void {}
 
   virtual auto focused() -> bool { return true; }
   virtual auto clear() -> void {}
@@ -45,9 +52,12 @@ protected:
   bool exclusive = false;
   uintptr context = 0;
   bool blocking = false;
+  bool forceSRGB = false;
+  bool threadedRenderer = true;
+  bool nativeFullScreen = false;
   bool flush = false;
   string format = "ARGB24";
-  string shader = "Blur";
+  string shader = "None";
 };
 
 struct Video {
@@ -63,6 +73,7 @@ struct Video {
     s32 y = 0;
     s32 width = 0;
     s32 height = 0;
+    uintptr_t nativeHandle = 0;
   };
   static auto monitor(string name) -> Monitor;
   static auto hasMonitors() -> vector<Monitor>;
@@ -85,6 +96,9 @@ struct Video {
   auto hasExclusive() -> bool { return instance->hasExclusive(); }
   auto hasContext() -> bool { return instance->hasContext(); }
   auto hasBlocking() -> bool { return instance->hasBlocking(); }
+  auto hasForceSRGB() -> bool { return instance->hasForceSRGB(); }
+  auto hasThreadedRenderer() -> bool { return instance->hasThreadedRenderer(); }
+  auto hasNativeFullScreen() -> bool { return instance->hasNativeFullScreen(); }
   auto hasFlush() -> bool { return instance->hasFlush(); }
   auto hasFormats() -> vector<string> { return instance->hasFormats(); }
   auto hasShader() -> bool { return instance->hasShader(); }
@@ -96,6 +110,9 @@ struct Video {
   auto exclusive() -> bool { return instance->exclusive; }
   auto context() -> uintptr { return instance->context; }
   auto blocking() -> bool { return instance->blocking; }
+  auto forceSRGB() -> bool { return instance->forceSRGB; }
+  auto threadedRenderer() -> bool { return instance->threadedRenderer; }
+  auto nativeFullScreen() -> bool { return instance->nativeFullScreen; }
   auto flush() -> bool { return instance->flush; }
   auto format() -> string { return instance->format; }
   auto shader() -> string { return instance->shader; }
@@ -105,9 +122,13 @@ struct Video {
   auto setExclusive(bool exclusive) -> bool;
   auto setContext(uintptr context) -> bool;
   auto setBlocking(bool blocking) -> bool;
+  auto setForceSRGB(bool forceSRGB) -> bool;
+  auto setThreadedRenderer(bool threadedRenderer) -> bool;
+  auto setNativeFullScreen(bool nativeFullScreen) -> bool;
   auto setFlush(bool flush) -> bool;
   auto setFormat(string format) -> bool;
   auto setShader(string shader) -> bool;
+  auto refreshRateHint(double refreshRate) -> void;
 
   auto focused() -> bool;
   auto clear() -> void;

@@ -39,21 +39,15 @@ auto VDP::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("VDP");
 
   screen = node->append<Node::Video::Screen>("Screen", 1365, 263);
-  screen->colors(1 << 10, {&VDP::color, this});
-  screen->setSize(1088, 239);
-  screen->setScale(0.25, 1.0);
-  screen->setAspect(8.0, 7.0);
-
-  overscan = screen->append<Node::Setting::Boolean>("Overscan", true, [&](auto value) {
-    if(value == 0) screen->setSize(1024, 239);
-    if(value == 1) screen->setSize(1088, 239);
-  });
-  overscan->setDynamic(true);
-
   colorEmulation = screen->append<Node::Setting::Boolean>("Color Emulation", true, [&](auto value) {
     screen->resetPalette();
   });
   colorEmulation->setDynamic(true);
+  screen->colors(1 << 10, {&VDP::color, this});
+  screen->setSize(1128, 263);
+  screen->setScale(0.25, 1.0);
+  screen->setAspect(8.0, 7.0);
+  screen->refreshRateHint(60); // TODO: More accurate refresh rate hint
 
   vce.debugger.load(vce, node);
   vdc0.debugger.load(vdc0, node); if(Model::SuperGrafx())
@@ -64,31 +58,30 @@ auto VDP::unload() -> void {
   vce.debugger = {};
   vdc0.debugger = {}; if(Model::SuperGrafx())
   vdc1.debugger = {};
-  overscan.reset();
   screen->quit();
   node->remove(screen);
   screen.reset();
   node.reset();
 }
 
-auto VDP::main() -> void {
-  vdc0.hsync(); if(Model::SuperGrafx())
+template<bool supergrafx> auto VDP::main() -> void {
+  vdc0.hsync(); if(supergrafx)
   vdc1.hsync();
 
   if(io.vcounter == 0) {
-    vdc0.vsync(); if(Model::SuperGrafx())
+    vdc0.vsync(); if(supergrafx)
     vdc1.vsync();
   }
 
   auto output = screen->pixels().data() + 1365 * io.vcounter;
 
   while(io.hcounter <= 1360) {
-    vdc0.hclock(); if(Model::SuperGrafx())
+    vdc0.hclock(); if(supergrafx)
     vdc1.hclock();
 
     n10 color;
-    if(Model::SuperGrafx() == 0) color = vdc0.bus();
-    if(Model::SuperGrafx() == 1) color = vpc.bus(io.hcounter);
+    if(!supergrafx) color = vdc0.bus();
+    if( supergrafx) color = vpc.bus(io.hcounter);
     color = vce.io.grayscale << 9 | vce.cram.read(color);
 
     switch(vce.clock()) {
@@ -98,26 +91,25 @@ auto VDP::main() -> void {
     case 1: *output++ = color;
     }
 
-    step(vce.clock());
+    step<supergrafx>(vce.clock());
   }
 
-  step(1365 - io.hcounter);
+  step<supergrafx>(1365 - io.hcounter);
   vdc0.vclock(); if(Model::SuperGrafx())
   vdc1.vclock();
 
   io.hcounter = 0;
   if(++io.vcounter >= 262 + vce.io.extraLine) {
     io.vcounter = 0;
-    if(overscan->value() == 0) screen->setViewport(96, 21, 1024, 239);
-    if(overscan->value() == 1) screen->setViewport(96, 21, 1088, 239);
+    screen->setViewport(48, 16, screen->width(), 242);
     screen->frame();
     scheduler.exit(Event::Frame);
   }
 }
 
-auto VDP::step(u32 clocks) -> void {
+template<bool supergrafx> auto VDP::step(u32 clocks) -> void {
   io.hcounter += clocks;
-  vdc0.dma.step(clocks); if(Model::SuperGrafx())
+  vdc0.dma.step(clocks); if(supergrafx)
   vdc1.dma.step(clocks);
 
   Thread::step(clocks);
@@ -125,7 +117,9 @@ auto VDP::step(u32 clocks) -> void {
 }
 
 auto VDP::power() -> void {
-  Thread::create(system.colorburst() * 6.0, {&VDP::main, this});
+  if(Model::SuperGrafx()) Thread::create(system.colorburst() * 6.0, {&VDP::main<true>, this});
+  else                    Thread::create(system.colorburst() * 6.0, {&VDP::main<false>, this});
+
   screen->power();
 
   vce.power();

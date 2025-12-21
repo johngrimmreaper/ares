@@ -9,10 +9,15 @@ auto AI::serialize(serializer& s) -> void {
   s(io.dmaAddressCarry);
   s(io.dmaLength);
   s(io.dmaCount);
+  s(io.dmaOriginPc);
   s(io.dacRate);
   s(io.bitRate);
 
   s(dac.frequency);
   s(dac.precision);
   s(dac.period);
+
+  if(s.reading() && stream->frequency() != dac.frequency) {
+    stream->setFrequency(dac.frequency);
+  }
 }

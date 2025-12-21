@@ -5,7 +5,7 @@ auto PPU::DAC::prepare() -> void {
   n15 belowColor = hires ? cgram[0] : fixedColor();
   if(self.io.displayDisable) aboveColor = 0, belowColor = 0;
 
-  for(u32 x : range(self.width())) {
+  for(u32 x : range(256)) {
     above[x] = {PPU::Source::COL, 0, aboveColor};
     below[x] = {PPU::Source::COL, 0, belowColor};
   }
@@ -17,20 +17,27 @@ auto PPU::DAC::render() -> void {
 
   auto vcounter = self.vcounter();
   auto output = (n32*)self.screen->pixels().data();
+
   if(!self.state.overscan) vcounter += 8;
   if(vcounter < 240) {
-    output += vcounter * 2 * 896;
-    if(self.interlace() && self.field()) output += 896;
+    auto yScale = self.interlace() ? 2 : 1;
+    output += vcounter * yScale * 564;
+    //PAL systems have additional vertical border
+    if(Region::PAL()) output += (20 * yScale) * 564;
+    if(self.interlace() && self.field()) output += 564;
+
+    //Offset for horizontal border
+    output += Region::PAL() ? 22 : 26;
 
     u32 luma = self.io.displayBrightness << 15;
     if(!self.hires()) {
-      for(u32 x : range(self.width())) {
+      for(u32 x : range(256)) {
         u32 color = luma | pixel(x, above[x], below[x]);
         *output++ = color;
         *output++ = color;
       }
     } else {
-      for(u32 x : range(self.width())) {
+      for(u32 x : range(256)) {
         *output++ = luma | pixel(x, below[x], above[x]);
         *output++ = luma | pixel(x, above[x], below[x]);
       }

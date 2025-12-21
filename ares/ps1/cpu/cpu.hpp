@@ -45,7 +45,8 @@ struct CPU : Thread {
   auto synchronize() -> void;
 
   auto instruction() -> void;
-  auto instructionEpilogue() -> s32;
+  auto instructionPrologue(u32 instruction) -> void;
+  auto instructionEpilogue() -> void;
   auto instructionHook() -> void;
 
   auto power(bool reset) -> void;
@@ -55,7 +56,7 @@ struct CPU : Thread {
 
   struct Pipeline {
     u32 address = 0;
-    u32 instruction = 0;
+    n32 instruction = 0;
   } pipeline;
 
   //delay-slots.cpp
@@ -93,7 +94,6 @@ struct CPU : Thread {
 
   //icache.cpp
   struct InstructionCache {
-    auto step(u32 address) -> void;
     auto fetch(u32 address) -> u32;
     auto read(u32 address) -> u32;
     auto invalidate(u32 address) -> void;
@@ -113,7 +113,7 @@ struct CPU : Thread {
     Exception(CPU& self) : self(self) {}
 
     auto operator()() -> bool;
-    auto trigger(u32 code) -> void;
+    auto trigger(u32 code, n1 hardwareBreakpoint = 0) -> void;
 
     auto interruptsPending() -> u8;
     auto interrupt() -> void;
@@ -505,45 +505,6 @@ struct CPU : Thread {
   auto SWC1(u8 rt, cu32& rs, s16 imm) -> void;
   auto SWC3(u8 rt, cu32& rs, s16 imm) -> void;
   auto INVALID() -> void;
-
-  //recompiler.cpp
-  struct Recompiler : recompiler::generic {
-    CPU& self;
-    Recompiler(CPU& self) : self(self), generic(allocator) {}
-
-    struct Block {
-      auto execute(CPU& self) -> void {
-        ((void (*)(CPU*, IPU*))code)(&self, &self.ipu);
-      }
-
-      u8* code;
-    };
-
-    struct Pool {
-      Block* blocks[1 << 6];
-    };
-
-    auto reset() -> void {
-      for(u32 index : range(1 << 21)) pools[index] = nullptr;
-    }
-
-    auto invalidate(u32 address) -> void {
-      pools[address >> 8 & 0x1fffff] = nullptr;
-    }
-
-    auto pool(u32 address) -> Pool*;
-    auto block(u32 address) -> Block*;
-
-    auto emit(u32 address) -> Block*;
-    auto emitEXECUTE(u32 instruction) -> bool;
-    auto emitSPECIAL(u32 instruction) -> bool;
-    auto emitREGIMM(u32 instruction) -> bool;
-    auto emitSCC(u32 instruction) -> bool;
-    auto emitGTE(u32 instruction) -> bool;
-
-    bump_allocator allocator;
-    Pool* pools[1 << 21];  //2_MiB * sizeof(void*) = 16_MiB
-  } recompiler{*this};
 
   struct Disassembler {
     CPU& self;

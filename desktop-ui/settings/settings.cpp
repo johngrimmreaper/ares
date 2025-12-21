@@ -56,11 +56,14 @@ auto Settings::process(bool load) -> void {
   bind(string,  "Video/Format", video.format);
   bind(boolean, "Video/Exclusive", video.exclusive);
   bind(boolean, "Video/Blocking", video.blocking);
+  bind(boolean, "Video/PresentSRGB", video.forceSRGB);
+  bind(boolean, "Video/ThreadedRenderer", video.threadedRenderer);
+  bind(boolean, "Video/NativeFullScreen", video.nativeFullScreen);
   bind(boolean, "Video/Flush", video.flush);
   bind(string,  "Video/Shader", video.shader);
   bind(natural, "Video/Multiplier", video.multiplier);
   bind(string,  "Video/Output", video.output);
-  bind(boolean, "Video/AspectCorrection", video.aspectCorrection);
+  bind(string,  "Video/AspectCorrectionMode", video.aspectCorrection);
   bind(boolean, "Video/AdaptiveSizing", video.adaptiveSizing);
   bind(boolean, "Video/AutoCentering", video.autoCentering);
   bind(real,    "Video/Luminance", video.luminance);
@@ -68,6 +71,7 @@ auto Settings::process(bool load) -> void {
   bind(real,    "Video/Gamma", video.gamma);
   bind(boolean, "Video/ColorBleed", video.colorBleed);
   bind(boolean, "Video/ColorEmulation", video.colorEmulation);
+  bind(boolean, "Video/DeepBlackBoost", video.deepBlackBoost);
   bind(boolean, "Video/InterframeBlending", video.interframeBlending);
   bind(boolean, "Video/Overscan", video.overscan);
   bind(boolean, "Video/PixelAccuracy", video.pixelAccuracy);
@@ -99,11 +103,13 @@ auto Settings::process(bool load) -> void {
   bind(boolean, "General/RunAhead", general.runAhead);
   bind(boolean, "General/AutoSaveMemory", general.autoSaveMemory);
   bind(boolean, "General/HomebrewMode", general.homebrewMode);
+  bind(boolean, "General/ForceInterpreter", general.forceInterpreter);
 
   bind(natural, "Rewind/Length", rewind.length);
   bind(natural, "Rewind/Frequency", rewind.frequency);
 
   bind(string,  "Paths/Home", paths.home);
+  bind(string,  "Paths/Firmware", paths.firmware);
   bind(string,  "Paths/Saves", paths.saves);
   bind(string,  "Paths/Screenshots", paths.screenshots);
   bind(string,  "Paths/Debugging", paths.debugging);
@@ -115,6 +121,13 @@ auto Settings::process(bool load) -> void {
   bind(natural, "DebugServer/Port", debugServer.port);
   bind(boolean, "DebugServer/Enabled", debugServer.enabled);
   bind(boolean, "DebugServer/UseIPv4", debugServer.useIPv4);
+
+  bind(boolean, "Nintendo64/ExpansionPak", nintendo64.expansionPak);
+  bind(string, "Nintendo64/ControllerPakBankString", nintendo64.controllerPakBankString);
+
+  bind(boolean, "GameBoyAdvance/Player", gameBoyAdvance.player);
+
+  bind(boolean, "MegaDrive/TMSS", megadrive.tmss);
 
   for(u32 index : range(9)) {
     string name = {"Recent/Game-", 1 + index};
@@ -155,6 +168,7 @@ auto Settings::process(bool load) -> void {
     bind(string,  name, emulator->configuration.game);
     for(auto& firmware : emulator->firmware) {
       string name = {base, "/Firmware/", firmware.type, ".", firmware.region};
+      name.replace(" ", "-");
       bind(string, name, firmware.location);
     }
   }
@@ -164,7 +178,7 @@ auto Settings::process(bool load) -> void {
 
 //
 
-SettingsWindow::SettingsWindow() {
+auto SettingsWindow::initialize() -> void {
   onClose([&] {
     settings.save();
     setVisible(false);
@@ -214,12 +228,18 @@ SettingsWindow::SettingsWindow() {
 
   setDismissable();
   setTitle("Configuration");
-  setSize({700_sx, 405_sy});
+  setSize({700_sx, 425_sy});
   setAlignment({0.0, 1.0});
   setResizable(false);
+  
+  driverSettings.videoRefresh();
+  driverSettings.audioRefresh();
+  driverSettings.inputRefresh();
+  initialized = true;
 }
 
 auto SettingsWindow::show(const string& panel) -> void {
+  if(!initialized) initialize();
   for(auto item : panelList.items()) {
     if(item.text() == panel) {
       item.setSelected();

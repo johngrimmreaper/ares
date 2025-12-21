@@ -1,7 +1,7 @@
 struct MegaDrive : Cartridge {
   auto name() -> string override { return "Mega Drive"; }
   auto extensions() -> vector<string> override { return {"md", "gen", "bin"}; }
-  auto load(string location) -> bool override;
+  auto load(string location) -> LoadResult override;
   auto save(string location) -> bool override;
   auto analyze(vector<u8>& rom) -> string;
   auto analyzeStorage(vector<u8>& rom, string hash) -> void;
@@ -37,19 +37,19 @@ struct MegaDrive : Cartridge {
   } peripherals;
 };
 
-auto MegaDrive::load(string location) -> bool {
+auto MegaDrive::load(string location) -> LoadResult {
   vector<u8> rom;
   if(directory::exists(location)) {
     append(rom, {location, "program.rom"});
   } else if(file::exists(location)) {
     rom = Cartridge::read(location);
   }
-  if(!rom) return false;
+  if(!rom) return romNotFound;
 
   this->location = location;
   this->manifest = analyze(rom);
   auto document = BML::unserialize(manifest);
-  if(!document) return false;
+  if(!document) return couldNotParseManifest;
 
   pak = new vfs::directory;
   pak->setAttribute("title",    document["game/title"].string());
@@ -100,7 +100,7 @@ auto MegaDrive::load(string location) -> bool {
     pak->setAttribute("jcart", true);
   }
 
-  return true;
+  return successful;
 }
 
 auto MegaDrive::save(string location) -> bool {
@@ -280,8 +280,8 @@ auto MegaDrive::analyzeRegion(vector<u8>& rom, string hash) -> void {
     regions.append("NTSC-J", "NTSC-U", "PAL");
   }
 
-  //Alisia Dragoon (Europe)
-  if(hash == "0930b77d0474e99c10690245cac12a6618b6c16420e3575379aba6e715ea797a") {
+  // Many PAL games have incorrect headers, so force PAL based on name
+  if(location.ifind("(Europe)") || location.ifind("(PAL)")) {
     regions.reset();
     regions.append("PAL");
   }
@@ -433,6 +433,17 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
         ram.enable = true;
       }
     }
+  }
+
+  // QuackShot Starring Donald Duck (World) (Rev A)
+  // 512KiB ROM with non-standard wiring
+  // A18 and A19 not connected, A20 wired as A19
+  //   $000000-$0fffff : lower 256KiB mirrored 4 times
+  //   $100000-$1fffff : upper 256KiB mirrored 4 times
+  if(hash == "44c96f106b966d55131473ea6554522279953c73cf33e2ad34abc73f1bcc465d") {
+    rom.resize(2_MiB);
+    for(auto n : range(4)) memory::copy(&rom[1_MiB + (n * 256_KiB)], &rom[256_KiB], 256_KiB);
+    for(auto n : range(4)) memory::copy(&rom[(n * 256_KiB)], &rom[0], 256_KiB);
   }
 
   //M28C16
@@ -604,7 +615,8 @@ auto MegaDrive::analyzeStorage(vector<u8>& rom, string hash) -> void {
   }
 
   //Wonder Boy in Monster World (USA, Europe)
-  if(hash == "6b2ac36f624f914ad26e32baa87d1253aea9dcfc13d2a5842ecdd2bd4a7a43b9") {
+  if(hash == "8d905c863b73a1522f6ea734d630beae1b824b9eecb63f899534c02efbde20fd" ||  
+     hash == "6b2ac36f624f914ad26e32baa87d1253aea9dcfc13d2a5842ecdd2bd4a7a43b9") {
     eeprom.mode = "X24C01";
     eeprom.size = 128;
     eeprom.rsda = 0;

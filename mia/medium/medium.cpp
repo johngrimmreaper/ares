@@ -15,6 +15,7 @@ namespace Media {
   #include "mega-drive.cpp"
   #include "mega-32x.cpp"
   #include "mega-cd.cpp"
+  #include "mega-ld.cpp"
   #include "msx.cpp"
   #include "msx2.cpp"
   #include "neo-geo.cpp"
@@ -58,6 +59,7 @@ auto Medium::create(string name) -> shared_pointer<Pak> {
   if(name == "Mega Drive") return new Media::MegaDrive;
   if(name == "Mega 32X") return new Media::Mega32X;
   if(name == "Mega CD") return new Media::MegaCD;
+  if(name == "Mega LD") return new Media::MegaLD;
   if(name == "MSX") return new Media::MSX;
   if(name == "MSX2") return new Media::MSX2;
   if(name == "Neo Geo") return new Media::NeoGeo;
@@ -82,19 +84,22 @@ auto Medium::create(string name) -> shared_pointer<Pak> {
   return {};
 }
 
-auto Medium::loadDatabase() -> void {
+auto Medium::loadDatabase() -> bool {
   //load the database on the first time it's needed for a given media type
-  bool found = false;
   for(auto& database : Media::databases) {
-    if(database.name == name()) found = true;
+    if(database.name == name()) return true;
   }
 
-  if(!found) {
-    Database database;
-    database.name = name();
-    database.list = BML::unserialize(file::read(locate({"Database/", name(), ".bml"})));
+  Database database;
+  database.name = name();
+  auto databaseFile = locate({"Database/", name(), ".bml"});
+  if(inode::exists(databaseFile)) {
+    database.list = BML::unserialize(file::read(databaseFile));
     Media::databases.append(std::move(database));
+    return true;
   }
+
+  return false;
 }
 
 //Retrieve all entries in game database
@@ -161,6 +166,43 @@ auto CompactDisc::manifestAudio(string location) -> string {
   return manifest;
 }
 
+auto CompactDisc::isAudioCd(string pathname) -> bool {
+  auto fp = file::open({pathname, "cd.rom"}, file::mode::read);
+  if(!fp) return {};
+
+  vector<u8> toc;
+  toc.resize(96 * 7500);
+  for(u32 sector : range(7500)) {
+    fp.read({toc.data() + 96 * sector, 96});
+  }
+  CD::Session session;
+  session.decode(toc, 96);
+
+  //If the disc contains no data tracks, we are an audio cd
+  for(u32 trackID : range(100)) {
+    if(auto& track = session.tracks[trackID]) {
+      if(track.isData()) return false;
+    }
+  }
+
+  return true;
+}
+
+auto CompactDisc::readDataSector(string pathname, u32 sectorID) -> vector<u8> {
+  if(pathname.iendsWith(".bcd")) {
+    return readDataSectorBCD(pathname, sectorID);
+  }
+  if(pathname.iendsWith(".cue")) {
+    return readDataSectorCUE(pathname, sectorID);
+  }
+#if defined(ARES_ENABLE_CHD)
+  if(pathname.iendsWith(".chd")) {
+    return readDataSectorCHD(pathname, sectorID);
+  }
+#endif
+  return {};
+}
+
 auto CompactDisc::readDataSectorBCD(string pathname, u32 sectorID) -> vector<u8> {
   auto fp = file::open({pathname, "cd.rom"}, file::mode::read);
   if(!fp) return {};
@@ -191,7 +233,7 @@ auto CompactDisc::readDataSectorBCD(string pathname, u32 sectorID) -> vector<u8>
 
 auto CompactDisc::readDataSectorCUE(string filename, u32 sectorID) -> vector<u8> {
   Decode::CUE cuesheet;
-  if(!cuesheet.load(filename)) return {};
+  if(!cuesheet.load(filename, nullptr, nullptr)) return {};
 
   for(auto& file : cuesheet.files) {
     u64 offset = 0;
@@ -234,6 +276,7 @@ auto CompactDisc::readDataSectorCUE(string filename, u32 sectorID) -> vector<u8>
   return {};
 }
 
+#if defined(ARES_ENABLE_CHD)
 auto CompactDisc::readDataSectorCHD(string filename, u32 sectorID) -> vector<u8> {
   Decode::CHD chd;
   if(!chd.load(filename)) return {};
@@ -256,6 +299,50 @@ auto CompactDisc::readDataSectorCHD(string filename, u32 sectorID) -> vector<u8>
 
       memory::copy(output.data(), output.size(), sector.data() + 16, output.size());
       return output;
+    }
+  }
+
+  return {};
+}
+#endif
+
+auto LaserDisc::readDataSector(string mmiPath, string cuePath, u32 sectorID) -> vector<u8> {
+  unique_pointer archive = new Decode::ZIP;
+  if (!archive->open(mmiPath)) return {};
+  Decode::CUE cuesheet;
+  if(!cuesheet.load(mmiPath, archive.data(), &archive->findFile(cuePath).get())) return {};
+
+  for(auto& file : cuesheet.files) {
+    u64 offset = 0;
+    if(file.type == "binary") {
+      auto filePathInArchive = file.archiveFolder;
+      filePathInArchive.append(file.name);
+      auto fileEntry = archive->findFile(filePathInArchive);
+      if(!fileEntry) continue;
+      array_view<u8> rawDataView;
+      vector<u8> rawDataBuffer;
+      if (archive->isDataUncompressed(*fileEntry)) {
+        rawDataView = archive->dataViewIfUncompressed(*fileEntry);
+      } else {
+        rawDataBuffer = archive->extract(*fileEntry);
+        rawDataView = rawDataBuffer;
+      }
+      for(auto& track : file.tracks) {
+        for(auto& index : track.indices) {
+          u32 sectorSize = 0;
+          if(track.type == "mode1/2048") sectorSize = 2048;
+          if(track.type == "mode1/2352") sectorSize = 2352;
+          if(track.type == "mode2/2352") sectorSize = 2352;
+          if(sectorSize && index.number == 1) {
+            size_t readPos = offset + (sectorSize * sectorID) + (sectorSize == 2352 ? 16 : 0);
+            vector<u8> sector;
+            sector.resize(2048);
+            memcpy(sector.data(), rawDataView.data() + readPos, sector.size());
+            return sector;
+          }
+          offset += track.sectorSize() * index.sectorCount();
+        }
+      }
     }
   }
 

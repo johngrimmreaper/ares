@@ -1,5 +1,5 @@
 auto CPU::readIO(n32 address) -> n8 {
-  auto dma = [&]() -> DMA& { return this->dma[address / 12 & 3]; };
+  auto channel = [&]() -> DMAC::Channel& { return this->dmac.channel[address / 12 & 3]; };
   auto timer = [&]() -> Timer& { return this->timer[address.bit(2,3)]; };
 
   switch(address) {
@@ -10,17 +10,17 @@ auto CPU::readIO(n32 address) -> n8 {
 
   //DMA0CNT_H, DMA1CNT_H, DMA2CNT_H, DMA3CNT_H
   case 0x0400'00ba: case 0x0400'00c6: case 0x0400'00d2: case 0x0400'00de: return (
-    dma().targetMode        << 5
-  | dma().sourceMode.bit(0) << 7
+    channel().targetMode        << 5
+  | channel().sourceMode.bit(0) << 7
   );
   case 0x0400'00bb: case 0x0400'00c7: case 0x0400'00d3: case 0x0400'00df: return (
-    dma().sourceMode.bit(1) << 0
-  | dma().repeat            << 1
-  | dma().size              << 2
-  | dma().drq               << 3
-  | dma().timingMode        << 4
-  | dma().irq               << 6
-  | dma().enable            << 7
+    channel().sourceMode.bit(1) << 0
+  | channel().repeat            << 1
+  | channel().size              << 2
+  | channel().drq               << 3
+  | channel().timingMode        << 4
+  | channel().irq               << 6
+  | channel().enable            << 7
   );
 
   //TM0CNT_L, TM1CNT_L, TM2CNT_L, TM3CNT_L
@@ -55,13 +55,14 @@ auto CPU::readIO(n32 address) -> n8 {
   | serial.startBit              << 7
   );
   case 0x0400'0129: return (
-    serial.transferLength << 4
-  | serial.irqEnable      << 6
+    serial.uartFlags << 0
+  | serial.mode      << 4
+  | serial.irqEnable << 6
   );
 
   //SIOMLT_SEND (SIODATA8)
-  case 0x0400'012a: return serial.data8;
-  case 0x0400'012b: return 0;
+  case 0x0400'012a: return serial.dataMulti.byte(0);
+  case 0x0400'012b: return serial.dataMulti.byte(1);  //upper 8 bits are always readable, but only used in multiplayer mode
 
   //KEYINPUT
   case 0x04000130: {
@@ -81,10 +82,10 @@ auto CPU::readIO(n32 address) -> n8 {
       result.bit(7) = !system.controls.downLatch;
     }
     if(ppu.rotation->value() == "90°") {
-      result.bit(4) = !system.controls.downLatch;
-      result.bit(5) = !system.controls.upLatch;
-      result.bit(6) = !system.controls.rightLatch;
-      result.bit(7) = !system.controls.leftLatch;
+      result.bit(4) = !system.controls.upLatch;
+      result.bit(5) = !system.controls.downLatch;
+      result.bit(6) = !system.controls.leftLatch;
+      result.bit(7) = !system.controls.rightLatch;
     }
     if(ppu.rotation->value() == "180°") {
       result.bit(4) = !system.controls.leftLatch;
@@ -93,10 +94,10 @@ auto CPU::readIO(n32 address) -> n8 {
       result.bit(7) = !system.controls.upLatch;
     }
     if(ppu.rotation->value() == "270°") {
-      result.bit(4) = !system.controls.upLatch;
-      result.bit(5) = !system.controls.downLatch;
-      result.bit(6) = !system.controls.leftLatch;
-      result.bit(7) = !system.controls.rightLatch;
+      result.bit(4) = !system.controls.downLatch;
+      result.bit(5) = !system.controls.upLatch;
+      result.bit(6) = !system.controls.rightLatch;
+      result.bit(7) = !system.controls.leftLatch;
     }
     return result;
   }
@@ -144,6 +145,10 @@ auto CPU::readIO(n32 address) -> n8 {
     joybus.siIRQEnable << 0
   | joybus.mode        << 6
   );
+  
+  //zero
+  case 0x0400'0136: return 0;
+  case 0x0400'0137: return 0;
 
   //JOYCNT
   case 0x0400'0140: return (
@@ -179,12 +184,12 @@ auto CPU::readIO(n32 address) -> n8 {
   case 0x0400'015b: return 0;
 
   //IE
-  case 0x0400'0200: return irq.enable.byte(0);
-  case 0x0400'0201: return irq.enable.byte(1);
+  case 0x0400'0200: return irq.enable[0].byte(0);
+  case 0x0400'0201: return irq.enable[0].byte(1);
 
   //IF
-  case 0x0400'0202: return irq.flag.byte(0);
-  case 0x0400'0203: return irq.flag.byte(1);
+  case 0x0400'0202: return irq.flag[0].byte(0);
+  case 0x0400'0203: return irq.flag[0].byte(1);
 
   //WAITCNT
   case 0x0400'0204: return (
@@ -201,14 +206,26 @@ auto CPU::readIO(n32 address) -> n8 {
   | wait.prefetch << 6
   | wait.gameType << 7
   );
+  
+  //zero
+  case 0x0400'0206: return 0;
+  case 0x0400'0207: return 0;
 
   //IME
-  case 0x0400'0208: return irq.ime;
+  case 0x0400'0208: return irq.ime[0];
   case 0x0400'0209: return 0;
+  
+  //zero
+  case 0x0400'020a: return 0;
+  case 0x0400'020b: return 0;
 
   //POSTFLG + HALTCNT
   case 0x0400'0300: return context.booted;
   case 0x0400'0301: return 0;
+  
+  //zero
+  case 0x0400'0302: return 0;
+  case 0x0400'0303: return 0;
 
   //MEMCNT_L
   case 0x0400'0800: return (
@@ -227,81 +244,80 @@ auto CPU::readIO(n32 address) -> n8 {
 
   }
 
-  if(cpu.context.dmaActive) return cpu.dmabus.data.byte(address & 3);
-  return cpu.pipeline.fetch.instruction.byte(address & 1);
+  return cpu.openBus.get(Byte, address);
 }
 
 auto CPU::writeIO(n32 address, n8 data) -> void {
-  auto dma = [&]() -> DMA& { return this->dma[address / 12 & 3]; };
+  auto channel = [&]() -> DMAC::Channel& { return this->dmac.channel[address / 12 & 3]; };
   auto timer = [&]() -> Timer& { return this->timer[address.bit(2,3)]; };
 
   switch(address) {
 
   //DMA0SAD, DMA1SAD, DMA2SAD, DMA3SAD
-  case 0x0400'00b0: case 0x0400'00bc: case 0x0400'00c8: case 0x0400'00d4: dma().source.data.byte(0) = data; return;
-  case 0x0400'00b1: case 0x0400'00bd: case 0x0400'00c9: case 0x0400'00d5: dma().source.data.byte(1) = data; return;
-  case 0x0400'00b2: case 0x0400'00be: case 0x0400'00ca: case 0x0400'00d6: dma().source.data.byte(2) = data; return;
-  case 0x0400'00b3: case 0x0400'00bf: case 0x0400'00cb: case 0x0400'00d7: dma().source.data.byte(3) = data; return;
+  case 0x0400'00b0: case 0x0400'00bc: case 0x0400'00c8: case 0x0400'00d4: channel().source.data.byte(0) = data; return;
+  case 0x0400'00b1: case 0x0400'00bd: case 0x0400'00c9: case 0x0400'00d5: channel().source.data.byte(1) = data; return;
+  case 0x0400'00b2: case 0x0400'00be: case 0x0400'00ca: case 0x0400'00d6: channel().source.data.byte(2) = data; return;
+  case 0x0400'00b3: case 0x0400'00bf: case 0x0400'00cb: case 0x0400'00d7: channel().source.data.byte(3) = data; return;
 
   //DMA0DAD, DMA1DAD, DMA2DAD, DMA3DAD
-  case 0x0400'00b4: case 0x0400'00c0: case 0x0400'00cc: case 0x0400'00d8: dma().target.data.byte(0) = data; return;
-  case 0x0400'00b5: case 0x0400'00c1: case 0x0400'00cd: case 0x0400'00d9: dma().target.data.byte(1) = data; return;
-  case 0x0400'00b6: case 0x0400'00c2: case 0x0400'00ce: case 0x0400'00da: dma().target.data.byte(2) = data; return;
-  case 0x0400'00b7: case 0x0400'00c3: case 0x0400'00cf: case 0x0400'00db: dma().target.data.byte(3) = data; return;
+  case 0x0400'00b4: case 0x0400'00c0: case 0x0400'00cc: case 0x0400'00d8: channel().target.data.byte(0) = data; return;
+  case 0x0400'00b5: case 0x0400'00c1: case 0x0400'00cd: case 0x0400'00d9: channel().target.data.byte(1) = data; return;
+  case 0x0400'00b6: case 0x0400'00c2: case 0x0400'00ce: case 0x0400'00da: channel().target.data.byte(2) = data; return;
+  case 0x0400'00b7: case 0x0400'00c3: case 0x0400'00cf: case 0x0400'00db: channel().target.data.byte(3) = data; return;
 
   //DMA0CNT_L, DMA1CNT_L, DMA2CNT_L, DMA3CNT_L
-  case 0x0400'00b8: case 0x0400'00c4: case 0x0400'00d0: case 0x0400'00dc: dma().length.data.byte(0) = data; return;
-  case 0x0400'00b9: case 0x0400'00c5: case 0x0400'00d1: case 0x0400'00dd: dma().length.data.byte(1) = data; return;
+  case 0x0400'00b8: case 0x0400'00c4: case 0x0400'00d0: case 0x0400'00dc: channel().length.data.byte(0) = data; return;
+  case 0x0400'00b9: case 0x0400'00c5: case 0x0400'00d1: case 0x0400'00dd: channel().length.data.byte(1) = data; return;
 
   //DMA0CNT_H, DMA1CNT_H, DMA2CNT_H, DMA3CNT_H
   case 0x0400'00ba: case 0x0400'00c6: case 0x0400'00d2: case 0x0400'00de:
-    dma().targetMode        = data.bit(5,6);
-    dma().sourceMode.bit(0) = data.bit(7);
+    channel().targetMode        = data.bit(5,6);
+    channel().sourceMode.bit(0) = data.bit(7);
     return;
   case 0x0400'00bb: case 0x0400'00c7: case 0x0400'00d3: case 0x0400'00df: {
-    bool enable = dma().enable;
+    bool enable = channel().enable;
     if(address != 0x0400'00df) data.bit(3) = 0;  //gamepad DRQ valid for DMA3 only
 
-    dma().sourceMode.bit(1) = data.bit(0);
-    dma().repeat            = data.bit(1);
-    dma().size              = data.bit(2);
-    dma().drq               = data.bit(3);
-    dma().timingMode        = data.bit(4,5);
-    dma().irq               = data.bit(6);
-    dma().enable            = data.bit(7);
+    channel().sourceMode.bit(1) = data.bit(0);
+    channel().repeat            = data.bit(1);
+    channel().size              = data.bit(2);
+    channel().drq               = data.bit(3);
+    channel().timingMode        = data.bit(4,5);
+    channel().irq               = data.bit(6);
+    channel().enable            = data.bit(7);
 
-    if(!enable && dma().enable) {  //0->1 transition
-      if(dma().timingMode == 0) {
-        dma().active = true;  //immediate transfer mode
-        dma().waiting = 2;
+    if(!enable && channel().enable) {  //0->1 transition
+      if(channel().timingMode == 0) {
+        channel().active = true;  //immediate transfer mode
+        channel().waiting = 2;
       }
-      dma().latch.source = dma().source;
-      dma().latch.target = dma().target;
-      dma().latch.length = dma().length;
-    } else if(!dma().enable) {
-      dma().active = false;
+      channel().latch.source = channel().source;
+      channel().latch.target = channel().target;
+      channel().latch.length = channel().length;
+    } else if(!channel().enable) {
+      channel().active = false;
     }
     return;
   }
 
   //TM0CNT_L, TM1CNT_L, TM2CNT_L, TM3CNT_L
-  case 0x0400'0100: case 0x0400'0104: case 0x0400'0108: case 0x0400'010c: timer().reload.byte(0) = data; return;
-  case 0x0400'0101: case 0x0400'0105: case 0x0400'0109: case 0x0400'010d: timer().reload.byte(1) = data; return;
+  case 0x0400'0100: case 0x0400'0104: case 0x0400'0108: case 0x0400'010c:
+    timer().latch.reload.byte(0) = data;
+    timer().latch.reloadFlags.bit(0) = 1;
+    context.timerLatched = 1;
+    return;
+  case 0x0400'0101: case 0x0400'0105: case 0x0400'0109: case 0x0400'010d:
+    timer().latch.reload.byte(1) = data;
+    timer().latch.reloadFlags.bit(1) = 1;
+    context.timerLatched = 1;
+    return;
 
   //TM0CNT_H, TM1CNT_H, TM2CNT_H, TM3CNT_H
-  case 0x0400'0102: case 0x0400'0106: case 0x0400'010a: case 0x0400'010e: {
-    bool enable = timer().enable;
-
-    timer().frequency = data.bit(0,1);
-    timer().cascade   = data.bit(2);
-    timer().irq       = data.bit(6);
-    timer().enable    = data.bit(7);
-
-    if(!enable && timer().enable) {  //0->1 transition
-      timer().pending = true;
-    }
+  case 0x0400'0102: case 0x0400'0106: case 0x0400'010a: case 0x0400'010e:
+    timer().latch.control = data;
+    timer().latch.controlFlag = 1;
+    context.timerLatched = 1;
     return;
-  }
   case 0x0400'0103: case 0x0400'0107: case 0x0400'010b: case 0x0400'010f:
     return;
 
@@ -324,13 +340,14 @@ auto CPU::writeIO(n32 address, n8 data) -> void {
     serial.startBit              = data.bit(7);
     return;
   case 0x0400'0129:
-    serial.transferLength = data.bit(4);
-    serial.irqEnable      = data.bit(6);
+    serial.uartFlags = data.bit(0,3);
+    serial.mode      = data.bit(4,5);
+    serial.irqEnable = data.bit(6);
     return;
 
   //SIOMLT_SEND (SIODATA8)
-  case 0x0400'012a: serial.data8 = data; return;
-  case 0x0400'012b: return;
+  case 0x0400'012a: serial.dataMulti.byte(0) = data; return;
+  case 0x0400'012b: serial.dataMulti.byte(1) = data; return;  //upper 8 bits are always writable, but only used in multiplayer mode
 
   //KEYCNT
   case 0x0400'0132:
@@ -368,10 +385,10 @@ auto CPU::writeIO(n32 address, n8 data) -> void {
 
   //JOYCNT
   case 0x0400'0140:
-    joybus.resetSignal     = data.bit(0);
-    joybus.receiveComplete = data.bit(1);
-    joybus.sendComplete    = data.bit(2);
-    joybus.resetIRQEnable  = data.bit(6);
+    joybus.resetSignal     &= ~data.bit(0);
+    joybus.receiveComplete &= ~data.bit(1);
+    joybus.sendComplete    &= ~data.bit(2);
+    joybus.resetIRQEnable   =  data.bit(6);
     return;
   case 0x0400'0141: return;
   case 0x0400'0142: return;
@@ -400,12 +417,12 @@ auto CPU::writeIO(n32 address, n8 data) -> void {
   case 0x0400'0159: return;
 
   //IE
-  case 0x0400'0200: irq.enable.byte(0) = data; return;
-  case 0x0400'0201: irq.enable.byte(1) = data; return;
+  case 0x0400'0200: irq.enable[1].byte(0) = data; return;
+  case 0x0400'0201: irq.enable[1].byte(1) = data; return;
 
   //IF
-  case 0x0400'0202: irq.flag.byte(0) = irq.flag.byte(0) & ~data; return;
-  case 0x0400'0203: irq.flag.byte(1) = irq.flag.byte(1) & ~data; return;
+  case 0x0400'0202: irq.flag[1].byte(0) = irq.flag[1].byte(0) & ~data; return;
+  case 0x0400'0203: irq.flag[1].byte(1) = irq.flag[1].byte(1) & ~data; return;
 
   //WAITCNT
   case 0x0400'0204:
@@ -425,7 +442,7 @@ auto CPU::writeIO(n32 address, n8 data) -> void {
     return;
 
   //IME
-  case 0x0400'0208: irq.ime = data.bit(0); return;
+  case 0x0400'0208: irq.ime[1] = data.bit(0); return;
   case 0x0400'0209: return;
 
   //POSTFLG, HALTCNT

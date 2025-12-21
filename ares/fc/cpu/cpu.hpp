@@ -44,16 +44,17 @@ struct CPU : MOS6502, Thread {
   auto read(n16 address) -> n8 override;
   auto write(n16 address, n8 data) -> void override;
   auto lastCycle() -> void override;
+  auto cancelNmi() -> void override;
+  auto delayIrq() -> void override;
+  auto irqPending() -> bool override;
   auto nmi(n16& vector) -> void override;
 
-  auto oamDMA() -> void;
+  auto dmcDMAPending() -> void;
+  auto dma(n16 address) -> void;
 
   auto nmiLine(bool) -> void;
   auto irqLine(bool) -> void;
   auto apuLine(bool) -> void;
-
-  auto rdyLine(bool) -> void;
-  auto rdyAddress(bool valid, n16 value = 0) -> void;
 
 //protected:
   struct IO {
@@ -62,11 +63,12 @@ struct CPU : MOS6502, Thread {
     n1  nmiLine;
     n1  irqLine;
     n1  apuLine;
-    n1  rdyLine = 1;
-    n1  rdyAddressValid;
-    n16 rdyAddressValue;
+    n1  oddCycle;
+    n1  dmcDMAPending;
+    n1  dmcDummyRead;
     n1  oamDMAPending;
     n8  oamDMAPage;
+    n8  openBus;
   } io;
 };
 

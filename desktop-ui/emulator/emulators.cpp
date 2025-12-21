@@ -39,6 +39,7 @@ namespace ares::Atari2600 {
 #ifdef CORE_GBA
   namespace ares::GameBoyAdvance {
     auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
   }
   #include "game-boy-advance.cpp"
 #endif
@@ -46,11 +47,13 @@ namespace ares::Atari2600 {
 #ifdef CORE_MD
   namespace ares::MegaDrive {
     auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
   }
   #include "mega-drive.cpp"
   #include "mega-32x.cpp"
   #include "mega-cd.cpp"
   #include "mega-cd-32x.cpp"
+  #include "mega-ld.cpp"
 #endif
 
 #ifdef CORE_MS
@@ -108,6 +111,7 @@ namespace ares::Atari2600 {
 #ifdef CORE_PS1
   namespace ares::PlayStation {
     auto load(Node::System& node, string name) -> bool;
+    auto option(string name, string value) -> bool;
   }
   #include "playstation.cpp"
 #endif
@@ -132,6 +136,7 @@ namespace ares::Atari2600 {
     auto load(Node::System& node, string name) -> bool;
   }
   #include "sg-1000.cpp"
+  #include "sc-3000.cpp"
 #endif
 
 #ifdef CORE_WS
@@ -213,6 +218,7 @@ auto Emulator::construct() -> void {
 
   #ifdef CORE_SG
   emulators.append(new SG1000);
+  emulators.append(new SC3000);
   #endif
 
   #ifdef CORE_MS
@@ -225,6 +231,7 @@ auto Emulator::construct() -> void {
   emulators.append(new Mega32X);
   emulators.append(new MegaCD);
   emulators.append(new MegaCD32X);
+  emulators.append(new MegaLD);
   #endif
 
   #ifdef CORE_SATURN

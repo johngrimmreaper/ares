@@ -1,4 +1,5 @@
 //Mega 32X
+#include "nall/dsp/iir/dc-removal.hpp"
 
 struct M32X {
   Node::Object node;
@@ -23,7 +24,7 @@ struct M32X {
 
       //debugger.cpp
       auto load(Node::Object) -> void;
-      auto instruction() -> void;
+      auto instruction(u16 opcode) -> void;
       auto interrupt(string_view) -> void;
 
       struct Tracer {
@@ -37,10 +38,14 @@ struct M32X {
     auto unload() -> void;
 
     auto main() -> void;
+    auto instructionPrologue(u16 instruction) -> void override;
     auto step(u32 clocks) -> void override;
+    auto internalStep(u32 clocks) -> void;
     auto power(bool reset) -> void;
     auto restart() -> void;
-    auto syncOtherSh2() -> void;
+    auto syncAll(bool force = false) -> void;
+    auto syncOtherSh2(bool force = false) -> void;
+    auto syncM68k(bool force = false) -> void;
 
     auto busReadByte(u32 address) -> u32 override;
     auto busReadWord(u32 address) -> u32 override;
@@ -65,9 +70,9 @@ struct M32X {
     } irq;
 
     s32 cyclesUntilSh2Sync = 0;
-    s32 cyclesUntilFullSync = 0;
-    s32 minCyclesBetweenFullSyncs = 0;
+    s32 cyclesUntilM68kSync = 0;
     s32 minCyclesBetweenSh2Syncs = 0;
+    s32 minCyclesBetweenM68kSyncs = 0;
   };
 
   struct VDP {
@@ -99,6 +104,8 @@ struct M32X {
     auto plot(u32* output, u16 color) -> void;
     auto fill() -> void;
     auto selectFramebuffer(n1 active) -> void;
+    auto framebufferEngaged() -> bool;
+    auto paletteEngaged() -> bool;
 
     //serialization.cpp
     auto serialize(serializer&) -> void;
@@ -113,12 +120,21 @@ struct M32X {
     n1  framebufferAccess;
     n1  framebufferActive;
     n1  framebufferSelect;
+    int framebufferWait;
     n1  hblank;
     n1  vblank;
+
+    struct Latch {
+      n2 mode;
+      n1 lines;
+      n1 priority;
+      n1 dotshift;
+    } latch;
   };
 
   struct PWM : Thread {
     Node::Audio::Stream stream;
+    nall::DSP::IIR::DCRemoval dcfilter_l, dcfilter_r;
 
     //pwm.cpp
     auto load(Node::Object) -> void;
@@ -126,6 +142,7 @@ struct M32X {
     auto main() -> void;
     auto step(u32 clocks) -> void;
     auto power(bool reset) -> void;
+    auto updateFrequency() -> void;
 
     //serialization.cpp
     auto serialize(serializer&) -> void;
@@ -201,7 +218,7 @@ struct M32X {
 
     //$a15000
     n1 adapterEnable;
-    n1 adapterReset;
+    n1 adapterReset = 1;
     n1 resetEnable = 1;
 
     //$a15004

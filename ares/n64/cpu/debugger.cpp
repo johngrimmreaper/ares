@@ -2,6 +2,12 @@ auto CPU::Debugger::load(Node::Object parent) -> void {
   tracer.instruction = parent->append<Node::Debugger::Tracer::Instruction>("Instruction", "CPU");
   tracer.instruction->setAddressBits(64, 2);
   tracer.instruction->setDepth(64);
+  if constexpr(Accuracy::CPU::Recompiler) {
+    tracer.instruction->setToggle([&] {
+      cpu.recompiler.reset();
+      cpu.recompiler.callInstructionPrologue = tracer.instruction->enabled();
+    });
+  }
 
   tracer.exception = parent->append<Node::Debugger::Tracer::Notification>("Exception", "CPU");
   tracer.interrupt = parent->append<Node::Debugger::Tracer::Notification>("Interrupt", "CPU");
@@ -15,10 +21,8 @@ auto CPU::Debugger::unload() -> void {
   tracer.tlb.reset();
 }
 
-auto CPU::Debugger::instruction() -> void {
+auto CPU::Debugger::instruction(u64 address, u32 instruction) -> void {
   if(unlikely(tracer.instruction->enabled())) {
-    u64 address = cpu.pipeline.address;
-    u32 instruction = cpu.pipeline.instruction;
     if(tracer.instruction->address(address)) {
       cpu.disassembler.showColors = 0;
       tracer.instruction->notify(cpu.disassembler.disassemble(address, instruction), {});

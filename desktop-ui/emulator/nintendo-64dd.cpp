@@ -1,13 +1,13 @@
-struct Nintendo64DD : Emulator {
+struct Nintendo64DD : Nintendo64 {
   Nintendo64DD();
-  auto load() -> bool override;
+  auto load() -> LoadResult override;
   auto load(Menu) -> void override;
+  auto unload() -> void override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
 
-  shared_pointer<mia::Pak> gamepad;
   u32 regionID = 0;
-  Timer diskInsertTimer;
+  sTimer diskInsertTimer;
 };
 
 Nintendo64DD::Nintendo64DD() {
@@ -56,9 +56,12 @@ Nintendo64DD::Nintendo64DD() {
   }
 }
 
-auto Nintendo64DD::load() -> bool {
+auto Nintendo64DD::load() -> LoadResult {
   game = mia::Medium::create("Nintendo 64DD");
-  if(!game->load(Emulator::load(game, configuration.game))) return false;
+  string location = Emulator::load(game, configuration.game);
+  if(!location) return noFileSelected;
+  LoadResult result = game->load(location);
+  if(result != successful) return result;
 
   auto region = game->pak->attribute("region");
   //if statements below are ordered by lowest to highest priority
@@ -67,7 +70,14 @@ auto Nintendo64DD::load() -> bool {
   if (region == "NTSC-J"  ) regionID = 0;
 
   system = mia::System::create("Nintendo 64DD");
-  if(!system->load(firmware[regionID].location)) return errorFirmware(firmware[regionID]), false;
+  result = system->load(firmware[regionID].location);
+  if(result != successful) {
+    result.firmwareSystemName = "Nintendo 64DD";
+    result.firmwareType = firmware[regionID].type;
+    result.firmwareRegion = firmware[regionID].region;
+    result.result = noFirmware;
+    return result;
+  }
 
   ares::Nintendo64::option("Quality", settings.video.quality);
   ares::Nintendo64::option("Supersampling", settings.video.supersampling);
@@ -79,8 +89,11 @@ auto Nintendo64DD::load() -> bool {
   ares::Nintendo64::option("Disable Video Interface Processing", settings.video.disableVideoInterfaceProcessing);
   ares::Nintendo64::option("Weave Deinterlacing", settings.video.weaveDeinterlacing);
   ares::Nintendo64::option("Homebrew Mode", settings.general.homebrewMode);
+  ares::Nintendo64::option("Recompiler", !settings.general.forceInterpreter);
+  ares::Nintendo64::option("Expansion Pak", settings.nintendo64.expansionPak);
+  ares::Nintendo64::option("Controller Pak Banks", settings.nintendo64.controllerPakBankString);
 
-  if(!ares::Nintendo64::load(root, {"[Nintendo] Nintendo 64DD (", region, ")"})) return false;
+  if(!ares::Nintendo64::load(root, {"[Nintendo] Nintendo 64DD (", region, ")"})) return otherError;
 
   if(auto port = root->find<ares::Node::Port>("Nintendo 64DD/Disk Drive")) {
     port->allocate();
@@ -92,10 +105,13 @@ auto Nintendo64DD::load() -> bool {
     if(auto port = root->find<ares::Node::Port>({"Controller Port ", 1 + id})) {
       auto peripheral = port->allocate("Gamepad");
       port->connect();
+      bool transferPakConnected = false;
       if(auto port = peripheral->find<ares::Node::Port>("Pak")) {
         if(id == 0 && game->pak->attribute("cpak").boolean()) {
           gamepad = mia::Pak::create("Nintendo 64");
-          gamepad->pak->append("save.pak", 32_KiB);
+
+          //create maximum sized controller pak, file is resized later
+          gamepad->pak->append("save.pak", 1984_KiB);
           gamepad->load("save.pak", ".pak", game->location);
           port->allocate("Controller Pak");
           port->connect();
@@ -103,34 +119,76 @@ auto Nintendo64DD::load() -> bool {
           port->allocate("Rumble Pak");
           port->connect();
         }
+        if(id == 0 && game->pak->attribute("tpak").boolean()) {
+          #if defined(CORE_GB)
+          auto transferPak = port->allocate("Transfer Pak");
+          port->connect();
+
+          if(auto slot = transferPak->find<ares::Node::Port>("Cartridge Slot")) {
+            gb = mia::Medium::create("Game Boy Color");
+            string tmpPath;
+            if(gb->load(Emulator::load(gb, tmpPath)) == successful) {
+              slot->allocate();
+              slot->connect();
+              transferPakConnected = true;
+            } else {
+              port->disconnect();
+              gb.reset();
+            }
+          }
+          #endif
+        }
+
+        if(!transferPakConnected) {
+          if(id == 0 && game->pak->attribute("cpak").boolean()) {
+            gamepad = mia::Pak::create("Nintendo 64");
+            gamepad->pak->append("save.pak", 32_KiB);
+            gamepad->load("save.pak", ".pak", game->location);
+            port->allocate("Controller Pak");
+            port->connect();
+          } else if(game->pak->attribute("rpak").boolean()) {
+            port->allocate("Rumble Pak");
+            port->connect();
+          }
+        }
       }
     }
   }
 
+  diskInsertTimer = Timer{};
 
-  return true;
+  return successful;
 }
 
 auto Nintendo64DD::load(Menu menu) -> void {
   MenuItem changeDisk{&menu};
   changeDisk.setIcon(Icon::Device::Optical);
   changeDisk.setText("Change Disk").onActivate([&] {
+    Program::Guard guard;
     save();
     auto drive = root->find<ares::Node::Port>("Nintendo 64DD/Disk Drive");
     drive->disconnect();
 
-    if(!game->load(Emulator::load(game, configuration.game))) {
+    if(game->load(Emulator::load(game, configuration.game)) != successful) {
       return;
     }
 
     //give the emulator core a few seconds to notice an empty drive state before reconnecting
-    diskInsertTimer.onActivate([&] {
-      diskInsertTimer.setEnabled(false);
+    diskInsertTimer->onActivate([&] {
+      Program::Guard guard;
+      diskInsertTimer->setEnabled(false);
       auto drive = root->find<ares::Node::Port>("Nintendo 64DD/Disk Drive");
       drive->allocate();
       drive->connect();
     }).setInterval(3000).setEnabled();
   });
+}
+
+auto Nintendo64DD::unload() -> void {
+  gamepad.reset();
+
+  Emulator::unload();
+  diskInsertTimer.reset();
 }
 
 auto Nintendo64DD::save() -> bool {

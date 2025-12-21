@@ -1,6 +1,6 @@
 #if defined(Hiro_MenuCheckItem)
 
-@implementation CocoaMenuCheckItem : NSMenuItem
+@implementation CocoaMenuCheckItem
 
 -(id) initWith:(hiro::mMenuCheckItem&)menuCheckItemReference {
   if(self = [super initWithTitle:@"" action:@selector(activate) keyEquivalent:@""]) {
@@ -13,7 +13,7 @@
 
 -(void) activate {
   menuCheckItem->state.checked = !menuCheckItem->state.checked;
-  auto state = menuCheckItem->state.checked ? NSOnState : NSOffState;
+  auto state = menuCheckItem->state.checked ? NSControlStateValueOn : NSControlStateValueOff;
   [self setState:state];
   menuCheckItem->doToggle();
 }
@@ -34,7 +34,7 @@ auto pMenuCheckItem::destruct() -> void {
 }
 
 auto pMenuCheckItem::setChecked(bool checked) -> void {
-  auto state = checked ? NSOnState : NSOffState;
+  auto state = checked ? NSControlStateValueOn : NSControlStateValueOff;
   [cocoaAction setState:state];
 }
 

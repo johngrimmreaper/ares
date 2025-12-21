@@ -47,6 +47,7 @@ auto Cartridge::save() -> void {
 }
 
 auto Cartridge::power() -> void {
+  Thread::create(system.frequency(), {&Cartridge::main, this});
   board->power();
 }
 
@@ -68,6 +69,10 @@ auto Cartridge::readCHR(n32 address, n8 data) -> n8 {
 
 auto Cartridge::writeCHR(n32 address, n8 data) -> void {
   return board->writeCHR(address, data);
+}
+
+auto Cartridge::ppuAddressBus(n14 address) -> void {
+  return board->ppuAddressBus(address);
 }
 
 auto Cartridge::scanline(n32 y) -> void {

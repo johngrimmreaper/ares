@@ -8,11 +8,13 @@ auto MemoryEditor::construct() -> void {
   memoryEditor.setRows(24);
 
   exportButton.setText("Export").onActivate([&] {
+    Program::Guard guard;
     eventExport();
   });
 
   gotoLabel.setText("Goto:");
   gotoAddress.setFont(Font().setFamily(Font::Mono)).onActivate([&] {
+    Program::Guard guard;
     auto address = gotoAddress.text().hex();
     memoryEditor.setAddress(address);
     gotoAddress.setText();
@@ -21,6 +23,7 @@ auto MemoryEditor::construct() -> void {
   liveOption.setText("Live");
 
   refreshButton.setText("Refresh").onActivate([&] {
+    Program::Guard guard;
     memoryEditor.update();
   });
 }
@@ -58,6 +61,7 @@ auto MemoryEditor::eventChange() -> void {
         return memory->read(address);
       });
       memoryEditor.onWrite([=](u32 address, u8 data) -> void {
+        Program::Guard guard;
         return memory->write(address, data);
       });
     }
@@ -71,6 +75,7 @@ auto MemoryEditor::eventChange() -> void {
 }
 
 auto MemoryEditor::eventExport() -> void {
+  Program::Guard guard;
   if(auto item = memoryList.selected()) {
     if(auto memory = item.attribute<ares::Node::Debugger::Memory>("node")) {
       auto identifier = memory->name().downcase().replace(" ", "-");

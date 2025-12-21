@@ -11,11 +11,14 @@ struct Settings : Markup::Node {
     string format;
     bool exclusive = false;
     bool blocking = false;
+    bool forceSRGB = false;
+    bool threadedRenderer = true;
+    bool nativeFullScreen = false;
     bool flush = false;
     string shader = "None";
     u32 multiplier = 2;
     string output = "Scale";
-    bool aspectCorrection = true;
+    string aspectCorrection = "Standard";
     bool adaptiveSizing = true;
     bool autoCentering = false;
 
@@ -66,6 +69,7 @@ struct Settings : Markup::Node {
     bool runAhead = false;
     bool autoSaveMemory = true;
     bool homebrewMode = false;
+    bool forceInterpreter = false;
   } general;
 
   struct Rewind {
@@ -96,6 +100,20 @@ struct Settings : Markup::Node {
     bool enabled = false; // if enabled, server starts with ares
     bool useIPv4 = false; // forces IPv4 over IPv6
   } debugServer;
+
+  struct Nintendo64 {
+    bool expansionPak = true;
+    u8 controllerPakBankCount = 1;
+    string controllerPakBankString = "32KiB (Default)";
+  } nintendo64;
+
+  struct GameBoyAdvance {
+    bool player = false;
+  } gameBoyAdvance;
+
+  struct MegaDrive {
+    bool tmss = false;
+  } megadrive;
 };
 
 struct VideoSettings : VerticalLayout {
@@ -142,10 +160,10 @@ struct VideoSettings : VerticalLayout {
     CheckLabel weaveDeinterlacingOption{&weaveDeinterlacingLayout, Size{0, 0}, 5};
     Label weaveDeinterlacingHint{&weaveDeinterlacingLayout, Size{0, 0}};
   HorizontalLayout renderQualityLayout{this, Size{~0, 0}, 5};
-    RadioLabel renderQualitySD{&renderQualityLayout, Size{0, 0}};
-    RadioLabel renderQualityHD{&renderQualityLayout, Size{0, 0}};
-    RadioLabel renderQualityUHD{&renderQualityLayout, Size{0, 0}};
-    Group renderQualityGroup{&renderQualitySD, &renderQualityHD, &renderQualityUHD};
+    RadioLabel renderQuality1x{&renderQualityLayout, Size{0, 0}};
+    RadioLabel renderQuality2x{&renderQualityLayout, Size{0, 0}};
+    RadioLabel renderQuality4x{&renderQualityLayout, Size{0, 0}};
+    Group renderQualityGroup{&renderQuality1x, &renderQuality2x, &renderQuality4x};
   HorizontalLayout renderSupersamplingLayout{this, Size{~0, 0}, 5};
     CheckLabel renderSupersamplingOption{&renderSupersamplingLayout, Size{0, 0}, 5};
     Label renderSupersamplingHint{&renderSupersamplingLayout, Size{0, 0}};
@@ -230,18 +248,41 @@ struct EmulatorSettings : VerticalLayout {
 
 struct OptionSettings : VerticalLayout {
   auto construct() -> void;
-  HorizontalLayout rewindLayout{this, Size{~0, 0}, 5};
-    CheckLabel rewind{&rewindLayout, Size{0, 0}, 5};
-    Label rewindHint{&rewindLayout, Size{~0, 0}};
-  HorizontalLayout runAheadLayout{this, Size{~0, 0}, 5};
-    CheckLabel runAhead{&runAheadLayout, Size{0, 0}, 5};
-    Label runAheadHint{&runAheadLayout, Size{~0, 0}};
-  HorizontalLayout autoSaveMemoryLayout{this, Size{~0, 0}, 5};
-    CheckLabel autoSaveMemory{&autoSaveMemoryLayout, Size{0, 0}, 5};
-    Label autoSaveMemoryHint{&autoSaveMemoryLayout, Size{~0, 0}};
-  HorizontalLayout homebrewModeLayout{this, Size{~0, 0}, 5};
-    CheckLabel homebrewMode{&homebrewModeLayout, Size{0, 0}, 5};
-    Label homebrewModeHint{&homebrewModeLayout, Size{~0, 0}};
+  Label commonSettingsLabel{this, Size{~0, 0}, 5};
+    HorizontalLayout rewindLayout{this, Size{~0, 0}, 5};
+      CheckLabel rewind{&rewindLayout, Size{0, 0}, 5};
+      Label rewindHint{&rewindLayout, Size{~0, 0}};
+    HorizontalLayout runAheadLayout{this, Size{~0, 0}, 5};
+      CheckLabel runAhead{&runAheadLayout, Size{0, 0}, 5};
+      Label runAheadHint{&runAheadLayout, Size{~0, 0}};
+    HorizontalLayout autoSaveMemoryLayout{this, Size{~0, 0}, 5};
+      CheckLabel autoSaveMemory{&autoSaveMemoryLayout, Size{0, 0}, 5};
+      Label autoSaveMemoryHint{&autoSaveMemoryLayout, Size{~0, 0}};
+    HorizontalLayout homebrewModeLayout{this, Size{~0, 0}, 5};
+      CheckLabel homebrewMode{&homebrewModeLayout, Size{0, 0}, 5};
+      Label homebrewModeHint{&homebrewModeLayout, Size{~0, 0}};
+    HorizontalLayout forceInterpreterLayout{this, Size{~0, 0}, 5};
+      CheckLabel forceInterpreter{&forceInterpreterLayout, Size{0, 0}, 5};
+      Label forceInterpreterHint{&forceInterpreterLayout, Size{0, 0}};
+  Label nintendo64SettingsLabel{this, Size{~0, 0}, 5};
+    HorizontalLayout nintendo64ExpansionPakLayout{this, Size{~0, 0}, 5};
+      CheckLabel nintendo64ExpansionPakOption{&nintendo64ExpansionPakLayout, Size{0, 0}, 5};
+      Label nintendo64ExpansionPakHint{&nintendo64ExpansionPakLayout, Size{0, 0}};
+    HorizontalLayout nintendo64ControllerPakBankLayout{this, Size{~0, 0}, 5};
+      Label nintendo64ControllerPakBankLabel{&nintendo64ControllerPakBankLayout, Size{0, 0}};
+      ComboButton nintendo64ControllerPakBankOption{&nintendo64ControllerPakBankLayout, Size{0, 0}};
+      // LineEdit nintendo64ControllerPakBankOption{&nintendo64ControllerPakBankLayout, Size{40, 0}};
+      Label nintendo64ControllerPakBankHint{&nintendo64ControllerPakBankLayout, Size{0, 0}};
+
+  Label gameBoyAdvanceSettingsLabel{this, Size{~0, 0}, 5};
+    HorizontalLayout gameBoyPlayerLayout{this, Size{~0, 0}, 5};
+      CheckLabel gameBoyPlayerOption{&gameBoyPlayerLayout, Size{0, 0}, 5};
+      Label gameBoyPlayerHint{&gameBoyPlayerLayout, Size{0, 0}};
+
+  Label megaDriveSettingsLabel{this, Size{~0, 0}, 5};
+    HorizontalLayout megaDriveTmssLayout{this, Size{~0, 0}, 5};
+      CheckLabel megaDriveTmssOption{&megaDriveTmssLayout, Size{0, 0}, 5};
+      Label megaDriveTmssHint{&megaDriveTmssLayout, Size{0, 0}};
 };
 
 struct FirmwareSettings : VerticalLayout {
@@ -304,17 +345,16 @@ struct PathSettings : VerticalLayout {
 struct DriverSettings : VerticalLayout {
   auto construct() -> void;
   auto videoRefresh() -> void;
-  auto videoDriverUpdate() -> void;
+  auto videoDriverUpdate() -> bool;
   auto audioRefresh() -> void;
-  auto audioDriverUpdate() -> void;
+  auto audioDriverUpdate() -> bool;
   auto inputRefresh() -> void;
-  auto inputDriverUpdate() -> void;
+  auto inputDriverUpdate() -> bool;
 
   Label videoLabel{this, Size{~0, 0}, 5};
   HorizontalLayout videoDriverLayout{this, Size{~0, 0}};
     Label videoDriverLabel{&videoDriverLayout, Size{0, 0}};
     ComboButton videoDriverList{&videoDriverLayout, Size{0, 0}};
-    Button videoDriverAssign{&videoDriverLayout, Size{0, 0}};
     Label videoDriverActive{&videoDriverLayout, Size{0, 0}};
   HorizontalLayout videoPropertyLayout{this, Size{~0, 0}};
     Label videoMonitorLabel{&videoPropertyLayout, Size{0, 0}};
@@ -322,15 +362,21 @@ struct DriverSettings : VerticalLayout {
     Label videoFormatLabel{&videoPropertyLayout, Size{0, 0}};
     ComboButton videoFormatList{&videoPropertyLayout, Size{0, 0}};
   HorizontalLayout videoToggleLayout{this, Size{~0, 0}};
+#if !defined(PLATFORM_MACOS)
     CheckLabel videoExclusiveToggle{&videoToggleLayout, Size{0, 0}};
+#endif
     CheckLabel videoBlockingToggle{&videoToggleLayout, Size{0, 0}};
     CheckLabel videoFlushToggle{&videoToggleLayout, Size{0, 0}};
+#if defined(PLATFORM_MACOS)
+    CheckLabel videoColorSpaceToggle{&videoToggleLayout, Size{0, 0}};
+    CheckLabel videoThreadedRendererToggle{&videoToggleLayout, Size{0, 0}};
+    CheckLabel videoNativeFullScreenToggle{&videoToggleLayout, Size{0, 0}};
+#endif
   //
   Label audioLabel{this, Size{~0, 0}, 5};
   HorizontalLayout audioDriverLayout{this, Size{~0, 0}};
     Label audioDriverLabel{&audioDriverLayout, Size{0, 0}};
     ComboButton audioDriverList{&audioDriverLayout, Size{0, 0}};
-    Button audioDriverAssign{&audioDriverLayout, Size{0, 0}};
     Label audioDriverActive{&audioDriverLayout, Size{0, 0}};
   HorizontalLayout audioDeviceLayout{this, Size{~0, 0}};
     Label audioDeviceLabel{&audioDeviceLayout, Size{0, 0}};
@@ -349,7 +395,6 @@ struct DriverSettings : VerticalLayout {
   HorizontalLayout inputDriverLayout{this, Size{~0, 0}};
     Label inputDriverLabel{&inputDriverLayout, Size{0, 0}};
     ComboButton inputDriverList{&inputDriverLayout, Size{0, 0}};
-    Button inputDriverAssign{&inputDriverLayout, Size{0, 0}};
     Label inputDriverActive{&inputDriverLayout, Size{0, 0}};
   HorizontalLayout inputDefocusLayout{this, Size{~0, 0}};
     Label inputDefocusLabel{&inputDefocusLayout, Size{0, 0}};
@@ -389,7 +434,6 @@ struct HomePanel : VerticalLayout {
 };
 
 struct SettingsWindow : Window {
-  SettingsWindow();
   auto show(const string& panel) -> void;
   auto eventChange() -> void;
 
@@ -407,6 +451,11 @@ struct SettingsWindow : Window {
       DriverSettings driverSettings;
       DebugSettings debugSettings;
       HomePanel homePanel;
+  
+  bool initialized = false;
+  
+private:
+  auto initialize() -> void;
 };
 
 extern Settings settings;

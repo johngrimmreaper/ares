@@ -38,26 +38,92 @@ auto Emulator::locate(const string& location, const string& suffix, const string
 
 //handles region selection when games support multiple regions
 auto Emulator::region() -> string {
+  auto preferredRegions = settings.boot.prefer.split(",").strip();
   if(game && game->pak) {
     if(auto regions = game->pak->attribute("region").split(",").strip()) {
-      if(settings.boot.prefer == "NTSC-U" && regions.find("NTSC-U")) return "NTSC-U";
-      if(settings.boot.prefer == "NTSC-J" && regions.find("NTSC-J")) return "NTSC-J";
-      if(settings.boot.prefer == "NTSC-U" && regions.find("NTSC"  )) return "NTSC";
-      if(settings.boot.prefer == "NTSC-J" && regions.find("NTSC"  )) return "NTSC";
-      if(settings.boot.prefer == "PAL"    && regions.find("PAL"   )) return "PAL";
-      if(regions.first()) return regions.first();
+      for(auto &prefer: preferredRegions) {
+        if(regions.find(prefer)) return prefer; //NTSC-U, NTSC-J or PAL
+      }
+
+      //Handle generic "NTSC" region.
+      //NOTE: we don't need to check PAL because the above check covered it
+      if(regions.find("NTSC")) return "NTSC";
+
+      //If no preferred region was found, return the first region in the list
+      //NOTE: required for 'unsual' regions like NTSC-DEV for 64DD
+      return regions.first();
     }
   }
-  if(settings.boot.prefer == "NTSC-J") return "NTSC-J";
-  if(settings.boot.prefer == "NTSC-U") return "NTSC-U";
-  if(settings.boot.prefer == "PAL"   ) return "PAL";
+
   return {};
 }
 
-auto Emulator::load(const string& location) -> bool {
-  if(inode::exists(location)) locationQueue.append(location);
 
-  if(!load()) return false;
+auto Emulator::handleLoadResult(LoadResult result) -> void {
+  string errorText;
+
+  switch (result.result) {
+    case successful:
+      return;
+    case noFileSelected:
+      return;
+    case invalidROM:
+      errorText = { "There was an error trying to parse the selected ROM. \n",
+                    "Your ROM may be corrupt or contain a bad dump. " };
+      break;
+    case couldNotParseManifest:
+      errorText = { "An error occurred while parsing the database file. You \n",
+                    "may need to reinstall ares. " };
+      break;
+    case databaseNotFound:
+      errorText = { "The database file for the system was not found. \n",
+                    "Make sure that you have installed or packaged ares correctly. \n",
+                    "Missing database file: " };
+      break;
+    case noFirmware:
+      errorText = { "Error: firmware is missing or invalid.\n",
+                    result.firmwareSystemName, " - ", result.firmwareType, " (", result.firmwareRegion, ") is required to play this game.\n",
+                    "Would you like to configure firmware settings now? " };
+      break;
+    case romNotFound:
+      errorText = "The selected ROM file was not found or could not be opened. ";
+      break;
+    case romNotFoundInDatabase:
+      errorText = { "The required manifest for this ROM was not found in the database. \n",
+                    "This title may not be currently supported by ares. " };
+      break;
+    case otherError:
+      errorText = "An internal error occurred when initializing the emulator core. ";
+      break;
+  }
+  
+  if(result.info) {
+    errorText = { errorText, result.info };
+  }
+  
+  switch (result.result) {
+    case noFirmware:
+      if(MessageDialog().setText({
+        errorText
+      }).question() == "Yes") {
+        settingsWindow.show("Firmware");
+        firmwareSettings.select(emulator->name, result.firmwareType, result.firmwareRegion);
+      }
+      break;
+    default:
+      error(errorText);
+  }
+}
+
+auto Emulator::load(const string& location) -> bool {
+  Program::Guard guard;
+  if(inode::exists(location)) locationQueue.append(location);
+  
+  LoadResult result = load();
+  handleLoadResult(result);
+  if(result != successful) {
+    return false;
+  }
   setBoolean("Color Emulation", settings.video.colorEmulation);
   setBoolean("Deep Black Boost", settings.video.deepBlackBoost);
   setBoolean("Interframe Blending", settings.video.interframeBlending);
@@ -70,6 +136,7 @@ auto Emulator::load(const string& location) -> bool {
 }
 
 auto Emulator::load(shared_pointer<mia::Pak> pak, string& path) -> string {
+  Program::Guard guard;
   string location;
   if(locationQueue) {
     location = locationQueue.takeFirst();  //pull from the game queue if an entry is available
@@ -100,6 +167,7 @@ auto Emulator::load(shared_pointer<mia::Pak> pak, string& path) -> string {
 }
 
 auto Emulator::loadFirmware(const Firmware& firmware) -> shared_pointer<vfs::file> {
+  Program::Guard guard;
   if(firmware.location.iendsWith(".zip")) {
     Decode::ZIP archive;
     if(archive.open(firmware.location) && archive.file) {
@@ -113,6 +181,7 @@ auto Emulator::loadFirmware(const Firmware& firmware) -> shared_pointer<vfs::fil
 }
 
 auto Emulator::unload() -> void {
+  Program::Guard guard;
   save();
   root->unload();
   game = {};
@@ -122,6 +191,7 @@ auto Emulator::unload() -> void {
 }
 
 auto Emulator::load(mia::Pak& node, string name) -> bool {
+  Program::Guard guard;
   if(auto fp = node.pak->read(name)) {
     if(auto memory = file::read({node.location, name})) {
       fp->read(memory);
@@ -132,6 +202,7 @@ auto Emulator::load(mia::Pak& node, string name) -> bool {
 }
 
 auto Emulator::save(mia::Pak& node, string name) -> bool {
+  Program::Guard guard;
   if(auto memory = node.pak->write(name)) {
     return file::write({node.location, name}, {memory->data(), memory->size()});
   }
@@ -139,12 +210,14 @@ auto Emulator::save(mia::Pak& node, string name) -> bool {
 }
 
 auto Emulator::refresh() -> void {
+  Program::Guard guard;
   if(auto screen = root->scan<ares::Node::Video::Screen>("Screen")) {
     screen->refresh();
   }
 }
 
 auto Emulator::setBoolean(const string& name, bool value) -> bool {
+  Program::Guard guard;
   if(auto node = root->scan<ares::Node::Setting::Boolean>(name)) {
     node->setValue(value);  //setValue() will not call modify() if value has not changed;
     node->modify(value);    //but that may prevent the initial setValue() from working
@@ -154,16 +227,16 @@ auto Emulator::setBoolean(const string& name, bool value) -> bool {
 }
 
 auto Emulator::setOverscan(bool value) -> bool {
+  Program::Guard guard;
   if(auto screen = root->scan<ares::Node::Video::Screen>("Screen")) {
-    if(auto overscan = screen->find<ares::Node::Setting::Boolean>("Overscan")) {
-      overscan->setValue(value);
-      return true;
-    }
+    screen->setOverscan(value);
+    return true;
   }
   return false;
 }
 
 auto Emulator::setColorBleed(bool value) -> bool {
+  Program::Guard guard;
   if(auto screen = root->scan<ares::Node::Video::Screen>("Screen")) {
     screen->setColorBleed(screen->height() < 720 ? value : false);  //only apply to sub-HD content
     return true;
@@ -176,24 +249,16 @@ auto Emulator::error(const string& text) -> void {
   MessageDialog().setTitle("Error").setText(text).setAlignment(presentation).error();
 }
 
-auto Emulator::errorFirmware(const Firmware& firmware, string system) -> void {
-  if(!system) system = emulator->name;
-  if(MessageDialog().setText({
-    "Error: firmware is missing or invalid.\n",
-    system, " - ", firmware.type, " (", firmware.region, ") is required to play this game.\n"
-    "Would you like to configure firmware settings now?"
-  }).question() == "Yes") {
-    settingsWindow.show("Firmware");
-    firmwareSettings.select(system, firmware.type, firmware.region);
-  }
-}
-
 auto Emulator::input(ares::Node::Input::Input input) -> void {
   //looking up inputs is very time-consuming; skip call if input was called too recently
-  auto thisPoll = chrono::millisecond();
-  if(thisPoll - input->lastPoll < 5) return;
-  input->lastPoll = thisPoll;
+  //note: allow rumble to be polled at full speed to prevent missed motor events
+  if(!input->cast<ares::Node::Input::Rumble>()) {
+    auto thisPoll = chrono::millisecond();
+    if(thisPoll - input->lastPoll < 5) return;
+    input->lastPoll = thisPoll;
+  }
 
+  lock_guard<recursive_mutex> programinputLock(program.inputMutex);
   auto device = ares::Node::parent(input);
   if(!device) return;
 
@@ -232,6 +297,7 @@ auto Emulator::input(ares::Node::Input::Input input) -> void {
 }
 
 auto Emulator::inputKeyboard(string name) -> bool {
+  lock_guard<recursive_mutex> programinputLock(program.inputMutex);
   for (auto& device : inputManager.devices) {
     if (!device->isKeyboard()) continue;
 

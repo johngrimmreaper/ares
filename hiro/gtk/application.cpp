@@ -27,10 +27,11 @@ auto pApplication::modal() -> bool {
 auto pApplication::run() -> void {
   while(!Application::state().quit) {
     Application::doMain();
+    // Sleep for 8ms between main run loops
+    usleep(8 * 1000);
     processEvents();
-    //avoid spinlooping the thread when there is no main loop ...
-    //when there is one, Application::onMain() is expected to sleep when possible instead
-    if(!Application::state().onMain) usleep(2000);
+    // If there is no main run loop, sleep for longer
+    if(!Application::state().onMain) usleep(20 * 1000);
   }
 }
 
@@ -145,6 +146,12 @@ auto pApplication::initialize() -> void {
   char** argvp = argv;
 
   gtk_init(&argc, &argvp);
+
+  // gtk_init causes GTK to set the locale from the environment.
+  // Set the locale for LC_NUMERIC back to "C". It is expected to be "C" for
+  // the purpose of various string formatting and parsing operations.
+  setlocale(LC_NUMERIC, "C");
+
   GtkSettings* gtkSettings = gtk_settings_get_default();
 
   //allow buttons to show icons

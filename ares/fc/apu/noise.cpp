@@ -1,11 +1,5 @@
-auto APU::Noise::clockLength() -> void {
-  if(envelope.loopMode == 0) {
-    if(lengthCounter > 0) lengthCounter--;
-  }
-}
-
 auto APU::Noise::clock() -> n8 {
-  if(lengthCounter == 0) return 0;
+  if(length.counter == 0) return 0;
 
   n8 result = (lfsr & 1) ? envelope.volume() : 0;
 
@@ -23,4 +17,14 @@ auto APU::Noise::clock() -> n8 {
   }
 
   return result;
+}
+
+auto APU::Noise::power(bool reset) -> void {
+  length.power(reset, false);
+  envelope = {};
+
+  periodCounter = 1;
+  period = 0;
+  shortMode = 0;
+  lfsr = 1;
 }

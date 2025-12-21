@@ -17,6 +17,7 @@ struct HVC_TxROM : Interface {  //MMC3
     if(id == "HVC-TVROM" ) return new HVC_TxROM(Revision::TVROM);
     if(id == "NES-QJ"    ) return new HVC_TxROM(Revision::NESQJ);
     if(id == "PAL-ZZ"    ) return new HVC_TxROM(Revision::PALZZ);
+    if(id == "MC-ACC"    ) return new HVC_TxROM(Revision::MCACC);
     return nullptr;
   }
 
@@ -43,6 +44,7 @@ struct HVC_TxROM : Interface {  //MMC3
     TVROM,
     NESQJ,
     PALZZ,
+    MCACC,
   } revision;
 
   HVC_TxROM(Revision revision) : revision(revision) {}
@@ -62,21 +64,7 @@ struct HVC_TxROM : Interface {  //MMC3
   auto main() -> void override {
     if(irqDelay) irqDelay--;
     cpu.irqLine(irqLine);
-  }
-
-  auto irqTest(n16 address) -> void {
-    if(!(characterAddress & 0x1000) && (address & 0x1000)) {
-      if(irqDelay == 0) {
-        if(irqCounter == 0) {
-          irqCounter = irqLatch + 1;
-        }
-        if(--irqCounter == 0) {
-          if(irqEnable) irqLine = 1;
-        }
-      }
-      irqDelay = 6;
-    }
-    characterAddress = address;
+    tick();
   }
 
   auto readPRG(n32 address, n8 data) -> n8 override {
@@ -107,7 +95,6 @@ struct HVC_TxROM : Interface {  //MMC3
   }
 
   auto writePRG(n32 address, n8 data) -> void override {
-    if(address == 0x2006 && ++characterLatch) irqTest(data << 8);
     if(address < 0x6000) return;
 
     if(address < 0x8000) {
@@ -148,6 +135,7 @@ struct HVC_TxROM : Interface {  //MMC3
       break;
     case 0xc001:
       irqCounter = 0;
+      mcAccPulseCounter = 0;
       break;
     case 0xe000:
       irqEnable = 0;
@@ -196,7 +184,6 @@ struct HVC_TxROM : Interface {  //MMC3
   }
 
   auto readCHR(n32 address, n8 data) -> n8 override {
-    irqTest(address);
     if(revision == Revision::TVROM) {
       if(address < 0x2000) return characterROM.read(addressCHR(address));
       address.bit(12) = 0;
@@ -222,7 +209,6 @@ struct HVC_TxROM : Interface {  //MMC3
   }
 
   auto writeCHR(n32 address, n8 data) -> void override {
-    irqTest(address);
     if(revision == Revision::TVROM) {
       if(address < 0x2000) return;
       address.bit(12) = 0;
@@ -244,6 +230,29 @@ struct HVC_TxROM : Interface {  //MMC3
     ramWritable = 1;
   }
 
+  auto ppuAddressBus(n14 address) -> void override {
+    if (!(characterAddress & 0x1000) && (address & 0x1000)) {
+      bool clocking = false;
+
+      if (revision == Revision::MCACC) {
+        clocking = ++mcAccPulseCounter == 1;
+      } else {
+        clocking = irqDelay == 0;
+        irqDelay = 6;
+      }
+
+      if (clocking) {
+        if (irqCounter == 0)
+          irqCounter = irqLatch + 1;
+
+        if (--irqCounter == 0) {
+          if (irqEnable) irqLine = 1;
+        }
+      }
+    }
+    characterAddress = address;
+  }
+
   auto serialize(serializer& s) -> void override {
     s(programRAM);
     s(characterRAM);
@@ -263,6 +272,8 @@ struct HVC_TxROM : Interface {  //MMC3
     s(irqLine);
     s(characterLatch);
     s(characterAddress);
+    if (revision == Revision::MCACC)
+      s(mcAccPulseCounter);
   }
 
   n1  characterMode;
@@ -281,4 +292,5 @@ struct HVC_TxROM : Interface {  //MMC3
   n1  irqLine;
   n1  characterLatch;
   n16 characterAddress;
+  n3  mcAccPulseCounter;
 };

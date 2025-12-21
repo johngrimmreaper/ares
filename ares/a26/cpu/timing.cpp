@@ -6,24 +6,17 @@ auto CPU::read(n16 address) -> n8 {
       step(1);
     }
 
-    MDR = readBus(address);
-    return MDR;
+    io.openBus = readBus(address);
+    return io.openBus;
   }
 
-  MDR = readBus(address);
-  return MDR;
+  io.openBus = readBus(address);
+  return io.openBus;
 }
 
 auto CPU::write(n16 address, n8 data) -> void {
   step(1);
-  writeBus(address, MDR = data);
-}
-
-auto CPU::lastCycle() -> void {
-}
-
-auto CPU::nmi(n16& vector) -> void {
-
+  writeBus(address, io.openBus = data);
 }
 
 auto CPU::rdyLine(bool line) -> void {

@@ -7,6 +7,12 @@ VI vi;
 #include "debugger.cpp"
 #include "serialization.cpp"
 
+auto VI::step(u32 clocks) -> void {
+  auto scaled = (u64)clocks * system.frequency() + clockFraction;
+  Thread::clock += scaled / system.videoFrequency();
+  clockFraction = scaled % system.videoFrequency();
+}
+
 auto VI::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("VI");
 
@@ -21,6 +27,7 @@ auto VI::load(Node::Object parent) -> void {
   #endif
   screen = node->append<Node::Video::Screen>("Screen", width, height);
   screen->setRefresh({&VI::refresh, this});
+  screen->refreshRateHint(Region::PAL() ? 50 : 60); // TODO: More accurate refresh rate hint
   screen->colors((1 << 24) + (1 << 15), [&](n32 color) -> n64 {
     if(color < (1 << 24)) {
       u64 a = 65535;
@@ -37,18 +44,25 @@ auto VI::load(Node::Object parent) -> void {
     }
   });
   
+  int videoHeight = Region::PAL() ? 576 : 480;
+
   #if defined(VULKAN)
   if(vulkan.enable) {
-    screen->setSize(vulkan.outputUpscale * 640, vulkan.outputUpscale * 480);
+    screen->setSize(vulkan.outputUpscale * 640, vulkan.outputUpscale * videoHeight);
     if(!vulkan.supersampleScanout) {
       screen->setScale(1.0 / vulkan.outputUpscale, 1.0 / vulkan.outputUpscale);
     }
   } else {
-    screen->setSize(640, 480);
+    screen->setSize(640, videoHeight);
   }
   #else
-  screen->setSize(640, 480);
+  screen->setSize(640, videoHeight);
   #endif
+
+  // Pedantic N64 NTSC aspect ratio is 120:119, but let's keep 120:120 to avoid slight scaling.
+  // Pedantic N64 PAL aspect ratio is 5900000:4965653, but let's use 12:10 to achieve the
+  // same aspect ratio as NTSC.
+  Region::PAL() ? screen->setAspect(12, 10) : screen->setAspect(120, 120);
 
   debugger.load(node);
 }
@@ -62,26 +76,58 @@ auto VI::unload() -> void {
 
 auto VI::main() -> void {
   while(Thread::clock < 0) {
-    if(++io.vcounter >= (Region::NTSC() ? 262 : 312) + io.field) {
-      io.vcounter = 0;
-      io.field = io.field + 1 & io.serrate;
-      #if defined(VULKAN)
-      if (vulkan.enable) {
-        gpuOutputValid = vulkan.scanoutAsync(io.field);
-        vulkan.frame();
+    if(active()) {
+      ++io.vcounter;
+      int halfline = io.vcounter << 1 | io.field;
+      if(halfline >= io.halfLinesPerField+1) {
+        io.vcounter = 0;
+        io.field += !io.halfLinesPerField.bit(0);
+        if(++io.leapCounter == 5) io.leapCounter = 0;
+        #if defined(VULKAN)
+        if (vulkan.enable) {
+          gpuOutputValid = vulkan.scanoutAsync(io.field);
+          vulkan.frame();
+        }
+        #endif
+        refreshed = true;
+        screen->frame();
       }
-      #endif
-      refreshed = true;
-      screen->frame();
-    }
 
-    //field is not compared
-    if(io.vcounter << 1 == io.coincidence) {
-      mi.raise(MI::IRQ::VI);
-    }
+      if(io.halfLinesPerField.bit(0)) { // progressive
+        if(io.vcounter == io.coincidence >> 1) {
+          mi.raise(MI::IRQ::VI);
+        }
+      } else { // interlaced
+        if(io.coincidence.bit(0)) {
+          if(io.vcounter == io.coincidence >> 1)
+            mi.raise(MI::IRQ::VI);
+        }
+        if(!io.coincidence.bit(0)) {
+          int halfline = io.vcounter << 1 | io.field;
+          if(!io.field && halfline == io.coincidence)
+            mi.raise(MI::IRQ::VI);
+          if(io.field && halfline+1 == io.coincidence)
+            mi.raise(MI::IRQ::VI);
+          if(!io.field && halfline == io.halfLinesPerField && io.coincidence == 0)
+            mi.raise(MI::IRQ::VI);
+        }
+      }
 
-    if(Region::NTSC()) step(system.frequency() / 60 / 262);
-    if(Region::PAL ()) step(system.frequency() / 50 / 312);
+      u32 lineDuration = io.quarterLineDuration;
+      if(io.vcounter == 1)
+        lineDuration = io.hsyncLeap[io.leapPattern.bit(io.leapCounter)];      
+      step(io.quarterLineDuration);
+    } else {
+      // Arbitrarily call screen->frame() every once in a while to keep the UI responsive.
+      // We do that every 200 simulated lines of 0x800 quarter-clocks. This is just arbitrary,
+      // the real VI is not clocking at all when inactive.
+      io.vcounter = 0;
+      if(++inactiveCounter >= 200) {
+        inactiveCounter = 0;
+        refreshed = true;
+      }
+      step(0x800);
+    }
   }
 }
 
@@ -111,6 +157,8 @@ auto VI::refresh() -> void {
     }
     vulkan.unmapScanoutRead();
     vulkan.endScanout();
+
+    if(Model::Aleck64()) aleck64.vdp.render(screen); //aleck64 supports overlay graphics
     return;
   }
   #endif
@@ -150,7 +198,7 @@ auto VI::refresh() -> void {
         auto line = screen->pixels(1).data() + (dy - vscan_start) * hscan_len;
         u32 x0 = vi.io.xsubpixel + vi.io.xscale * (dx0 - vi.io.hstart);
         for(i32 dx = dx0; dx < dx1; dx++) {
-          u16 data = rdram.ram.read<Half>(address + (x0 >> 10) * 2);
+          u16 data = rdram.ram.read<Half>(address + (x0 >> 10) * 2, "VI");
           line[dx - hscan_start] = 1 << 24 | data >> 1;
           x0 += vi.io.xscale;
         }
@@ -168,7 +216,7 @@ auto VI::refresh() -> void {
         auto line = screen->pixels(1).data() + (dy - vscan_start) * hscan_len;
         u32 x0 = vi.io.xsubpixel + vi.io.xscale * (dx0 - vi.io.hstart);
         for(i32 dx = dx0; dx < dx1; dx++) {
-          u32 data = rdram.ram.read<Word>(address + (x0 >> 10) * 4);
+          u32 data = rdram.ram.read<Word>(address + (x0 >> 10) * 4, "VI");
           line[dx - hscan_start] = data >> 8;
           x0 += vi.io.xscale;
         }
@@ -183,6 +231,7 @@ auto VI::power(bool reset) -> void {
   screen->power();
   io = {};
   refreshed = false;
+  clockFraction = 0;
 
   #if defined(VULKAN)
   gpuOutputValid = false;

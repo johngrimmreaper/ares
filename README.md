@@ -1,9 +1,11 @@
-![ares logo](https://github.com/ares-emulator/ares/blob/master/ares/ares/resource/logo.png)
+<img src="https://github.com/ares-emulator/ares/blob/master/ares/ares/resource/logo@2x.png" width="350"/>
 
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://github.com/higan-emu/ares/blob/master/LICENSE)
 
 **ares** is a multi-system emulator that began development on October 14th, 2004.
 It is a descendant of [higan](https://github.com/higan-emu/higan) and [bsnes](https://github.com/bsnes-emu/bsnes/), and focuses on accuracy and preservation.
+
+It's worth noting that ares takes some uncommon design approaches that essentially trade speed for code clarity. We avoid state machines and bitmasks (when possible). Most cores end up being half the amount of code, but slower. The code is clearer and less spaghettified, especially for systems with lots of processors. C bitfields being non-portable incurs a speedhit. Windows also has a speedhit over Linux due to its ABI needing more instructions to switch contexts.
 
 Official Releases
 -----------------
@@ -14,90 +16,18 @@ Official releases are available from
 Nightly Builds
 --------------
 
-Automated, untested builds of ares are available for Windows and macOS as a [pre-release](https://github.com/higan-emu/ares/releases/tag/nightly). 
+Automated, untested builds of ares are available for Windows and macOS as a [pre-release](https://github.com/ares-emulator/ares/releases/tag/nightly). 
 Only the latest nightly build is kept.
 
-Prerequisites
+Building ares
 -------------
 
-### *nix building
+ares supports building on Windows, macOS, and various Linux/BSD distributions. See build instructions for:
 
-###### Minimum required packages:
-```
-g++ make pkg-config libgtk-3-dev libcanberra-gtk-module libgl-dev libasound2-dev
-```  
-###### Additional Audio Drivers
-ares supports additional audio drivers besides the ALSA drivers included above. Installing these additional packages will allow them to be selected in Settings > Drivers:  
-`libao-dev libopenal-dev'
-
-###### GTK2 & GTK3
-By default, GTK3 is used, but support for GTK2 is available. You will need to install the additional package `libgtk2.0-dev` as well as specifying the command line option `hiro=gtk2` at compile time.
-
-###### SDL2 for input
-If you would like to use SDL for input, you will need to install the following the `libsdl2-dev` and `libsdl2-0.0` packages and perform a clean build of ares. You should then be able to select SDL for input in the Settings > Drivers menu.   
-
-##### Building with clang
-
-clang++ is now the preferred compiler for ares. If clang is detected on Windows/macOS/BSD, it will be selected by default. On Linux and other platforms, g++ remains the default if present. To build with clang, it is necessary to install both the `clang` and `lld` packages. If you would like to manually specify a compiler, you can use the following option: `compiler=[g++|clang++]`  
-  
---------------
-
-### Windows building
-
-To build on Windows, using MSYS2 is recommended which can be download [here](https://www.msys2.org/). Follow the instructions
-on this page to install and setup an appropriate MINGW64 environment. Running the command:  
-```
-pacman -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-SDL2
-```  
-from the MSYS2 MSYS terminal should setup everything you need to compile ares. Note that in order to compile, you will want to be in a MINGW64 terminal window after install and setup is complete. 
-
-##### Building with clang
-
-clang is available through Visual Studio (or Build Tools for Visual Studio) through its installer and can be used to build ares. You will still need to supply GNU make in this instance. MSYS2 also offers a clang environment. You will want to make sure you select the clangw64 option during installation of MSYS2 which should provide and additional CLANG64 pre-configured environment. Install the clang toolchain package from the MSYS2 terminal:  
-```
-pacman -S mingw-w64-clang-x86_64-toolchain mingw-w64-clang-x86_64-SDL2
-```  
-Once complete, open a CLANG64 terminal window and proceed with building ares. 
-
-###### Debug Symbols
-When building with clang, by default symbols will be generated for debug builds using an MSVC compatible format (CodeView) for use with Windows debugging tools. In order to generate GDB compatible symbols, specify the following option: `symformat=gdb`  
-
-Compilation
------------
-
-Check out the source code by running this command:
-
-```
-git clone https://github.com/ares-emulator/ares.git
-```
-
-From the root of the project directory run:
-
-```
-make -j4
-```
- 
-`-j#` indicates number of parallel build processes, and shouldn't be set higher than N-1 cores on your processor.  Specifying this option can significantly decrease the time to build this project. There are multiple build types available and it defaults to an 'optimized' build. Build types can be specified using: `build=[debug|stable|release|minified|optimized]`  
-
-Build options can be found in the following two make files: nall/GNUmakefile desktop-ui/GNUmakefile
-
-To start compilation from the beginning, run the following prior to compiling:
-
-```
-make clean
-```
-
-#### Building specific cores  
-If you would like to build a subset of cores, you can specify the `cores="core1 core2"` option. Currently available cores:  
-```
-a26 fc sfc n64 sg ms md ps1 pce ng msx cv myvision gb gba ws ngp spec
-```  
-
-Build Output
-------------
-
-There is a single binary produced at the end of compilation which can be found in `desktop-ui/out`. On OS's besides Linux, the `Database` & `Shader` directories are copied over here as well. On Linux, running `make install` after compilation will copy these directories and binary into suitable locations (see desktop-ui/GNUmakefile for details). Alternatively, these directories can be copied from `ares/Shaders/*` and `mia/Database/*`.
-
+* [Windows](https://github.com/ares-emulator/ares/wiki/Build-Instructions-For-Windows)
+* [macOS](https://github.com/ares-emulator/ares/wiki/Build-Instructions-For-macOS)
+* [Linux](https://github.com/ares-emulator/ares/wiki/Build-Instructions-For-Linux)
+* [BSD](https://github.com/ares-emulator/ares/wiki/Build-Instructions-For-BSD)
 
 Command-line options
 --------------------
@@ -110,7 +40,7 @@ Usage: ./ares [options] game(s)
   --help                 Displays available options and exit
   --fullscreen           Start in full screen mode
   --system system        Specify the system name
-  --shader shader        Specify GLSL shader name to load (requires OpenGL driver)
+  --shader shader        Specify a slang shader to load (requires OpenGL or Metal)
   --setting name=value   Specify a value for a setting
   --dump-all-settings    Show a list of all existing settings and exit
   --no-file-prompt       Do not prompt to load (optional) additional roms (eg: 64DD)

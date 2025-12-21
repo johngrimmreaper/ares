@@ -13,26 +13,20 @@ private:
 
 auto Mame2BML::main(Arguments arguments) -> void {
   if(arguments.size() < 2) {
-    return print("usage: mame2bml softwarelist.xml output.bml core - convert a mame software list xml to bml\n"
-                 "       mame2bml machinelist.xml output.bml core driver - convert a mame machine list xml to bml\n");
+    return print("usage: mame2bml softwarelist.xml output.bml ares_core - convert a mame software list xml to bml\n"
+                 "       mame2bml machinelist.xml output.bml mame_driver - convert a mame machine list xml to bml\n");
   }
 
   string markupName = arguments.take();
   string outputName = arguments.take();
-  string driverName = {};
-  string systemName = {};
+  vector<string> driverNames = {};
   if(!markupName.endsWith(".xml")) return print("error: arguments in incorrect order\n");
   if(!outputName.endsWith(".bml")) return print("error: arguments in incorrect order\n");
+  if(arguments.size() == 0) return print("error: mame driver or ares core name required\n");
 
-  if(arguments.size()) {
-    systemName = arguments.take();
-  } else {
-    return print("ares core not specified\n");
-  }
-
-  if(arguments.size()) {
-    driverName = arguments.take();
-    if(!driverName.iendsWith(".cpp")) return print("error: driver does not appear to be a mame src filename (eg: sega/segae.cpp)\n");
+  while(arguments.size()) {
+    string driverName = arguments.take();
+    driverNames.append(driverName);
   }
 
   string markup = string::read(markupName);
@@ -41,7 +35,7 @@ auto Mame2BML::main(Arguments arguments) -> void {
   if(!output.open(outputName, file::mode::write)) return print("error: unable to write output file\n");
 
   output.print("database\n");
-  output.print("  revision: ", chrono::local::date(), "\n\n");
+  output.print("  revision: ", chrono::local::date(), "\n");
 
   pathname = Location::path(markupName);
   auto document = XML::unserialize(markup);
@@ -49,22 +43,36 @@ auto Mame2BML::main(Arguments arguments) -> void {
   for(auto header : document) {
     // machine list xml (from mame.exe -listxml)
     if(header.name() == "mame") {
+      output.print("  romset: ", header["build"].string(), "\n");
+      output.print("  drivers: ");
+      for(auto driver : driverNames) {
+        output.print(driver, ", ");
+      }
+      output.print("\n");
+
       for(auto machine : header) {
         if(machine.name() != "machine") continue;
-        if(machine["sourcefile"].string() != driverName) continue;
+        string driverName = machine["sourcefile"].string();
+        if(!driverNames.find(driverName)) continue;
+        string type = "game";
+        string IsBIOS = machine["isbios"].string();
+        string parent = machine["romof"].string();
+        if(IsBIOS == "yes") type = "bios";
 
-        print("found game: ", machine["name"].string(), " (", machine["description"].string(), ")\n");
+        print("found ", type, ": ", machine["name"].string(), " (", machine["description"].string(), ")\n");
 
         output.print("game\n");
-        output.print("  name:  ", machine["name"].string(), "\n");
-        output.print("  title: ", machine["description"].string(), "\n");
-        output.print("  board: ", systemName, "\n");
+        output.print("  name:    ", machine["name"].string(), "\n");
+        output.print("  title:   ", machine["description"].string(), "\n");
+        output.print("  board:   ", driverName.trimRight(".cpp"), "\n");
+        output.print("  type:    ", type, "\n");
+        if(parent) output.print("  parent:  ", parent, "\n");
 
         string region = "";
         for(auto rom : machine) {
           if(rom.name() == "rom") {
             if(rom["region"].string() != region) {
-              region = rom["region"].string().replace(":", "");
+              region = rom["region"].string().replace(":", "-");
               output.print("  ", region, "\n");
             }
 
@@ -90,9 +98,11 @@ auto Mame2BML::main(Arguments arguments) -> void {
         output.print("game\n");
         output.print("  name:  ", software["name"].string(), "\n");
         output.print("  title: ", software["description"].string(), "\n");
-        output.print("  board: ", systemName, "\n");
+        output.print("  board: ", driverNames.first(), "\n");
 
-        for(auto sub : software["part"]){
+        print("found ", software["name"].string(), " (", software["description"].string(), ")\n");
+
+        for(auto sub : software["part"]) {
           if(sub.name() == "feature") {
             output.print("  feature\n");
             output.print("    name:  ", sub["name"].string(), "\n");
@@ -101,7 +111,7 @@ auto Mame2BML::main(Arguments arguments) -> void {
           }
 
           if(sub.name() != "dataarea") continue;
-          output.print("  ", sub["name"].string().replace(":", ""), "\n");
+          output.print("  ", sub["name"].string().replace(":", "-"), "\n");
           output.print("    size: ", sub["size"].natural(), "\n");
 
           for(auto rom : sub) {

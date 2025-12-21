@@ -41,7 +41,6 @@ extern VDPBase vdp;
 struct VDP : VDPBase::Implementation {
   Node::Object node;
   Node::Video::Screen screen;
-  Node::Setting::Boolean overscan;
   Node::Setting::Boolean colorEmulation;
 
   auto irqLine() const -> bool override { return vdc0.irqLine() | vdc1.irqLine(); }
@@ -50,8 +49,8 @@ struct VDP : VDPBase::Implementation {
   auto load(Node::Object) -> void override;
   auto unload() -> void override;
 
-  auto main() -> void;
-  auto step(u32 clocks) -> void;
+  template<bool supergrafx> auto main() -> void;
+  template<bool supergrafx> auto step(u32 clocks) -> void;
   auto power() -> void override;
 
   //color.cpp

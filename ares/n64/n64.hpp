@@ -15,12 +15,20 @@
 #include <nmmintrin.h>
 using v128 = __m128i;
 #elif defined(ARCHITECTURE_ARM64) && !defined(COMPILER_MICROSOFT)
+#define SSE2NEON_SUPPRESS_WARNINGS
 #include <sse2neon.h>
 using v128 = __m128i;
 #endif
 
 #if defined(VULKAN)
+  #if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wnewline-eof"
+  #endif
   #include <n64/vulkan/vulkan.hpp>
+  #if defined(__clang__)
+    #pragma clang diagnostic pop
+  #endif
 #endif
 
 // Include the GB core, we can use its cartridge emulation for Transfer Pak
@@ -34,7 +42,12 @@ namespace ares::Nintendo64 {
   auto option(string name, string value) -> bool;
 
   enum : u32 { Read, Write };
-  enum : u32 { Byte = 1, Half = 2, Word = 4, Dual = 8 };
+  enum : u32 { Byte = 1, Half = 2, Word = 4, Dual = 8, DCache = 16, ICache = 32 };
+
+  struct Model {
+    inline static auto Nintendo64() -> bool;
+    inline static auto Aleck64() -> bool;
+  };
 
   struct Region {
     static inline auto NTSC() -> bool;
@@ -61,7 +74,6 @@ namespace ares::Nintendo64 {
 
   struct Queue : priority_queue<u32[512]> {
     enum : u32 {
-      RSP_DMA,
       PI_DMA_Read,
       PI_DMA_Write,
       PI_BUS_Write,
@@ -73,6 +85,7 @@ namespace ares::Nintendo64 {
       DD_MECHA_Response,
       DD_BM_Request,
       DD_Motor_Mode,
+      GDB_Poll,
     };
   };
   extern Queue queue;
@@ -89,6 +102,7 @@ namespace ares::Nintendo64 {
   #include <n64/cic/cic.hpp>
   #include <n64/controller/controller.hpp>
   #include <n64/dd/dd.hpp>
+  #include <n64/aleck64/aleck64.hpp>
   #include <n64/mi/mi.hpp>
   #include <n64/vi/vi.hpp>
   #include <n64/ai/ai.hpp>
@@ -96,8 +110,8 @@ namespace ares::Nintendo64 {
   #include <n64/pif/pif.hpp>
   #include <n64/ri/ri.hpp>
   #include <n64/si/si.hpp>
-  #include <n64/rdram/rdram.hpp>
   #include <n64/cpu/cpu.hpp>
+  #include <n64/rdram/rdram.hpp>
   #include <n64/rsp/rsp.hpp>
   #include <n64/rdp/rdp.hpp>
   #include <n64/memory/bus.hpp>

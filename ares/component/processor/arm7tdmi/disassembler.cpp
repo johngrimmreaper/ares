@@ -17,12 +17,12 @@ auto ARM7TDMI::disassembleInstruction(maybe<n32> pc, maybe<boolean> thumb) -> st
 
   _pc = pc();
   if(!thumb()) {
-    n32 opcode = read(Word | Nonsequential, _pc & ~3);
+    n32 opcode = getDebugger(Word, _pc & ~3);
     n12 index = (opcode & 0x0ff00000) >> 16 | (opcode & 0x000000f0) >> 4;
     _c = _conditions[opcode >> 28];
     return pad(armDisassemble[index](opcode), -40);
   } else {
-    n16 opcode = read(Half | Nonsequential, _pc & ~1);
+    n16 opcode = getDebugger(Half, _pc & ~1);
     return pad(thumbDisassemble[opcode](), -40);
   }
 }
@@ -64,8 +64,14 @@ auto ARM7TDMI::armDisassembleBranch
 }
 
 auto ARM7TDMI::armDisassembleBranchExchangeRegister
-(n4 m) -> string {
+(n4 m, n4 d, n4 field, n1 mode) -> string {
   return {"bx", _c, " ", _r[m]};
+}
+
+auto ARM7TDMI::armDisassembleCoprocessorDataProcessing
+(n4 cm, n3 op2, n4 cpid, n4 cd, n4 cn, n4 op1) -> string {
+  return {"cdp", _c, " p", cpid, ", ", op1, ", cr", cd,
+    ", cr", cn, ", cr", cm, ", ", op2};
 }
 
 auto ARM7TDMI::armDisassembleDataImmediate
@@ -118,30 +124,6 @@ auto ARM7TDMI::armDisassembleDataRegisterShift
     " ", _r[s]};
 }
 
-auto ARM7TDMI::armDisassembleLoadImmediate
-(n8 immediate, n1 half, n4 d, n4 n, n1 writeback, n1 up, n1 pre) -> string {
-  string data;
-  if(n == 15) data = {" =0x", hex(read((half ? Half : Byte) | Nonsequential,
-    _pc + 8 + (up ? +immediate : -immediate)), half ? 4L : 2L)};
-
-  return {"ldr", _c, half ? "sh" : "sb", " ",
-    _r[d], ",[", _r[n],
-    pre == 0 ? "]" : "",
-    immediate ? string{",", up ? "+" : "-", "0x", hex(immediate, 2L)} : string{},
-    pre == 1 ? "]" : "",
-    pre == 0 || writeback ? "!" : "", data};
-}
-
-auto ARM7TDMI::armDisassembleLoadRegister
-(n4 m, n1 half, n4 d, n4 n, n1 writeback, n1 up, n1 pre) -> string {
-  return {"ldr", _c, half ? "sh" : "sb", " ",
-    _r[d], ",[", _r[n],
-    pre == 0 ? "]" : "",
-    ",", up ? "+" : "-", _r[m],
-    pre == 1 ? "]" : "",
-    pre == 0 || writeback ? "!" : ""};
-}
-
 auto ARM7TDMI::armDisassembleMemorySwap
 (n4 m, n4 d, n4 n, n1 byte) -> string {
   return {"swp", _c, byte ? "b" : "", " ", _r[d], ",", _r[m], ",[", _r[n], "]"};
@@ -150,7 +132,7 @@ auto ARM7TDMI::armDisassembleMemorySwap
 auto ARM7TDMI::armDisassembleMoveHalfImmediate
 (n8 immediate, n4 d, n4 n, n1 mode, n1 writeback, n1 up, n1 pre) -> string {
   string data;
-  if(n == 15) data = {" =0x", hex(read(Half | Nonsequential, _pc + (up ? +immediate : -immediate)), 4L)};
+  if(n == 15) data = {" =0x", hex(getDebugger(Half, _pc + (up ? +immediate : -immediate)), 4L)};
 
   return {mode ? "ldr" : "str", _c, "h ",
     _r[d], ",[", _r[n],
@@ -173,7 +155,7 @@ auto ARM7TDMI::armDisassembleMoveHalfRegister
 auto ARM7TDMI::armDisassembleMoveImmediateOffset
 (n12 immediate, n4 d, n4 n, n1 mode, n1 writeback, n1 byte, n1 up, n1 pre) -> string {
   string data;
-  if(n == 15) data = {" =0x", hex(read((byte ? Byte : Word) | Nonsequential,
+  if(n == 15) data = {" =0x", hex(getDebugger((byte ? Byte : Word),
     _pc + 8 + (up ? +immediate : -immediate)), byte ? 2L : 4L)};
   return {mode ? "ldr" : "str", _c, byte ? "b" : "", " ", _r[d], ",[", _r[n],
     pre == 0 ? "]" : "",
@@ -212,6 +194,47 @@ auto ARM7TDMI::armDisassembleMoveRegisterOffset
     pre == 0 || writeback ? "!" : ""};
 }
 
+auto ARM7TDMI::armDisassembleMoveSignedImmediate
+(n8 immediate, n1 half, n4 d, n4 n, n1 mode, n1 writeback, n1 up, n1 pre) -> string {
+  string data;
+  if(n == 15) data = {" =0x", hex(getDebugger((half ? Half : Byte),
+    _pc + 8 + (up ? +immediate : -immediate)), half ? 4L : 2L)};
+
+  return {mode ? "ldr" : "str", _c, half ? "sh" : "sb", " ",
+    _r[d], ",[", _r[n],
+    pre == 0 ? "]" : "",
+    immediate ? string{",", up ? "+" : "-", "0x", hex(immediate, 2L)} : string{},
+    pre == 1 ? "]" : "",
+    pre == 0 || writeback ? "!" : "", data};
+}
+
+auto ARM7TDMI::armDisassembleMoveSignedRegister
+(n4 m, n1 half, n4 d, n4 n, n1 mode, n1 writeback, n1 up, n1 pre) -> string {
+  return {mode ? "ldr" : "str", _c, half ? "sh" : "sb", " ",
+    _r[d], ",[", _r[n],
+    pre == 0 ? "]" : "",
+    ",", up ? "+" : "-", _r[m],
+    pre == 1 ? "]" : "",
+    pre == 0 || writeback ? "!" : ""};
+}
+
+auto ARM7TDMI::armDisassembleMoveToCoprocessorFromRegister
+(n4 cm, n3 op2, n4 cpid, n4 d, n4 cn, n3 op1) -> string {
+  return {"mcr", _c, " p", cpid, ", ", op1, ", ", _r[d],
+    ", cr", cn, ", cr", cm, ", ", op2};
+}
+
+auto ARM7TDMI::armDisassembleMoveToRegisterFromCoprocessor
+(n4 cm, n3 op2, n4 cpid, n4 d, n4 cn, n3 op1) -> string {
+  return {"mrc", _c, " p", cpid, ", ", op1, ", ", _r[d],
+    ", cr", cn, ", cr", cm, ", ", op2};
+}
+
+auto ARM7TDMI::armDisassembleMoveToRegisterFromRegister
+(n4 d, n4 n) -> string {
+  return {"mov", _c, " ", _r[d], ",", _r[n]};
+}
+
 auto ARM7TDMI::armDisassembleMoveToRegisterFromStatus
 (n4 d, n1 mode) -> string {
   return {"mrs", _c, " ", _r[d], ",", mode ? "spsr" : "cpsr"};
@@ -229,13 +252,18 @@ auto ARM7TDMI::armDisassembleMoveToStatusFromImmediate
 }
 
 auto ARM7TDMI::armDisassembleMoveToStatusFromRegister
-(n4 m, n4 field, n1 mode) -> string {
+(n4 m, n2 type, n5 shift, n4 field, n1 mode) -> string {
   return {"msr", _c, " ", mode ? "spsr:" : "cpsr:",
     field.bit(0) ? "c" : "",
     field.bit(1) ? "x" : "",
     field.bit(2) ? "s" : "",
     field.bit(3) ? "f" : "",
-    ",", _r[m]};
+    ",", _r[m],
+    type == 0 && shift ? string{" lsl #", shift} : string{},
+    type == 1 ? string{" lsr #", shift ? (u32)shift : 32} : string{},
+    type == 2 ? string{" asr #", shift ? (u32)shift : 32} : string{},
+    type == 3 && shift ? string{" ror #", shift} : string{},
+    type == 3 && !shift ? " rrx" : ""};
 }
 
 auto ARM7TDMI::armDisassembleMultiply
@@ -276,7 +304,7 @@ auto ARM7TDMI::thumbDisassembleALU
 
 auto ARM7TDMI::thumbDisassembleALUExtended
 (n4 d, n4 m, n2 mode) -> string {
-  static const string opcode[] = {"add", "sub", "mov"};
+  static const string opcode[] = {"add", "cmp", "mov"};
   if(d == 8 && m == 8 && mode == 2) return {"nop"};
   return {opcode[mode], " ", _r[d], ",", _r[m]};
 }
@@ -308,7 +336,7 @@ auto ARM7TDMI::thumbDisassembleBranchExchange
 
 auto ARM7TDMI::thumbDisassembleBranchFarPrefix
 (i11 displacementHi) -> string {
-  n11 displacementLo = read(Half | Nonsequential, (_pc & ~1) + 2);
+  n11 displacementLo = getDebugger(Half, (_pc & ~1) + 2);
   i22 displacement = displacementHi << 11 | displacementLo << 0;
   n32 address = _pc + 4 + displacement * 2;
   return {"bl 0x", hex(address, 8L)};
@@ -340,7 +368,7 @@ auto ARM7TDMI::thumbDisassembleImmediate
 auto ARM7TDMI::thumbDisassembleLoadLiteral
 (n8 displacement, n3 d) -> string {
   n32 address = ((_pc + 4) & ~3) + (displacement << 2);
-  n32 data = read(Word | Nonsequential, address);
+  n32 data = getDebugger(Word, address);
   return {"ldr ", _r[d], ",[pc,#0x", hex(address, 8L), "] =0x", hex(data, 8L)};
 }
 

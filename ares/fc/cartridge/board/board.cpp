@@ -8,6 +8,7 @@ namespace Board {
 #include "bandai-karaoke.cpp"
 #include "bandai-lz93d50.cpp"
 #include "bandai-oeka.cpp"
+#include "camerica-bf909x.cpp"
 #include "colordreams-74x377.cpp"
 #include "gtrom.cpp"
 #include "jaleco-jf05.cpp"
@@ -54,7 +55,13 @@ namespace Board {
 #include "taito-tc0690.cpp"
 #include "taito-x1-005.cpp"
 #include "taito-x1-017.cpp"
+#include "tengen-80003x.cpp"
 #include "unrom-512.cpp"
+
+#include "unl-bmc.cpp"
+#include "unl-sachen-74ls374n.cpp"
+#include "unl-sachen-sa0037.cpp"
+#include "unl-txc.cpp"
 
 auto Interface::create(string board) -> Interface* {
   Interface* p = nullptr;
@@ -66,6 +73,7 @@ auto Interface::create(string board) -> Interface* {
   if(!p) p = BandaiKaraoke::create(board);
   if(!p) p = BandaiLZ93D50::create(board);
   if(!p) p = BandaiOeka::create(board);
+  if(!p) p = Camerica_BF909x::create(board);
   if(!p) p = ColorDreams_74x377::create(board);
   if(!p) p = GTROM::create(board);
   if(!p) p = HVC_AxROM::create(board);
@@ -112,9 +120,26 @@ auto Interface::create(string board) -> Interface* {
   if(!p) p = TaitoTC0690::create(board);
   if(!p) p = TaitoX1005::create(board);
   if(!p) p = TaitoX1017::create(board);
+  if(!p) p = Tengen80003x::create(board);
   if(!p) p = UNROM512::create(board);
+
+  if(!p) p = BMC::create(board);
+  if(!p) p = Sachen74LS374N::create(board);
+  if(!p) p = SachenSA0037::create(board);
+  if(!p) p = TXC::create(board);
+
   if(!p) p = new Interface;
   return p;
+}
+
+auto Interface::main() -> void {
+  cartridge.step(cartridge.rate() * 4095);
+  tick();
+}
+
+auto Interface::tick() -> void {
+  cartridge.step(cartridge.rate());
+  cartridge.synchronize(cpu);
 }
 
 auto Interface::load(Memory::Readable<n8>& memory, string name) -> bool {

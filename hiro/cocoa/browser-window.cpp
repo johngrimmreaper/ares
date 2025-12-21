@@ -10,11 +10,14 @@ auto pBrowserWindow::directory(BrowserWindow::State& state) -> string {
     if(state.title) [panel setTitle:[NSString stringWithUTF8String:state.title]];
     panel.canChooseDirectories = YES;
     panel.canChooseFiles = NO;
-    panel.directory = [NSString stringWithUTF8String:state.path];
-    if([panel runModal] == NSOKButton) {
-      NSArray* names = [panel filenames];
-      const char* name = [[names objectAtIndex:0] UTF8String];
-      if(name) result = name;
+    panel.canCreateDirectories = YES;
+    panel.directoryURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:state.path]];
+    if([panel runModal] == NSModalResponseOK) {
+      NSString* path = panel.URLs.firstObject.path;
+      if(path) {
+        path = [path stringByAppendingString:@"/"];
+        result = path.UTF8String;
+      }
     }
   }
 
@@ -40,13 +43,13 @@ auto pBrowserWindow::open(BrowserWindow::State& state) -> string {
     panel.canChooseFiles = YES;
     if([filters count] > 0) panel.allowedFileTypes = filters;
     panel.allowsOtherFileTypes = NO;
-    panel.directory = [NSString stringWithUTF8String:state.path];
-    if([panel runModal] == NSOKButton) {
-      NSString* name = panel.filenames.firstObject;
+    panel.directoryURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:state.path]];
+    if([panel runModal] == NSModalResponseOK) {
+      NSString* path = panel.URLs.firstObject.path;
       BOOL isDirectory = NO;
-      [[NSFileManager defaultManager] fileExistsAtPath:name isDirectory:&isDirectory];
-      if(isDirectory) name = [name stringByAppendingString:@"/"];
-      if(name) result = name.UTF8String;
+      [[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDirectory];
+      if(isDirectory) path = [path stringByAppendingString:@"/"];
+      if(path) result = path.UTF8String;
     }
   }
 
@@ -69,10 +72,10 @@ auto pBrowserWindow::save(BrowserWindow::State& state) -> string {
     NSSavePanel* panel = [NSSavePanel savePanel];
     if(state.title) [panel setTitle:[NSString stringWithUTF8String:state.title]];
     if([filters count] > 0) panel.allowedFileTypes = filters;
-    panel.directory = [NSString stringWithUTF8String:state.path];
-    if([panel runModal] == NSOKButton) {
-      const char* name = panel.URL.path.UTF8String;
-      if(name) result = name;
+    panel.directoryURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:state.path]];
+    if([panel runModal] == NSModalResponseOK) {
+      const char* path = panel.URL.path.UTF8String;
+      if(path) result = path;
     }
   }
 

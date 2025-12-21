@@ -15,7 +15,16 @@
 #endif
 
 #if defined(AUDIO_OPENAL)
+  #if defined(__APPLE__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  #endif
+
   #include <ruby/audio/openal.cpp>
+
+  #if defined(__APPLE__)
+    #pragma clang diagnostic pop
+  #endif
 #endif
 
 #if defined(AUDIO_OSS)
@@ -73,7 +82,7 @@ auto Audio::setBlocking(bool blocking) -> bool {
   if(instance->blocking == blocking) return true;
   if(!instance->hasBlocking()) return false;
   if(!instance->setBlocking(instance->blocking = blocking)) return false;
-  for(auto& resampler : resamplers) resampler.reset(instance->frequency);
+  updateResampleFrequency(instance->frequency);
   return true;
 }
 
@@ -85,12 +94,7 @@ auto Audio::setDynamic(bool dynamic) -> bool {
 }
 
 auto Audio::setChannels(u32 channels) -> bool {
-  if(resamplers.size() != channels) {
-    resamplers.reset();
-    resamplers.resize(channels);
-    for(auto& resampler : resamplers) resampler.reset(instance->frequency);
-    resampleBuffer.resize(channels);
-  }
+  updateResampleChannels(channels);
   if(instance->channels == channels) return true;
   if(!instance->hasChannels(channels)) return false;
   if(!instance->setChannels(instance->channels = channels)) return false;
@@ -101,7 +105,7 @@ auto Audio::setFrequency(u32 frequency) -> bool {
   if(instance->frequency == frequency) return true;
   if(!instance->hasFrequency(frequency)) return false;
   if(!instance->setFrequency(instance->frequency = frequency)) return false;
-  for(auto& resampler : resamplers) resampler.reset(instance->frequency);
+  updateResampleFrequency(instance->frequency);
   return true;
 }
 
@@ -114,8 +118,23 @@ auto Audio::setLatency(u32 latency) -> bool {
 
 //
 
+auto Audio::updateResampleChannels(u32 channels) -> void {
+  if(resamplers.size() != channels) {
+    resamplers.reset();
+    resamplers.resize(channels);
+    updateResampleFrequency(instance->frequency);
+    resampleBuffer.resize(channels);
+  }
+}
+
+auto Audio::updateResampleFrequency(u32 frequency) -> void {
+  for(auto& resampler : resamplers) resampler.reset(frequency);
+}
+
+//
+
 auto Audio::clear() -> void {
-  for(auto& resampler : resamplers) resampler.reset(instance->frequency);
+  updateResampleFrequency(instance->frequency);
   return instance->clear();
 }
 

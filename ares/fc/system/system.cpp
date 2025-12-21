@@ -61,6 +61,7 @@ auto System::load(Node::System& root, string name) -> bool {
   }
 
   node = Node::System::create(information.name);
+  node->setAttribute("configuration", name);
   node->setGame({&System::game, this});
   node->setRun({&System::run, this});
   node->setPower({&System::power, this});
@@ -85,6 +86,7 @@ auto System::load(Node::System& root, string name) -> bool {
 auto System::save() -> void {
   if(!node) return;
   cartridge.save();
+  if(fds.present) fds.save();
 }
 
 auto System::unload() -> void {
@@ -104,9 +106,10 @@ auto System::power(bool reset) -> void {
   for(auto& setting : node->find<Node::Setting::Setting>()) setting->setLatch();
 
   random.entropy(Random::Entropy::Low);
+  // The apu should run before the cpu
+  apu.power(reset);
   cartridge.power();
   cpu.power(reset);
-  apu.power(reset);
   ppu.power(reset);
   scheduler.power(cpu);
 }

@@ -3,6 +3,7 @@ auto ARM7TDMI::serialize(serializer& s) -> void {
   s(pipeline);
   s(carry);
   s(irq);
+  s(nonsequential);
 }
 
 auto ARM7TDMI::Processor::serialize(serializer& s) -> void {
@@ -23,6 +24,8 @@ auto ARM7TDMI::Processor::serialize(serializer& s) -> void {
   s(r14.data);
   s(r15.data);
   s(cpsr);
+  s(rNULL.data);
+  s(spsrNULL);
   s(fiq.r8.data);
   s(fiq.r9.data);
   s(fiq.r10.data);
@@ -54,18 +57,21 @@ auto ARM7TDMI::PSR::serialize(serializer& s) -> void {
   s(c);
   s(z);
   s(n);
+  s(readonly);
 }
 
 auto ARM7TDMI::Pipeline::serialize(serializer& s) -> void {
   s(reload);
-  s(nonsequential);
   s(fetch.address);
   s(fetch.instruction);
   s(fetch.thumb);
+  s(fetch.irq);
   s(decode.address);
   s(decode.instruction);
   s(decode.thumb);
+  s(decode.irq);
   s(execute.address);
   s(execute.instruction);
   s(execute.thumb);
+  s(execute.irq);
 }

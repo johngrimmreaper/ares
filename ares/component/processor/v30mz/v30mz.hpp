@@ -39,8 +39,9 @@ struct V30MZ {
   auto power() -> void;
 
   //instruction.cpp
+  auto prefixFlush() -> void;
   auto interrupt(u8 vector) -> bool;
-  auto nonMaskableInterrupt() -> bool;
+  auto nonMaskableInterrupt(bool value) -> bool;
   auto instruction() -> void;
 
   //registers.cpp
@@ -51,7 +52,7 @@ struct V30MZ {
   template<u32> auto setAccumulator(u32) -> void;
 
   //modrm.cpp
-  auto modRM() -> void;
+  auto modRM(bool forceAddress = false) -> void;
 
   auto getSegment() -> u16;
   auto setSegment(u16) -> void;
@@ -236,13 +237,21 @@ struct V30MZ {
   auto disassembleContext() -> string;
 
   struct State {
-    bool halt;    //set to true for hlt instruction; blocks execution until next interrupt
-    bool poll;    //set to false to suppress interrupt polling between CPU instructions
-    bool prefix;  //set to true for prefix instructions; prevents flushing of Prefix struct
+    bool halt;      //set to true for hlt instruction; blocks execution until next interrupt
+    bool poll;      //set to false to suppress interrupt polling between CPU instructions
+    bool prefix;    //set to true for prefix instructions; prevents flushing of Prefix struct
+    bool interrupt; //interrupt enable processor status before CPU instruction execution
+    bool brk;       //breakpoint enable processor status before CPU instruction execution
+    bool nmi;       //non-maskable interrupt requested
   } state;
 
   u8 opcode;
-  queue<u8[7]> prefixes;
+  struct Prefix {
+    u16 count;
+    u8 lock;
+    u8 repeat;
+    u8 segment;
+  } prefix;
 
   struct ModRM {
     u2 mod;
@@ -251,6 +260,8 @@ struct V30MZ {
 
     u16 segment;
     u16 address;
+
+    bool useAddress;
   } modrm;
 
   union { u16 AW; struct { u8 order_lsb2(AL, AH); }; };  //AX

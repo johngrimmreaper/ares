@@ -60,6 +60,7 @@ auto System::load(Node::System& root, string name) -> bool {
   }
 
   node = Node::System::create(information.name);
+  node->setAttribute("configuration", name);
   node->setGame({&System::game, this});
   node->setRun({&System::run, this});
   node->setPower({&System::power, this});
@@ -80,6 +81,9 @@ auto System::load(Node::System& root, string name) -> bool {
     controllerPort1.load(node);
     controllerPort2.load(node);
   }
+  if(information.model == Model::SC3000) {
+    keyboard.load(node);
+  }
   return true;
 }
 
@@ -99,6 +103,9 @@ auto System::unload() -> void {
   if(information.model != Model::SG1000A) {
     controllerPort1.unload();
     controllerPort2.unload();
+  }
+  if(information.model == Model::SC3000) {
+    keyboard.unload();
   }
   node = {};
 }

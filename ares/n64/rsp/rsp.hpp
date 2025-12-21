@@ -2,7 +2,36 @@
 
 struct RSP : Thread, Memory::RCP<RSP> {
   Node::Object node;
-  Memory::Writable dmem;
+  struct Writable : public Memory::Writable {
+    RSP& self;
+
+    Writable(RSP& self) : self(self) {}
+
+    template<u32 Size>
+    auto read(u32 address) -> u64 {
+      if (system.homebrewMode) self.debugger.dmemReadWord(address, Size, "RSP");
+      return Memory::Writable::read<Size>(address);
+    }
+
+    template<u32 Size>
+    auto readUnaligned(u32 address) -> u64 {
+      if (system.homebrewMode) self.debugger.dmemReadUnalignedWord(address, Size, "RSP");
+      return Memory::Writable::readUnaligned<Size>(address);
+    }
+
+    template<u32 Size>
+    auto write(u32 address, u64 value) -> void {
+      if (system.homebrewMode) self.debugger.dmemWriteWord(address, Size, value);
+      Memory::Writable::write<Size>(address, value);
+    }
+    
+    template<u32 Size>
+    auto writeUnaligned(u32 address, u64 value) -> void {
+      if (system.homebrewMode) self.debugger.dmemWriteUnalignedWord(address, Size, value);
+      Memory::Writable::writeUnaligned<Size>(address, value);
+    }
+
+  } dmem{*this};
   Memory::Writable imem;
 
   struct Debugger {
@@ -13,6 +42,23 @@ struct RSP : Thread, Memory::RCP<RSP> {
     auto instruction() -> void;
     auto ioSCC(bool mode, u32 address, u32 data) -> void;
     auto ioStatus(bool mode, u32 address, u32 data) -> void;
+
+    auto dmaReadWord(u32 rdramAddress, u32 pbusRegion, u32 pbusAddress) -> void;
+    auto dmemReadWord(u12 address, int size, const char *peripheral) -> void;
+    auto dmemWriteWord(u12 address, int size, u64 value) -> void;
+    auto dmemReadUnalignedWord(u12 address, int size, const char *peripheral) -> void;
+    auto dmemWriteUnalignedWord(u12 address, int size, u64 value) -> void;
+
+    struct TaintMask {
+      struct TaintWord {
+        u8  dirty;
+        u32 ctxDmaRdramAddress;
+        u64 ctxDmaOriginPc;
+        u1  ctxDmaOriginCpu;
+        u64 ctxCacheFillPc;
+        u64 ctxCacheDirtyPc;
+      } dmem[512], imem[512];
+    } taintMask;
 
     struct Memory {
       Node::Debugger::Memory dmem;
@@ -32,7 +78,8 @@ struct RSP : Thread, Memory::RCP<RSP> {
   auto main() -> void;
 
   auto instruction() -> void;
-  auto instructionEpilogue(u32 clocks) -> s32;
+  auto instructionPrologue(u32 instruction) -> void;
+  template<bool Recompiled> auto instructionEpilogue(u32 clocks) -> s32;
 
   auto power(bool reset) -> void;
 
@@ -43,6 +90,7 @@ struct RSP : Thread, Memory::RCP<RSP> {
       Branch    = 1 << 2,
       Vector    = 1 << 3,
       VNopGroup = 1 << 4,  //dual issue conflicts with VNOP
+      Bypass    = 1 << 5,
     };
 
     u32 flags;
@@ -55,6 +103,7 @@ struct RSP : Thread, Memory::RCP<RSP> {
     auto store() const -> bool { return flags & Store; }
     auto branch() const -> bool { return flags & Branch; }
     auto vector() const -> bool { return flags & Vector; }
+    auto bypass() const -> bool { return flags & Bypass; }
   };
 
   static auto canDualIssue(const OpInfo& op0, const OpInfo& op1) -> bool {
@@ -122,7 +171,7 @@ struct RSP : Thread, Memory::RCP<RSP> {
 
     auto issue(const OpInfo& op) -> void {
       current.rRead |= op.r.use;
-      current.rWrite |= op.r.def & ~1;  //zero register can't be written
+      if(!op.bypass()) current.rWrite |= op.r.def & ~1;  //zero register can't be written
       current.vRead |= op.v.use;
       current.vWrite |= op.v.def;
       current.load |= op.load();
@@ -159,14 +208,16 @@ struct RSP : Thread, Memory::RCP<RSP> {
   } pipeline;
 
   //dma.cpp
-  auto dmaTransferStart() -> void;
+  auto dmaQueue(u32 clocks, Thread& thread) -> void;
+  auto dmaStep(u32 clocks) -> void;
+  auto dmaTransferStart(Thread& thread) -> void;
   auto dmaTransferStep() -> void;
 
   //io.cpp
   auto readWord(u32 address, Thread& thread) -> u32;
   auto writeWord(u32 address, u32 data, Thread& thread) -> void;
-  auto ioRead(u32 address) -> u32;
-  auto ioWrite(u32 address, u32 data) -> void;
+  auto ioRead(u32 address, Thread& thread) -> u32;
+  auto ioWrite(u32 address, u32 data, Thread& thread) -> void;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
@@ -179,7 +230,9 @@ struct RSP : Thread, Memory::RCP<RSP> {
       n12 length;
       n12 skip;
       n8  count;
-      
+      n64 originPc;
+      n1  originCpu;
+
       auto serialize(serializer&) -> void;
     } pending, current;
 
@@ -189,6 +242,8 @@ struct RSP : Thread, Memory::RCP<RSP> {
 
       auto any() -> n1 { return read | write; }
     } busy, full;
+
+    s64 clock;
   } dma;
 
   struct Status : Memory::RCP<Status> {
@@ -283,6 +338,7 @@ struct RSP : Thread, Memory::RCP<RSP> {
   auto SW(cr32& rt, cr32& rs, s16 imm) -> void;
   auto XOR(r32& rd, cr32& rs, cr32& rt) -> void;
   auto XORI(r32& rt, cr32& rs, u16 imm) -> void;
+  auto SPECIAL_INVALID(r32& rd, cr32& rt, cr32& rs) -> void;
 
   //scc.cpp: System Control Coprocessor
   auto MFC0(r32& rt, u8 rd) -> void;
@@ -512,6 +568,8 @@ struct RSP : Thread, Memory::RCP<RSP> {
       return s <= e ? smask & emask : smask | emask;
     }
 
+    bool enabled = false;
+    bool callInstructionPrologue = false;
     Pipeline pipeline;
     bump_allocator allocator;
     array<Block*[1024]> context;

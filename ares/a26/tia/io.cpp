@@ -72,8 +72,9 @@ auto TIA::write(n8 address, n8 data) -> void {
 
 
 auto TIA::vsync(n1 state) -> void {
-  if(io.vsync && !state) {
+  if(!io.vsync && state) {
     frame();
+    tia.io.vcounter = 0;
   }
 
   io.vsync = state;
@@ -105,10 +106,12 @@ auto TIA::cxclr() -> void {
 }
 
 auto TIA::hmove() -> void {
-  for(auto& p : player)  p.position = (p.position - p.offset + 160) % 160;
-  for(auto& m : missile) m.position = (m.position - m.offset + 160) % 160;
-  ball.position = (ball.position - ball.offset + 160) % 160;
-  io.hmoveTriggered = io.vcounter;
+  u4 mask = 1 << 3;
+  for(auto& p : player) p.step(p.offset ^ mask);
+  for(auto& m : missile) m.step(m.offset ^ mask);
+  ball.step(ball.offset ^ mask);
+
+  io.hmoveTriggered = 1;
 }
 
 auto TIA::hmclr() -> void {
@@ -124,17 +127,17 @@ auto TIA::grp(n1 index, n8 data) -> void {
 }
 
 auto TIA::resp(n1 index) -> void {
-  player[index].position = (io.hcounter - 68 + 5) % 160;
+  player[index].reset();
 }
 
 auto TIA::resm(n1 index) -> void {
-  missile[index].position = (io.hcounter - 68 + 4) % 160;
+  missile[index].reset();
 }
 
 auto TIA::resmp(n1 index, n8 data) -> void {
-  missile[index].reset = data.bit(1);
+  missile[index].lockedToPlayer = data.bit(1);
 }
 
 auto TIA::resbl() -> void {
-  ball.position = (io.hcounter - 68 + 4) % 160;
+  ball.reset();
 }

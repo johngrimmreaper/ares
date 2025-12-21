@@ -1,4 +1,6 @@
 auto PPU::readIO(n32 address) -> n8 {
+  cpu.synchronize(ppu);
+
   switch(address) {
 
   //DISPCNT
@@ -8,39 +10,22 @@ auto PPU::readIO(n32 address) -> n8 {
   | Background::IO::frame << 4
   | objects.io.hblank     << 5
   | objects.io.mapping    << 6
-  | io.forceBlank         << 7
+  | io.forceBlank[3]      << 7
   );
   case 0x0400'0001: return (
-    bg0.io.enable     << 0
-  | bg1.io.enable     << 1
-  | bg2.io.enable     << 2
-  | bg3.io.enable     << 3
-  | objects.io.enable << 4
-  | window0.io.enable << 5
-  | window1.io.enable << 6
-  | window2.io.enable << 7
+    bg0.io.enable[3]     << 0
+  | bg1.io.enable[3]     << 1
+  | bg2.io.enable[3]     << 2
+  | bg3.io.enable[3]     << 3
+  | objects.io.enable[3] << 4
+  | window0.io.enable    << 5
+  | window1.io.enable    << 6
+  | window2.io.enable    << 7
   );
 
   //GRSWP
   case 0x0400'0002: return io.greenSwap;
   case 0x0400'0003: return 0;
-
-  //DISPSTAT
-  case 0x0400'0004: return (
-    io.vblank          << 0
-  | io.hblank          << 1
-  | io.vcoincidence    << 2
-  | io.irqvblank       << 3
-  | io.irqhblank       << 4
-  | io.irqvcoincidence << 5
-  );
-  case 0x0400'0005: return (
-    io.vcompare
-  );
-
-  //VCOUNT
-  case 0x0400'0006: return io.vcounter.byte(0);
-  case 0x0400'0007: return io.vcounter.byte(1);
 
   //BG0CNT
   case 0x0400'0008: return bg0.io.priority << 0 | bg0.io.characterBase << 2 | bg0.io.unused << 4 | bg0.io.mosaic << 6 | bg0.io.colorMode << 7;
@@ -99,11 +84,12 @@ auto PPU::readIO(n32 address) -> n8 {
 
   }
 
-  if(cpu.context.dmaActive) return cpu.dmabus.data.byte(address & 3);
-  return cpu.pipeline.fetch.instruction.byte(address & 1);
+  return cpu.openBus.get(Byte, address);
 }
 
 auto PPU::writeIO(n32 address, n8 data) -> void {
+  cpu.synchronize(ppu);
+
   switch(address) {
 
   //DISPCNT
@@ -113,14 +99,15 @@ auto PPU::writeIO(n32 address, n8 data) -> void {
     Background::IO::frame = data.bit(4);
     objects.io.hblank     = data.bit(5);
     objects.io.mapping    = data.bit(6);
-    io.forceBlank         = data.bit(7);
+    io.forceBlank[3]      = data.bit(7);
+    for(auto& flag : io.forceBlank) flag |= data.bit(7);
     return;
   case 0x0400'0001:
-    bg0.io.enable     = data.bit(0);
-    bg1.io.enable     = data.bit(1);
-    bg2.io.enable     = data.bit(2);
-    bg3.io.enable     = data.bit(3);
-    objects.io.enable = data.bit(4);
+    bg0.setEnable(data.bit(0));
+    bg1.setEnable(data.bit(1));
+    bg2.setEnable(data.bit(2));
+    bg3.setEnable(data.bit(3));
+    objects.setEnable(data.bit(4));
     window0.io.enable = data.bit(5);
     window1.io.enable = data.bit(6);
     window2.io.enable = data.bit(7);
@@ -133,16 +120,6 @@ auto PPU::writeIO(n32 address, n8 data) -> void {
     io.greenSwap = data.bit(0);
     return;
   case 0x0400'0003:
-    return;
-
-  //DISPSTAT
-  case 0x0400'0004:
-    io.irqvblank       = data.bit(3);
-    io.irqhblank       = data.bit(4);
-    io.irqvcoincidence = data.bit(5);
-    return;
-  case 0x0400'0005:
-    io.vcompare = data;
     return;
 
   //BG0CNT

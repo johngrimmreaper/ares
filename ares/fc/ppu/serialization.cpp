@@ -3,13 +3,19 @@ auto PPU::serialize(serializer& s) -> void {
   s(ciram);
   s(cgram);
   s(oam);
+  s(soam);
+  s(scroll.data);
+  s(scroll.latch);
+  s(scroll.fineX);
+  s(scroll.transferDelay);
+  s(var.data);
+  s(var.latchData);
+  s(var.blockingRead);
+  s(io.busAddress);
   s(io.mdr);
   s(io.field);
   s(io.lx);
   s(io.ly);
-  s(io.busData);
-  s(io.v.data);
-  s(io.t.data);
   s(io.nmiHold);
   s(io.nmiFlag);
   s(io.vramIncrement);
@@ -24,17 +30,20 @@ auto PPU::serialize(serializer& s) -> void {
   s(io.bgEnable);
   s(io.spriteEnable);
   s(io.emphasis);
-  s(io.spriteOverflow);
   s(io.spriteZeroHit);
-  s(io.oamAddress);
   s(latch.nametable);
   s(latch.attribute);
   s(latch.tiledataLo);
   s(latch.tiledataHi);
-  s(latch.oamIterator);
-  s(latch.oamCounter);
+  s(latch.oamId);
   for(auto& o : latch.oam) s(o);
-  for(auto& o : latch.soam) s(o);
+
+  s(sprite.spriteOverflow);
+  s(sprite.oamAddress);
+  s(sprite.oamData);
+  s(sprite.oamTempCounterOverflow);
+  s(sprite.oamTempCounter);
+  s(sprite.oamTempCounterOverflow);
 }
 
 auto PPU::OAM::serialize(serializer& s) -> void {

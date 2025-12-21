@@ -5,16 +5,8 @@ auto PPU::serialize(serializer& s) -> void {
   s(pram);
 
   s(io.gameBoyColorMode);
-  s(io.forceBlank);
+  for(auto& flag : io.forceBlank) s(flag);
   s(io.greenSwap);
-  s(io.vblank);
-  s(io.hblank);
-  s(io.vcoincidence);
-  s(io.irqvblank);
-  s(io.irqhblank);
-  s(io.irqvcoincidence);
-  s(io.vcompare);
-  s(io.vcounter);
 
   s(Background::IO::mode);
   s(Background::IO::frame);
@@ -32,12 +24,15 @@ auto PPU::serialize(serializer& s) -> void {
   s(dac);
   for(auto& object : this->object) s(object);
   for(auto& param : this->objectParam) s(param);
+
+  s(pramAccessed);
+  s(vramAccessedBG);
 }
 
 auto PPU::Background::serialize(serializer& s) -> void {
   s(id);
 
-  s(io.enable);
+  for(auto& flag : io.enable) s(flag);
   s(io.priority);
   s(io.characterBase);
   s(io.unused);
@@ -65,7 +60,7 @@ auto PPU::Background::serialize(serializer& s) -> void {
 }
 
 auto PPU::Objects::serialize(serializer& s) -> void {
-  s(io.enable);
+  for(auto& flag : io.enable) s(flag);
   s(io.hblank);
   s(io.mapping);
   s(io.mosaicWidth);

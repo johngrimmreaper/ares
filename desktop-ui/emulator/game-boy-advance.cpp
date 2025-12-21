@@ -1,9 +1,10 @@
 struct GameBoyAdvance : Emulator {
   GameBoyAdvance();
   auto load(Menu) -> void override;
-  auto load() -> bool override;
+  auto load() -> LoadResult override;
   auto save() -> bool override;
   auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
+  string deviceName;
 };
 
 GameBoyAdvance::GameBoyAdvance() {
@@ -41,6 +42,7 @@ auto GameBoyAdvance::load(Menu menu) -> void {
       MenuRadioItem item{&orientationMenu};
       item.setText(orientation);
       item.onActivate([=] {
+        Program::Guard guard;
         if(auto orientations = root->find<ares::Node::Setting::String>("PPU/Screen/Orientation")) {
           orientations->setValue(orientation);
         }
@@ -50,21 +52,33 @@ auto GameBoyAdvance::load(Menu menu) -> void {
   }
 }
 
-auto GameBoyAdvance::load() -> bool {
+auto GameBoyAdvance::load() -> LoadResult {
   game = mia::Medium::create("Game Boy Advance");
-  if(!game->load(Emulator::load(game, configuration.game))) return false;
+  string location = Emulator::load(game, configuration.game);
+  if(!location) return noFileSelected;
+  LoadResult result = game->load(location);
+  if(result != successful) return result;
 
   system = mia::System::create("Game Boy Advance");
-  if(!system->load(firmware[0].location)) return errorFirmware(firmware[0]), false;
+  if(system->load(firmware[0].location) != successful) {
+    result.firmwareSystemName = "Game Boy Advance";
+    result.firmwareType = firmware[0].type;
+    result.firmwareRegion = firmware[0].region;
+    result.result = noFirmware;
+    return result;
+  }
 
-  if(!ares::GameBoyAdvance::load(root, "[Nintendo] Game Boy Advance")) return false;
+  deviceName = settings.gameBoyAdvance.player ? "Game Boy Player" : "Game Boy Advance";
+  ares::GameBoyAdvance::option("Pixel Accuracy", settings.video.pixelAccuracy);
+
+  if(!ares::GameBoyAdvance::load(root, {"[Nintendo] ", deviceName})) return otherError;
 
   if(auto port = root->find<ares::Node::Port>("Cartridge Slot")) {
     port->allocate();
     port->connect();
   }
 
-  return true;
+  return successful;
 }
 
 auto GameBoyAdvance::save() -> bool {

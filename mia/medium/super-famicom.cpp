@@ -1,7 +1,7 @@
 struct SuperFamicom : Cartridge {
   auto name() -> string override { return "Super Famicom"; }
   auto extensions() -> vector<string> override { return {"sfc", "smc", "swc", "fig"}; }
-  auto load(string location) -> bool override;
+  auto load(string location) -> LoadResult override;
   auto save(string location) -> bool override;
   auto analyze(vector<u8>& rom) -> string;
 
@@ -21,7 +21,7 @@ protected:
   auto expansionRamSize() const -> u32;
   auto nonVolatile() const -> bool;
 
-  auto size() const -> u32 { return data.size(); }
+  auto size() const -> u32 { return rom.size(); }
   auto scoreHeader(u32 address) -> u32;
   auto firmwareARM() const -> string;
   auto firmwareEXNEC() const -> string;
@@ -29,28 +29,20 @@ protected:
   auto firmwareHITACHI() const -> string;
   auto firmwareNEC() const -> string;
 
-  array_view<u8> data;
+  vector<u8> rom; 
   u32 headerAddress = 0;
 };
 
-auto SuperFamicom::load(string location) -> bool {
-  vector<u8> rom;
+auto SuperFamicom::load(string location) -> LoadResult {
+  
   string directory = location;
-  if(directory::exists(location)) {
-    auto files = directory::files(location, "*.rom");
-    append(rom, {location, "program.rom"  });
-    append(rom, {location, "data.rom"     });
-    append(rom, {location, "expansion.rom"});
-    for(auto& file : files.match("*.program.rom")) append(rom, {location, file});
-    for(auto& file : files.match("*.data.rom"   )) append(rom, {location, file});
-    for(auto& file : files.match("*.boot.rom"   )) append(rom, {location, file});
-  } else if(rom = Medium::read(location)) {
-    directory = Location::dir(location);
-    //append firmware to the ROM if it is missing
-    auto manifest = analyze(rom);
-    auto document = BML::unserialize(manifest);
+  bool local_firmware = false;
+  bool folder = false;
+  
+  auto append_missing_firmware = [&](auto document)
+  {
     if(auto identifier = document["game/board/memory/identifier"]) {
-      if(!firmwareRomSize()) {
+      if(!firmwareRomSize() && !local_firmware) {
         auto id = identifier.string();
         array_view<u8> view;
         if(id == "Cx4"  ) view = Resource::SuperFamicom::Cx4;
@@ -66,16 +58,51 @@ auto SuperFamicom::load(string location) -> bool {
         if(id == "ST018") view = Resource::SuperFamicom::ST018;
         while(view) rom.append(*view++);
       }
-    }
+	}
+  };
+  
+  if(directory::exists(location)) {
+    auto files = directory::files(location, "*.rom");
+    append(rom, {location, "program.rom"  });
+    append(rom, {location, "data.rom"     });
+    append(rom, {location, "expansion.rom"});
+    for(auto& file : files.match("slot-*.rom"   )) { append(rom, {location, file});                        }
+    for(auto& file : files.match("*.program.rom")) { append(rom, {location, file}); local_firmware = true; }
+    for(auto& file : files.match("*.data.rom"   )) { append(rom, {location, file}); local_firmware = true; }
+    for(auto& file : files.match("*.boot.rom"   )) { append(rom, {location, file});                        }
+	folder = true;
+  } else if(rom = Medium::read(location)) {
+    directory = Location::dir(location);
   }
-  if(!rom) return false;
-
+  
+  if(!rom) return romNotFound;
+  
+  //append firmware to the ROM if it is missing
+  auto tmp_manifest = analyze(rom);
+  auto document = BML::unserialize(tmp_manifest);
+  append_missing_firmware(document);
+  
   this->sha256   = Hash::SHA256(rom).digest();
   this->location = location;
+  auto foundDatabase = Medium::loadDatabase();
+  if(!foundDatabase) return { databaseNotFound, "Super Famicom.bml" };
   this->manifest = Medium::manifestDatabase(sha256);
+  
+  if(!manifest) {
+    auto local_manifest = location.replace({".", location.split(".").last()}, ".bml");
+    if (folder)
+      local_manifest = directory.append("manifest.bml");
+    if(file::exists(local_manifest)) {
+      manifest = file::read(local_manifest);
+    }
+  }  
+  
+  document = BML::unserialize(manifest);
+  append_missing_firmware(document); // if auto-detect failed, use chips from the manifest
+  
   if(!manifest) manifest = analyze(rom);
-  auto document = BML::unserialize(manifest);
-  if(!document) return false;
+  document = BML::unserialize(manifest);
+  if(!document) return couldNotParseManifest;
 
   pak = new vfs::directory;
   pak->setAttribute("title", document["game/title"].string());
@@ -155,7 +182,7 @@ auto SuperFamicom::load(string location) -> bool {
     Medium::load(node, ".dram");
   }
 
-  return true;
+  return successful;
 }
 
 auto SuperFamicom::save(string location) -> bool {
@@ -191,9 +218,8 @@ auto SuperFamicom::analyze(vector<u8>& rom) -> string {
   if(rom.size() < 0x8000) {
     print("[mia] Loading rom failed. Minimum expected rom size is 32768 (0x8000) bytes. Rom size: ", rom.size(), " (0x", hex(rom.size()), ") bytes.\n");
     return {};
-  }  
-  data = rom;
-
+  }
+  
   u32 LoROM   = scoreHeader(  0x7fb0);
   u32 HiROM   = scoreHeader(  0xffb0);
   u32 ExLoROM = scoreHeader(0x407fb0);
@@ -209,6 +235,7 @@ auto SuperFamicom::analyze(vector<u8>& rom) -> string {
   string s;
   auto& output = s;
   s += "game\n";
+  s +={"  sha256:   ", sha256, "\n"};
   s +={"  name:     ", Medium::name(location), "\n"};
   s +={"  title:    ", Medium::name(location), "\n"};
   s +={"  label:    ", label(), "\n"};
@@ -410,14 +437,14 @@ auto SuperFamicom::region() const -> string {
 
   string region;
 
-  char A = data[headerAddress + 0x02];  //game type
-  char B = data[headerAddress + 0x03];  //game code
-  char C = data[headerAddress + 0x04];  //game code
-  char D = data[headerAddress + 0x05];  //region code (new; sometimes ambiguous)
-  auto E = data[headerAddress + 0x29];  //region code (old)
+  char A = rom[headerAddress + 0x02];  //game type
+  char B = rom[headerAddress + 0x03];  //game code
+  char C = rom[headerAddress + 0x04];  //game code
+  char D = rom[headerAddress + 0x05];  //region code (new; sometimes ambiguous)
+  auto E = rom[headerAddress + 0x29];  //region code (old)
 
   auto valid = [](char n) { return (n >= '0' && n <= '9') || (n >= 'A' && n <= 'Z'); };
-  if(data[headerAddress + 0x2a] == 0x33 && valid(A) && valid(B) & valid(C) & valid(D)) {
+  if(rom[headerAddress + 0x2a] == 0x33 && valid(A) && valid(B) & valid(C) & valid(D)) {
     string code{A, B, C, D};
     if(D == 'B') region = {"SNS-",  code, "-BRA"};
     if(D == 'C') region = {"SNSN-", code, "-ROC"};
@@ -452,11 +479,11 @@ auto SuperFamicom::region() const -> string {
     if(E == 0x11) region = {"AUS"};
   }
 
-  return region ? region : "NTSC";
+  return region ? region : "NTSC"_s;
 }
 
 auto SuperFamicom::videoRegion() const -> string {
-  auto region = data[headerAddress + 0x29];
+  auto region = rom[headerAddress + 0x29];
   if(region == 0x00) return "NTSC";  //JPN
   if(region == 0x01) return "NTSC";  //USA
   if(region == 0x0b) return "NTSC";  //ROC
@@ -469,15 +496,15 @@ auto SuperFamicom::videoRegion() const -> string {
 auto SuperFamicom::revision() const -> string {
   string revision;
 
-  char A = data[headerAddress + 0x02];  //game type
-  char B = data[headerAddress + 0x03];  //game code
-  char C = data[headerAddress + 0x04];  //game code
-  char D = data[headerAddress + 0x05];  //region code (new; sometimes ambiguous)
-  auto E = data[headerAddress + 0x29];  //region code (old)
-  auto F = data[headerAddress + 0x2b];  //revision code
+  char A = rom[headerAddress + 0x02];  //game type
+  char B = rom[headerAddress + 0x03];  //game code
+  char C = rom[headerAddress + 0x04];  //game code
+  char D = rom[headerAddress + 0x05];  //region code (new; sometimes ambiguous)
+  auto E = rom[headerAddress + 0x29];  //region code (old)
+  auto F = rom[headerAddress + 0x2b];  //revision code
 
   auto valid = [](char n) { return (n >= '0' && n <= '9') || (n >= 'A' && n <= 'Z'); };
-  if(data[headerAddress + 0x2a] == 0x33 && valid(A) && valid(B) & valid(C) & valid(D)) {
+  if(rom[headerAddress + 0x2a] == 0x33 && valid(A) && valid(B) & valid(C) & valid(D)) {
     string code{A, B, C, D};
     if(D == 'B') revision = {"SNS-",  code, "-", F};
     if(D == 'C') revision = {"SNSN-", code, "-", F};
@@ -506,10 +533,10 @@ auto SuperFamicom::revision() const -> string {
 auto SuperFamicom::board() const -> string {
   string board;
 
-  auto mapMode          = data[headerAddress + 0x25];
-  auto cartridgeTypeLo  = data[headerAddress + 0x26] & 15;
-  auto cartridgeTypeHi  = data[headerAddress + 0x26] >> 4;
-  auto cartridgeSubType = data[headerAddress + 0x0f];
+  auto mapMode          = rom[headerAddress + 0x25];
+  auto cartridgeTypeLo  = rom[headerAddress + 0x26] & 15;
+  auto cartridgeTypeHi  = rom[headerAddress + 0x26] >> 4;
+  auto cartridgeSubType = rom[headerAddress + 0x0f];
 
   string mode;
   if(mapMode == 0x20 || mapMode == 0x30) mode = "LOROM-";
@@ -528,6 +555,14 @@ auto SuperFamicom::board() const -> string {
     if(headerAddress == 0x40ffb0) mode = "EXHIROM-";
   }
 
+  //the Sufami Turbo has the non-descriptive label "ADD-ON BASE CASSETE"
+  //(yes, missing a T), and its serial "A9PJ" is shared with
+  //Bishoujo Senshi Sailor Moon SuperS - Fuwafuwa Panic (Japan)
+  //so we identify it with this embedded string
+  string sufamiSignature = "BANDAI SFC-ADX";
+  auto romSignature = string_view((const char*)rom.data(), sufamiSignature.length());
+  if(romSignature == sufamiSignature) board.append("ST-", mode);
+
   //this game's title overwrite the map mode with '!' (0x21), but is a LOROM game
   if(label() == "YUYU NO QUIZ DE GO!GO") mode = "LOROM-";
 
@@ -537,10 +572,7 @@ auto SuperFamicom::board() const -> string {
   bool epsonRTC = false;
   bool sharpRTC = false;
 
-         if(serial() == "A9PJ") {
-  //Sufami Turbo (JPN)
-    board.append("ST-", mode);
-  } else if(serial() == "ZBSJ") {
+  if(serial() == "ZBSJ") {
   //BS-X: Sore wa Namae o Nusumareta Machi no Monogatari (JPN)
     board.append("BS-MCC-");
   } else if(serial() == "042J") {
@@ -574,7 +606,7 @@ auto SuperFamicom::board() const -> string {
   if(board.beginsWith("NEC-LOROM-RAM") && romSize() <= 0x100000) board.append("#A");
 
   //Tengai Makyou Zero (fan translation)
-  if(board.beginsWith("SPC7110-") && data.size() == 0x700000) board.prepend("EX");
+  if(board.beginsWith("SPC7110-") && romSize() == 0x700000) board.prepend("EX");
 
   return board;
 }
@@ -583,8 +615,8 @@ auto SuperFamicom::label() const -> string {
   string label;
 
   for(u32 n = 0; n < 0x15; n++) {
-    auto x = data[headerAddress + 0x10 + n];
-    auto y = n == 0x14 ? 0 : data[headerAddress + 0x11 + n];
+    auto x = rom[headerAddress + 0x10 + n];
+    auto y = n == 0x14 ? 0 : rom[headerAddress + 0x11 + n];
 
     //null terminator (padding)
     if(x == 0x00 || x == 0xff);
@@ -682,13 +714,13 @@ auto SuperFamicom::label() const -> string {
 }
 
 auto SuperFamicom::serial() const -> string {
-  char A = data[headerAddress + 0x02];  //game type
-  char B = data[headerAddress + 0x03];  //game code
-  char C = data[headerAddress + 0x04];  //game code
-  char D = data[headerAddress + 0x05];  //region code (new; sometimes ambiguous)
+  char A = rom[headerAddress + 0x02];  //game type
+  char B = rom[headerAddress + 0x03];  //game code
+  char C = rom[headerAddress + 0x04];  //game code
+  char D = rom[headerAddress + 0x05];  //region code (new; sometimes ambiguous)
 
   auto valid = [](char n) { return (n >= '0' && n <= '9') || (n >= 'A' && n <= 'Z'); };
-  if(data[headerAddress + 0x2a] == 0x33 && valid(A) && valid(B) & valid(C) & valid(D)) {
+  if(rom[headerAddress + 0x2a] == 0x33 && valid(A) && valid(B) & valid(C) & valid(D)) {
     return {A, B, C, D};
   }
 
@@ -718,9 +750,9 @@ auto SuperFamicom::expansionRomSize() const -> u32 {
 
 //detect if any firmware is appended to the ROM image, and return its size if so
 auto SuperFamicom::firmwareRomSize() const -> u32 {
-  auto cartridgeTypeLo  = data[headerAddress + 0x26] & 15;
-  auto cartridgeTypeHi  = data[headerAddress + 0x26] >> 4;
-  auto cartridgeSubType = data[headerAddress + 0x0f];
+  auto cartridgeTypeLo  = rom[headerAddress + 0x26] & 15;
+  auto cartridgeTypeHi  = rom[headerAddress + 0x26] >> 4;
+  auto cartridgeSubType = rom[headerAddress + 0x0f];
 
   if(serial() == "042J" || (cartridgeTypeLo == 0x3 && cartridgeTypeHi == 0xe)) {
     //Game Boy
@@ -751,17 +783,17 @@ auto SuperFamicom::firmwareRomSize() const -> u32 {
 }
 
 auto SuperFamicom::ramSize() const -> u32 {
-  auto ramSize = data[headerAddress + 0x28] & 7;
-  if(ramSize) return 1024 << ramSize;
+  auto ramSize = rom[headerAddress + 0x28];
+  if (ramSize) return (1 << (((ramSize - 1) & 7) + 1)) << 10;
   return 0;
 }
 
 auto SuperFamicom::expansionRamSize() const -> u32 {
-  if(data[headerAddress + 0x2a] == 0x33) {
-    auto ramSize = data[headerAddress + 0x0d] & 7;
+  if(rom[headerAddress + 0x2a] == 0x33) {
+    auto ramSize = rom[headerAddress + 0x0d] & 7;
     if(ramSize) return 1024 << ramSize;
   }
-  if((data[headerAddress + 0x26] >> 4) == 1) {
+  if((rom[headerAddress + 0x26] >> 4) == 1) {
     //GSU: Starfox / Starwing lacks an extended header; but still has expansion RAM
     return 0x8000;
   }
@@ -769,7 +801,7 @@ auto SuperFamicom::expansionRamSize() const -> u32 {
 }
 
 auto SuperFamicom::nonVolatile() const -> bool {
-  auto cartridgeTypeLo = data[headerAddress + 0x26] & 15;
+  auto cartridgeTypeLo = rom[headerAddress + 0x26] & 15;
   return cartridgeTypeLo == 0x2 || cartridgeTypeLo == 0x5 || cartridgeTypeLo == 0x6;
 }
 
@@ -777,13 +809,13 @@ auto SuperFamicom::scoreHeader(u32 address) -> u32 {
   s32 score = 0;
   if(size() < address + 0x50) return score;
 
-  u8  mapMode     = data[address + 0x25] & ~0x10;  //ignore FastROM bit
-  u16 complement  = data[address + 0x2c] << 0 | data[address + 0x2d] << 8;
-  u16 checksum    = data[address + 0x2e] << 0 | data[address + 0x2f] << 8;
-  u16 resetVector = data[address + 0x4c] << 0 | data[address + 0x4d] << 8;
+  u8  mapMode     = rom[address + 0x25] & ~0x10;  //ignore FastROM bit
+  u16 complement  = rom[address + 0x2c] << 0 | rom[address + 0x2d] << 8;
+  u16 checksum    = rom[address + 0x2e] << 0 | rom[address + 0x2f] << 8;
+  u16 resetVector = rom[address + 0x4c] << 0 | rom[address + 0x4d] << 8;
   if(resetVector < 0x8000) return score;  //$00:0000-7fff is never ROM data
 
-  u8 opcode = data[(address & ~0x7fff) | (resetVector & 0x7fff)];  //first instruction executed
+  u8 opcode = rom[(address & ~0x7fff) | (resetVector & 0x7fff)];  //first instruction executed
 
   //most likely opcodes
   if(opcode == 0x78  //sei

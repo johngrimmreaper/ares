@@ -1,6 +1,6 @@
 #if defined(Hiro_Label)
 
-@implementation CocoaLabel : NSView
+@implementation CocoaLabel
 {
   NSColor *_foregroundColor;
 }
@@ -22,7 +22,8 @@
   if(auto backgroundColor = label->backgroundColor()) {
     NSColor* color = NSMakeColor(backgroundColor);
     [color setFill];
-    NSRectFill(dirtyRect);
+    NSRect frame = self.bounds;
+    NSRectFill(frame);
   }
 
   NSFont* font = hiro::pFont::create(label->font(true));

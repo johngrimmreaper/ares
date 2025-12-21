@@ -163,7 +163,7 @@ struct HVC_ExROM : Interface {  //MMC5
       pulse1.envelope.clock();
       pulse2.clockLength();
       pulse2.envelope.clock();
-      frameDivider += APU::FrameCounter::NtscPeriod;
+      frameDivider += 14915; // ~(21.477MHz / 6 / 240hz)
     }
 
     i32 output = 0;
@@ -172,6 +172,8 @@ struct HVC_ExROM : Interface {  //MMC5
     stream->frame(sclamp<16>(-output) / 32768.0);
 
     cpu.irqLine((irqLine & irqEnable) || (pcm.irqLine & pcm.irqEnable) || timerLine);
+
+    tick();
   }
 
   auto scanline() -> void {
@@ -354,7 +356,7 @@ struct HVC_ExROM : Interface {  //MMC5
       pulse1.period.bit(8,10) = data.bit(0,2);
       pulse1.dutyCounter = 0;
       pulse1.envelope.reloadDecay = 1;
-      pulse1.lengthCounter = apu.lengthCounterTable[data.bit(3,7)];
+      pulse1.lengthCounter = APU::Length::table[data.bit(3,7)];
       break;
 
     case 0x5004:
@@ -375,7 +377,7 @@ struct HVC_ExROM : Interface {  //MMC5
       pulse2.period.bit(8,10) = data.bit(0,2);
       pulse2.dutyCounter = 0;
       pulse2.envelope.reloadDecay = 1;
-      pulse2.lengthCounter = apu.lengthCounterTable[data.bit(3,7)];
+      pulse2.lengthCounter = APU::Length::table[data.bit(3,7)];
       break;
 
     case 0x5010:

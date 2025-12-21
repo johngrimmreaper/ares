@@ -1,4 +1,4 @@
-#define PC ipu.pc
+#define PC pipeline.pc
 #define RA ipu.r[31]
 #define LO ipu.lo
 #define HI ipu.hi
@@ -30,88 +30,87 @@ auto CPU::ANDI(r64& rt, cr64& rs, u16 imm) -> void {
 }
 
 auto CPU::BEQ(cr64& rs, cr64& rt, s16 imm) -> void {
-  if(rs.u64 == rt.u64) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
+  if(rs.u64 == rt.u64) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
 }
 
 auto CPU::BEQL(cr64& rs, cr64& rt, s16 imm) -> void {
-  if(rs.u64 == rt.u64) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
+  if(rs.u64 == rt.u64) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BGEZ(cr64& rs, s16 imm) -> void {
-  if(rs.s64 >= 0) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
+  if(rs.s64 >= 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
 }
 
 auto CPU::BGEZAL(cr64& rs, s16 imm) -> void {
-  bool inDelaySlot = branch.inDelaySlot();
-  if(rs.s64 >= 0) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
-  RA.u64 = s32(inDelaySlot ? branch.pc+4 : PC+8);
+  if(rs.s64 >= 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
+  RA.u64 = s32(PC + 4);
 }
 
 auto CPU::BGEZALL(cr64& rs, s16 imm) -> void {
-  if(rs.s64 >= 0) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
-  RA.u64 = s32(PC + 8);
+  RA.u64 = s32(PC + 4);
+  if(rs.s64 >= 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BGEZL(cr64& rs, s16 imm) -> void {
-  if(rs.s64 >= 0) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
+  if(rs.s64 >= 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BGTZ(cr64& rs, s16 imm) -> void {
-  if(rs.s64 > 0) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
+  if(rs.s64 > 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
 }
 
 auto CPU::BGTZL(cr64& rs, s16 imm) -> void {
-  if(rs.s64 > 0) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
+  if(rs.s64 > 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BLEZ(cr64& rs, s16 imm) -> void {
-  if(rs.s64 <= 0) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
+  if(rs.s64 <= 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
 }
 
 auto CPU::BLEZL(cr64& rs, s16 imm) -> void {
-  if(rs.s64 <= 0) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
+  if(rs.s64 <= 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BLTZ(cr64& rs, s16 imm) -> void {
-  if(rs.s64 < 0) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
+  if(rs.s64 < 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
 }
 
 auto CPU::BLTZAL(cr64& rs, s16 imm) -> void {
-  RA.u64 = s32(PC + 8);
-  if(rs.s64 < 0) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
+  RA.u64 = s32(PC + 4);
+  if(rs.s64 < 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
 }
 
 auto CPU::BLTZALL(cr64& rs, s16 imm) -> void {
-  RA.u64 = s32(PC + 8);
-  if(rs.s64 < 0) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
+  RA.u64 = s32(PC + 4);
+  if(rs.s64 < 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BLTZL(cr64& rs, s16 imm) -> void {
-  if(rs.s64 < 0) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
+  if(rs.s64 < 0) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BNE(cr64& rs, cr64& rt, s16 imm) -> void {
-  if(rs.u64 != rt.u64) branch.take(PC + 4 + (imm << 2));
-  else branch.notTaken();
+  if(rs.u64 != rt.u64) pipeline.branch(PC + (imm << 2));
+  else pipeline.noBranch();
 }
 
 auto CPU::BNEL(cr64& rs, cr64& rt, s16 imm) -> void {
-  if(rs.u64 != rt.u64) branch.take(PC + 4 + (imm << 2));
-  else branch.discard();
+  if(rs.u64 != rt.u64) pipeline.branch(PC + (imm << 2));
+  else pipeline.skip();
 }
 
 auto CPU::BREAK() -> void {
@@ -119,27 +118,29 @@ auto CPU::BREAK() -> void {
 }
 
 auto CPU::CACHE(u8 operation, cr64& rs, s16 imm) -> void {
-  u32 address;
-  if (auto phys = devirtualize(rs.u64 + imm)) address = *phys;
-  else return;
+  auto access = devirtualize<Read, Word>(rs.u64 + imm);
+  if (!access) return;
+  if(!access.cache) {
+    debug(unusual, "[CPU] CACHE access to non-cacheable address ", hex(access.vaddr, 8L), " at PC ", hex(PC, 16L));
+  }
 
   switch(operation) {
 
   case 0x00: {  //icache index invalidate
-    auto& line = icache.line(address);
+    auto& line = icache.line(access.vaddr);
     line.valid = 0;
     break;
   }
 
   case 0x04: {  //icache load tag
-    auto& line = icache.line(address);
+    auto& line = icache.line(access.vaddr);
     scc.tagLo.primaryCacheState = line.valid << 1;
     scc.tagLo.physicalAddress   = line.tag;
     break;
   }
 
   case 0x08: {  //icache store tag
-    auto& line = icache.line(address);
+    auto& line = icache.line(access.vaddr);
     line.valid = scc.tagLo.primaryCacheState.bit(1);
     line.tag   = scc.tagLo.physicalAddress;
     if(scc.tagLo.primaryCacheState == 0b01) debug(unusual, "[CPU] CACHE CPCS=1");
@@ -148,39 +149,39 @@ auto CPU::CACHE(u8 operation, cr64& rs, s16 imm) -> void {
   }
 
   case 0x10: {  //icache hit invalidate
-    auto& line = icache.line(address);
-    if(line.hit(address)) line.valid = 0;
+    auto& line = icache.line(access.vaddr);
+    if(line.hit(access.paddr)) line.valid = 0;
     break;
   }
 
   case 0x14: {  //icache fill
-    auto& line = icache.line(address);
-    line.fill(address, cpu);
+    auto& line = icache.line(access.vaddr);
+    line.fill(access.paddr, cpu);
     break;
   }
 
   case 0x18: {  //icache hit write back
-    auto& line = icache.line(address);
-    if(line.hit(address)) line.writeBack(cpu);
+    auto& line = icache.line(access.vaddr);
+    if(line.hit(access.paddr)) line.writeBack(cpu);
     break;
   }
 
   case 0x01: {  //dcache index write back invalidate
-    auto& line = dcache.line(address);
+    auto& line = dcache.line(access.vaddr);
     if(line.valid && line.dirty) line.writeBack();
     line.valid = 0;
     break;
   }
 
   case 0x05: {  //dcache index load tag
-    auto& line = dcache.line(address);
+    auto& line = dcache.line(access.vaddr);
     scc.tagLo.primaryCacheState = line.valid << 1 | line.dirty << 0;
     scc.tagLo.physicalAddress   = line.tag;
     break;
   }
 
   case 0x09: {  //dcache index store tag
-    auto& line = dcache.line(address);
+    auto& line = dcache.line(access.vaddr);
     line.valid = scc.tagLo.primaryCacheState.bit(1);
     line.dirty = scc.tagLo.primaryCacheState.bit(0);
     line.tag   = scc.tagLo.physicalAddress;
@@ -190,17 +191,17 @@ auto CPU::CACHE(u8 operation, cr64& rs, s16 imm) -> void {
   }
 
   case 0x0d: {  //dcache create dirty exclusive
-    auto& line = dcache.line(address);
-    if(!line.hit(address) && line.dirty) line.writeBack();
-    line.tag   = address & ~0xfff;
+    auto& line = dcache.line(access.vaddr);
+    if(!line.hit(access.paddr) && line.dirty) line.writeBack();
+    line.tag   = access.paddr & ~0xfff;
     line.valid = 1;
     line.dirty = 1;
     break;
   }
 
   case 0x11: {  //dcache hit invalidate
-    auto& line = dcache.line(address);
-    if(line.hit(address)) {
+    auto& line = dcache.line(access.vaddr);
+    if(line.hit(access.paddr)) {
       line.valid = 0;
       line.dirty = 0;
     }
@@ -208,8 +209,8 @@ auto CPU::CACHE(u8 operation, cr64& rs, s16 imm) -> void {
   }
 
   case 0x15: {  //dcache hit write back invalidate
-    auto& line = dcache.line(address);
-    if(line.hit(address)) {
+    auto& line = dcache.line(access.vaddr);
+    if(line.hit(access.paddr)) {
       if(line.dirty) line.writeBack();
       line.valid = 0;
     }
@@ -217,8 +218,8 @@ auto CPU::CACHE(u8 operation, cr64& rs, s16 imm) -> void {
   }
 
   case 0x19: {  //dcache hit write back
-    auto& line = dcache.line(address);
-    if(line.hit(address)) {
+    auto& line = dcache.line(access.vaddr);
+    if(line.hit(access.paddr)) {
       if(line.dirty) line.writeBack();
     }
     break;
@@ -286,10 +287,12 @@ auto CPU::DDIVU(cr64& rs, cr64& rt) -> void {
 
 auto CPU::DIV(cr64& rs, cr64& rt) -> void {
   if(!context.kernelMode() && context.bits == 32) return exception.reservedInstruction();
-  if(rt.s32) {
-    //cast to s64 to prevent exception on INT32_MIN / -1
-    LO.u64 = s32(s64(rs.s32) / s64(rt.s32));
-    HI.u64 = s32(s64(rs.s32) % s64(rt.s32));
+  if(rt.s64) {
+    //using s64 to match hardware behavior when input operands are not properly sign-extended
+    //note: this does not give correct results when sgn(rt.s32) != sgn(rt.s64); on hardware this
+    //results in a meaningless quotient, it's not clear how the result is reached in that case
+    LO.u64 = s32(s64(rs.s32) / rt.s64);
+    HI.u64 = s32(s64(rs.s32) % rt.s64);
   } else {
     LO.u64 = rs.s32 < 0 ? +1 : -1;
     HI.u64 = rs.s32;
@@ -391,26 +394,22 @@ auto CPU::DSUBU(r64& rd, cr64& rs, cr64& rt) -> void {
 }
 
 auto CPU::J(u32 imm) -> void {
-  if (branch.inDelaySlotTaken()) return;
-  branch.take((PC + 4 & 0xffff'ffff'f000'0000) | (imm << 2));
+  pipeline.branch((PC & 0xffff'ffff'f000'0000) | (imm << 2));
 }
 
 auto CPU::JAL(u32 imm) -> void {
-  RA.u64 = branch.inDelaySlotTaken() ? branch.pc+4 : PC+8;
-  if (!branch.inDelaySlotTaken()) branch.take((PC + 4 & 0xffff'ffff'f000'0000) | (imm << 2));
-  else if (!branch.inDelaySlot()) branch.notTaken();
+  RA.u64 = PC+4;
+  pipeline.branch((PC & 0xffff'ffff'f000'0000) | (imm << 2));
 }
 
 auto CPU::JALR(r64& rd, cr64& rs) -> void {
   u64 tgt = rs.u64;
-  rd.u64 = branch.inDelaySlotTaken() ? branch.pc+4 : PC+8;
-  if (!branch.inDelaySlotTaken()) branch.take(tgt);
-  else if (!branch.inDelaySlot()) branch.notTaken();
+  rd.u64 = PC+4;
+  pipeline.branch(tgt);
 }
 
 auto CPU::JR(cr64& rs) -> void {
-  if (!branch.inDelaySlotTaken()) branch.take(rs.u64);
-  else if (!branch.inDelaySlot()) branch.notTaken();
+  pipeline.branch(rs.u64);
 }
 
 auto CPU::LB(r64& rt, cr64& rs, s16 imm) -> void {
@@ -615,10 +614,10 @@ auto CPU::LHU(r64& rt, cr64& rs, s16 imm) -> void {
 }
 
 auto CPU::LL(r64& rt, cr64& rs, s16 imm) -> void {
-  if(auto address = devirtualize(rs.u64 + imm)) {
-    if (auto data = read<Word>(rs.u64 + imm)) {
+  if(auto access = devirtualize<Read, Word>(rs.u64 + imm)) {
+    if (auto data = read<Word>(access.vaddr)) {
       rt.u64 = s32(*data);
-      scc.ll = *address >> 4;
+      scc.ll = access.paddr >> 4;
       scc.llbit = 1;
     }
   }
@@ -626,10 +625,10 @@ auto CPU::LL(r64& rt, cr64& rs, s16 imm) -> void {
 
 auto CPU::LLD(r64& rt, cr64& rs, s16 imm) -> void {
   if(!context.kernelMode() && context.bits == 32) return exception.reservedInstruction();
-  if(auto address = devirtualize(rs.u64 + imm)) {
-    if (auto data = read<Dual>(rs.u64 + imm)) {
+  if(auto access = devirtualize<Read, Word>(rs.u64 + imm)) {
+    if (auto data = read<Dual>(access.vaddr)) {
       rt.u64 = *data;
-      scc.ll = *address >> 4;
+      scc.ll = access.paddr >> 4;
       scc.llbit = 1;
     }
   }
@@ -783,7 +782,9 @@ auto CPU::MTLO(cr64& rs) -> void {
 }
 
 auto CPU::MULT(cr64& rs, cr64& rt) -> void {
-  u64 result = s64(rs.s32) * s64(rt.s32);
+  //using s64 to match hardware behavior when input operands are not properly sign-extended,
+  //the hardware behavior appears to be a signed 64-bit by 35-bit multiplication
+  u64 result = rs.s64 * (rt.s64 << 29 >> 29);
   LO.u64 = s32(result >>  0);
   HI.u64 = s32(result >> 32);
   step((5 - 1) * 2);

@@ -1,12 +1,6 @@
-auto APU::Pulse::clockLength() -> void {
-  if(envelope.loopMode == 0) {
-    if(lengthCounter) lengthCounter--;
-  }
-}
-
 auto APU::Pulse::clock() -> n8 {
   if(!sweep.checkPeriod()) return 0;
-  if(lengthCounter == 0) return 0;
+  if(length.counter == 0) return 0;
 
   static constexpr u32 dutyTable[4][8] = {
     {0, 0, 0, 0, 0, 0, 0, 1},  //12.5%
@@ -23,4 +17,15 @@ auto APU::Pulse::clock() -> n8 {
   }
 
   return result;
+}
+
+auto APU::Pulse::power(bool reset) -> void {
+  length.power(reset, false);
+  envelope = {};
+  sweep = {};
+
+  periodCounter = 1;
+  duty = 0;
+  dutyCounter = 0;
+  period = 0;
 }

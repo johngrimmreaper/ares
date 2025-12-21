@@ -1,5 +1,4 @@
 inline auto Bus::mmio(u32 address) -> Memory::Interface& {
-  address &= 0x1fff'ffff;
   if(address <= 0x007f'ffff) return cpu.ram;
   if(address >= 0x1fc0'0000) return bios;
   if(address <= 0x1eff'ffff) return unmapped;
@@ -31,6 +30,5 @@ inline auto Bus::read(u32 address) -> u32 {
 
 template<u32 Size>
 inline auto Bus::write(u32 address, u32 data) -> void {
-  if constexpr(Accuracy::CPU::Recompiler) cpu.recompiler.invalidate(address);
   return mmio(address).write<Size>(address, data);
 }

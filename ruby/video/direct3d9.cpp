@@ -22,13 +22,13 @@ struct VideoDirect3D9 : VideoDriver {
   auto hasExclusive() -> bool override { return true; }
   auto hasContext() -> bool override { return true; }
   auto hasBlocking() -> bool override { return true; }
-  auto hasShader() -> bool override { return true; }
+  auto hasShader() -> bool override { return false; }
 
   auto setFullScreen(bool fullScreen) -> bool override { return initialize(); }
   auto setMonitor(string monitor) -> bool override { return initialize(); }
   auto setExclusive(bool exclusive) -> bool override { return initialize(); }
   auto setContext(uintptr context) -> bool override { return initialize(); }
-  auto setBlocking(bool blocking) -> bool override { return true; }
+  auto setBlocking(bool blocking) -> bool override { return initialize(); }
   auto setShader(string shader) -> bool override { return updateFilter(); }
 
   auto focused() -> bool override {
@@ -115,18 +115,6 @@ struct VideoDirect3D9 : VideoDriver {
     _device->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
     _device->EndScene();
 
-    if(self.blocking) {
-      D3DRASTER_STATUS status;
-      while(true) {  //wait for a previous vblank to finish, if necessary
-        _device->GetRasterStatus(0, &status);
-        if(!status.InVBlank) break;
-      }
-      while(true) {  //wait for next vblank to begin
-        _device->GetRasterStatus(0, &status);
-        if(status.InVBlank) break;
-      }
-    }
-
     if(_device->Present(0, 0, 0, 0) == D3DERR_DEVICELOST) _lost = true;
   }
 
@@ -209,9 +197,8 @@ private:
     if(!_device) return false;
     if(_lost && !recover()) return false;
 
-    auto filter = self.shader == "Blur" ? D3DTEXF_LINEAR : D3DTEXF_POINT;
-    _device->SetSamplerState(0, D3DSAMP_MINFILTER, filter);
-    _device->SetSamplerState(0, D3DSAMP_MAGFILTER, filter);
+    _device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+    _device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
     return true;
   }
 
@@ -292,7 +279,7 @@ private:
     _presentation.MultiSampleQuality = 0;
     _presentation.EnableAutoDepthStencil = false;
     _presentation.AutoDepthStencilFormat = D3DFMT_UNKNOWN;
-    _presentation.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+    _presentation.PresentationInterval = self.blocking ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
     _presentation.hDeviceWindow = _context;
     _presentation.Windowed = !_exclusive;
     _presentation.BackBufferFormat = _exclusive ? D3DFMT_X8R8G8B8 : D3DFMT_UNKNOWN;

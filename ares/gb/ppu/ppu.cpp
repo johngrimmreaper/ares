@@ -27,16 +27,17 @@ auto PPU::load(Node::Object parent) -> void {
     screen->setSize(160, 144);
     screen->setScale(1.0, 1.0);
     screen->setAspect(1.0, 1.0);
+    screen->refreshRateHint(4 * 1024 * 1024, 456, 154);
 
     if(Model::GameBoy()) {
-      screen->colors(1 << 2, {&PPU::colorGameBoy, this});
-      screen->setFillColor(0);
-
       colorEmulationDMG = screen->append<Node::Setting::String>("Color Emulation", "Game Boy", [&](auto value) {
         screen->resetPalette();
       });
       colorEmulationDMG->setAllowedValues({"Game Boy", "Game Boy Pocket", "RGB"});
       colorEmulationDMG->setDynamic(true);
+
+      screen->colors(1 << 2, {&PPU::colorGameBoy, this});
+      screen->setFillColor(0);
 
       interframeBlending = screen->append<Node::Setting::Boolean>("Interframe Blending", true, [&](auto value) {
         screen->setInterframeBlending(value);
@@ -45,13 +46,13 @@ auto PPU::load(Node::Object parent) -> void {
     }
 
     if(Model::GameBoyColor()) {
-      screen->colors(1 << 15, {&PPU::colorGameBoyColor, this});
-      screen->setFillColor(0x7fff);
-
       colorEmulationCGB = screen->append<Node::Setting::Boolean>("Color Emulation", true, [&](auto value) {
         screen->resetPalette();
       });
       colorEmulationCGB->setDynamic(true);
+
+      screen->colors(1 << 15, {&PPU::colorGameBoyColor, this});
+      screen->setFillColor(0x7fff);
 
       interframeBlending = screen->append<Node::Setting::Boolean>("Interframe Blending", true, [&](auto value) {
         screen->setInterframeBlending(value);
@@ -102,7 +103,6 @@ auto PPU::main() -> void {
     step(172);
 
     mode(0);
-    cpu.hblank();
     step(456 - 8 - status.lx);
   } else if(status.ly <= 143) {
     mode(2);
@@ -122,7 +122,6 @@ auto PPU::main() -> void {
     step(12);
 
     mode(0);
-    cpu.hblank();
     step(456 - status.lx);
   } else {
     mode(1);
@@ -145,6 +144,9 @@ auto PPU::main() -> void {
 }
 
 auto PPU::mode(n2 mode) -> void {
+  if(mode == 0) cpu.hblankIn();
+  if(mode != 0) cpu.hblankOut();
+
   if(status.mode == 0 && mode != 0) {
     if(Model::SuperGameBoy()) superGameBoy->ppuHreset();
   }

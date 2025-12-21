@@ -4,24 +4,24 @@
 #include <stdlib.h>
 
 struct point_st {
-	long x;
-	int y;
-	short z;
-	char d;
+	sljit_sw x;
+	sljit_s32 y;
+	sljit_s16 z;
+	sljit_s8 d;
 };
 
-typedef long (SLJIT_FUNC *point_func_t)(struct point_st *point);;
+typedef sljit_sw (SLJIT_FUNC *point_func_t)(struct point_st *point);
 
-static long SLJIT_FUNC print_num(long a)
+static sljit_sw SLJIT_FUNC print_num(sljit_sw a)
 {
-	printf("a = %ld\n", a);
+	printf("a = %ld\n", (long)a);
 	return a + 1;
 }
 
 /*
   This example, we generate a function like this:
 
-long func(struct point_st *point)
+sljit_sw func(struct point_st *point)
 {
 	print_num(point->x);
 	print_num(point->y);
@@ -34,7 +34,7 @@ long func(struct point_st *point)
 static int struct_access()
 {
 	void *code;
-	unsigned long len;
+	sljit_uw len;
 	point_func_t func;
 
 	struct point_st point = {
@@ -42,32 +42,37 @@ static int struct_access()
 	};
 
 	/* Create a SLJIT compiler */
-	struct sljit_compiler *C = sljit_create_compiler(NULL, NULL);
+	struct sljit_compiler *C = sljit_create_compiler(NULL);
 
-	sljit_emit_enter(C, 0, SLJIT_ARGS1(W, W), 1, 1, 0, 0, 0);
-	/*                  opt arg R  S  FR FS local_size */
+	sljit_emit_enter(C, 0, SLJIT_ARGS1(W, W), 1, 1, 0);
+	/*                  opt arg               R  S  local_size */
 
-	sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, x));	// S0->x --> R0
-	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));								// print_num(R0);
+	/* S0->x --> R0; print_num(R0) */
+	sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, x));
+	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));
 
-	sljit_emit_op1(C, SLJIT_MOV_S32, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, y));	// S0->y --> R0
-	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));								// print_num(R0);
+	/* S0->y --> R0; print_num(R0) */
+	sljit_emit_op1(C, SLJIT_MOV_S32, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, y));
+	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));
 
-	sljit_emit_op1(C, SLJIT_MOV_S16, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, z));	// S0->z --> R0
-	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));								// print_num(R0);
+	/* S0->z --> R0; print_num(R0) */
+	sljit_emit_op1(C, SLJIT_MOV_S16, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, z));
+	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));
 
-	sljit_emit_op1(C, SLJIT_MOV_S8, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, d));	// S0->d --> R0
-	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));								// print_num(R0);
+	/* S0->d --> R0; print_num(R0) */
+	sljit_emit_op1(C, SLJIT_MOV_S8, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, d));
+	sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, P), SLJIT_IMM, SLJIT_FUNC_ADDR(print_num));
 
-	sljit_emit_return(C, SLJIT_MOV, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, x));				// return S0->x
+	/* return S0->x */
+	sljit_emit_return(C, SLJIT_MOV, SLJIT_MEM1(SLJIT_S0), SLJIT_OFFSETOF(struct point_st, x));
 
 	/* Generate machine code */
-	code = sljit_generate_code(C);
+	code = sljit_generate_code(C, 0, NULL);
 	len = sljit_get_generated_code_size(C);
 
 	/* Execute code */
 	func = (point_func_t)code;
-	printf("func return %ld\n", func(&point));
+	printf("func return %ld\n", (long)func(&point));
 
 	/* dump_code(code, len); */
 

@@ -24,15 +24,17 @@ auto VDP::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("VDP");
 
   screen = node->append<Node::Video::Screen>("Screen", 1365, 263);
-  screen->colors(1 << 10, {&VDP::color, this});
-  screen->setSize(1024, 239);
-  screen->setScale(0.25, 1.0);
-  screen->setAspect(8.0, 7.0);
 
   colorEmulation = screen->append<Node::Setting::Boolean>("Color Emulation", true, [&](auto value) {
     screen->resetPalette();
   });
   colorEmulation->setDynamic(true);
+
+  screen->colors(1 << 10, {&VDP::color, this});
+  screen->setSize(1128, 263);
+  screen->setScale(0.25, 1.0);
+  screen->setAspect(8.0, 7.0);
+  screen->refreshRateHint(60); // TODO: More accurate refresh rate hint
 
   vce.debugger.load(vce, parent);
   vdc0.debugger.load(vdc0, parent); if(Model::SuperGrafx())
@@ -64,7 +66,7 @@ auto VDP::main() -> void {
   vdc1.hclock();
 
   if(io.vcounter >= 21 && io.vcounter < 239 + 21) {
-    auto line = screen->pixels().data() + 1365 * io.vcounter;
+    auto line = screen->pixels().data() + 1365 * io.vcounter + 48;
     auto clock = vce.clock();
 
     if(Model::SuperGrafx() == 0) {
@@ -101,7 +103,7 @@ auto VDP::main() -> void {
   io.hcounter = 0;
   if(++io.vcounter >= 262 + vce.io.extraLine) {
     io.vcounter = 0;
-    screen->setViewport(0, 21, 1024, 239);
+    screen->setViewport(0, 16, screen->width(), 242);
     screen->frame();
     scheduler.exit(Event::Frame);
   }

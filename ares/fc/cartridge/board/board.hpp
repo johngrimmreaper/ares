@@ -1,4 +1,6 @@
 namespace Board {
+#include "ic/jv001.hpp"
+#include "ic/txc05-00002-010.hpp"
 
 struct Interface {
   VFS::Pak pak;
@@ -11,7 +13,8 @@ struct Interface {
   virtual auto save() -> void {}
   virtual auto unload() -> void {}
 
-  virtual auto main() -> void {}
+  virtual auto main() -> void;
+  virtual auto tick() -> void;
 
   virtual auto readPRG(n32 address, n8 data) -> n8 { return data; }
   virtual auto writePRG(n32 address, n8 data) -> void {}
@@ -22,6 +25,8 @@ struct Interface {
   virtual auto scanline(n32 y) -> void {}
 
   virtual auto power() -> void {}
+
+  virtual auto ppuAddressBus(n14 address) -> void {}
 
   virtual auto serialize(serializer&) -> void {}
 

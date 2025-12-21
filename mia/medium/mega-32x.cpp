@@ -1,7 +1,7 @@
 struct Mega32X : Cartridge {
   auto name() -> string override { return "Mega 32X"; }
   auto extensions() -> vector<string> override { return {"32x"}; }
-  auto load(string location) -> bool override;
+  auto load(string location) -> LoadResult override;
   auto save(string location) -> bool override;
   auto analyze(vector<u8>& rom) -> string;
   auto analyzeStorage(vector<u8>& rom, string hash) -> void;
@@ -25,19 +25,19 @@ struct Mega32X : Cartridge {
   } eeprom;
 };
 
-auto Mega32X::load(string location) -> bool {
+auto Mega32X::load(string location) -> LoadResult {
   vector<u8> rom;
   if(directory::exists(location)) {
     append(rom, {location, "program.rom"});
   } else if(file::exists(location)) {
     rom = Cartridge::read(location);
   }
-  if(!rom) return false;
+  if(!rom) return romNotFound;
 
   this->location = location;
   this->manifest = analyze(rom);
   auto document = BML::unserialize(manifest);
-  if(!document) return false;
+  if(!document) return couldNotParseManifest;
 
   pak = new vfs::directory;
   pak->setAttribute("title",    document["game/title"].string());
@@ -67,7 +67,7 @@ auto Mega32X::load(string location) -> bool {
     }
   }
 
-  return true;
+  return successful;
 }
 
 auto Mega32X::save(string location) -> bool {
@@ -120,9 +120,12 @@ auto Mega32X::analyze(vector<u8>& rom) -> string {
 
   vector<string> regions;
   string region = slice((const char*)&rom[0x01f0], 0, 16).trimRight(" ");
-  if(!regions) {
-    if(region == "JAPAN" ) regions.append("NTSC-J");
-    if(region == "EUROPE") regions.append("PAL");
+
+  //Stellar Assault (U,E) is the one game using the single-byte region coding which
+  //uses an 'E' value for both PAL and NTSC-U region. (NTSC-J cartridge uses '1')  
+  //https://segaretro.org/ROM_header#Regional_compatiblity
+  if(region(0) == 'E' && hash == "2f9b6017258fbb1c37d81df07c68d5255495d3bf76d9c7b680ff66bccf665750") {
+    regions.append("NTSC-U", "PAL");
   }
   if(!regions) {
     if(region.find("J")) regions.append("NTSC-J");

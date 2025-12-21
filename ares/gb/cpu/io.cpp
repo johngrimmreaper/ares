@@ -139,16 +139,6 @@ auto CPU::readIO(u32 cycle, n16 address, n8 data) -> n8 {
     return data;
   }
 
-  if(Model::GameBoyColor())
-  if(address == 0xff76 && cycle == 2) {  //???
-    return 0xff;
-  }
-
-  if(Model::GameBoyColor())
-  if(address == 0xff77 && cycle == 2) {  //???
-    return 0xff;
-  }
-
   if(address == 0xffff && cycle == 2) {  //IE
     return status.interruptEnable;
   }
@@ -254,15 +244,17 @@ auto CPU::writeIO(u32 cycle, n16 address, n8 data) -> void {
     }
 
     status.dmaLength  = data.bit(0,6);
+    hdmaTrigger(status.hblank, 1);
     status.hdmaActive = data.bit(7);
 
     //GDMA
     if(!data.bit(7)) {
+      step(4);
       do {
         for(u32 loop : range(16)) {
           writeDMA(status.dmaTarget++, readDMA(status.dmaSource++, 0xff));
         }
-        step(8 << status.speedDouble);
+        step(2 << status.speedDouble);
       } while(status.dmaLength--);
     }
     return;

@@ -1,4 +1,5 @@
 auto Program::identify(const string& filename) -> shared_pointer<Emulator> {
+  Program::Guard guard;
   if(auto system = mia::identify(filename)) {
     for(auto& emulator : emulators) {
       if(emulator->name == system) return emulator;
@@ -13,8 +14,9 @@ auto Program::identify(const string& filename) -> shared_pointer<Emulator> {
   return {};
 }
 
-//location is an optional game to load automatically (for command-line loading)
+/// Loads an emulator and, optionally, a ROM from the given location.
 auto Program::load(shared_pointer<Emulator> emulator, string location) -> bool {
+  Program::Guard guard;
   unload();
 
   ::emulator = emulator;
@@ -22,8 +24,8 @@ auto Program::load(shared_pointer<Emulator> emulator, string location) -> bool {
   // For arcade systems, show the game browser dialog as we're using MAME-compatible roms
   if(emulator->arcade() && !location) {
     gameBrowserWindow.show(emulator);
-
-    // Temporarily pretend that the load failed to prevent UI hang
+    
+    // Temporarily pretend that the load failed to prevent crash
     // The browser dialog will call load() again when necessary
     ::emulator.reset();
     return false;
@@ -32,7 +34,9 @@ auto Program::load(shared_pointer<Emulator> emulator, string location) -> bool {
   return load(location);
 }
 
+/// Loads a ROM for an already-loaded emulator.
 auto Program::load(string location) -> bool {
+  Program::Guard guard;
   if(settings.debugServer.enabled) {
     nall::GDB::server.reset();
   }
@@ -62,6 +66,7 @@ auto Program::load(string location) -> bool {
   presentation.showIcon(false);
   if(settings.video.adaptiveSizing) presentation.resizeWindow();
   manifestViewer.reload();
+  cheatEditor.reload();
   memoryEditor.reload();
   graphicsViewer.reload();
   streamManager.reload();
@@ -89,10 +94,13 @@ auto Program::load(string location) -> bool {
   settings.recent.game[0] = {emulator->name, ";", location};
   presentation.loadEmulators();
 
+  configuration = emulator->root->attribute("configuration");
+
   return true;
 }
 
 auto Program::unload() -> void {
+  Program::Guard guard;
   if(!emulator) return;
 
   nall::GDB::server.close();
@@ -110,12 +118,14 @@ auto Program::unload() -> void {
   toolsWindow.setVisible(false);
   gameBrowserWindow.setVisible(false);
   manifestViewer.unload();
+  cheatEditor.unload();
   memoryEditor.unload();
   graphicsViewer.unload();
   streamManager.unload();
   propertiesViewer.unload();
   traceLogger.unload();
   message.text = "";
+  configuration = "";
   ruby::video.clear();
   ruby::audio.clear();
 }

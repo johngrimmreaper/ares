@@ -19,10 +19,35 @@ auto PPU::main() -> void {
   dac.scanline();
 
   if(vcounter() == 240) {
-    if(state.interlace == 0) screen->setProgressive(1);
+    if(state.interlace == 0) screen->setProgressive(0);
     if(state.interlace == 1) screen->setInterlace(field());
-    if(overscanEnable->value() == 0) screen->setViewport(0, 18, 512, 448);
-    if(overscanEnable->value() == 1) screen->setViewport(0,  0, 512, 480);
+    auto yScale = state.interlace ? 2 : 1;
+    screen->setScale(0.5, 1.0 / yScale);
+
+    if(screen->overscan()) {
+      screen->setSize(564, height() * yScale);
+      screen->setViewport(0, 0, 564, height() * yScale);
+    } else {
+      int x = 26;
+      int y = 9 * yScale;
+      int w = 564 - 52;
+      int h = height() - 18;
+
+      if(Region::PAL()) {
+        x -= 4;
+        y += 12 * yScale;
+        h -= 31;
+
+        if(!io.overscan) {
+          y += 8 * yScale;
+          h -= 15;
+        }
+      }
+
+      screen->setSize(w, h * yScale);
+      screen->setViewport(x, y, w, h * yScale);
+    }
+
     screen->frame();
     scheduler.exit(Event::Frame);
   }

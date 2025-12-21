@@ -74,7 +74,8 @@ auto Program::video(ares::Node::Video::Screen node, const u32* data, u32 pitch, 
 
   u32 videoWidth = node->width() * node->scaleX();
   u32 videoHeight = node->height() * node->scaleY();
-  if(settings.video.aspectCorrection) videoWidth = videoWidth * node->aspectX() / node->aspectY();
+  if(settings.video.aspectCorrection != "None")       videoWidth = videoWidth * node->aspectX() / node->aspectY();
+  if(settings.video.aspectCorrection == "Anamorphic") videoWidth = videoWidth * 4 / 3;
   if(node->rotation() == 90 || node->rotation() == 270) swap(videoWidth, videoHeight);
 
   ruby::video.lock();
@@ -85,16 +86,6 @@ auto Program::video(ares::Node::Video::Screen node, const u32* data, u32 pitch, 
 
   u32 outputWidth = videoWidth * multiplier;
   u32 outputHeight = videoHeight * multiplier;
-
-  if(settings.video.output == "Perfect") {
-    outputWidth = videoWidth;
-    outputHeight = videoHeight;
-  }
-
-  if(settings.video.output == "Fixed") {
-    outputWidth = videoWidth * settings.video.multiplier;
-    outputHeight = videoHeight * settings.video.multiplier;
-  }
 
   if(multiplier == 0 || settings.video.output == "Scale") {
     f32 multiplierX = (f32)viewportWidth / (f32)videoWidth;
@@ -121,15 +112,19 @@ auto Program::video(ares::Node::Video::Screen node, const u32* data, u32 pitch, 
   }
   ruby::video.unlock();
 
-  static u64 frameCounter = 0, previous, current;
-  frameCounter++;
+  static u64 vblankCounter = 0, previous, current;
+  vblankCounter++;
 
   current = chrono::timestamp();
   if(current != previous) {
     previous = current;
-    framesPerSecond = frameCounter;
-    frameCounter = 0;
+    vblanksPerSecond = vblankCounter;
+    vblankCounter = 0;
   }
+}
+
+auto Program::refreshRateHint(double refreshRate) -> void {
+  ruby::video.refreshRateHint(refreshRate);
 }
 
 auto Program::audio(ares::Node::Audio::Stream node) -> void {
@@ -183,4 +178,8 @@ auto Program::input(ares::Node::Input::Input node) -> void {
   }
 
   emulator->input(node);
+}
+
+auto Program::cheat(u32 address) -> maybe<u32> {
+  return cheatEditor.find(address);
 }

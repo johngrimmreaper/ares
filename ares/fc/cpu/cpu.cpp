@@ -25,7 +25,7 @@ auto CPU::unload() -> void {
 auto CPU::main() -> void {
   if(io.interruptPending) {
     debugger.interrupt("IRQ");
-    return interrupt();
+    interrupt();
   }
 
   debugger.instruction();
@@ -34,8 +34,7 @@ auto CPU::main() -> void {
 
 auto CPU::step(u32 clocks) -> void {
   assert(clocks == rate());
-  apu.main();
-  cartridge.main();
+  io.oddCycle ^= 1;
   Thread::step(clocks);
   Thread::synchronize();
 }
@@ -48,9 +47,6 @@ auto CPU::power(bool reset) -> void {
   if(!reset) {
     ram.fill(0xff);
   }
-
-  PC.byte(0) = readBus(0xfffc);
-  PC.byte(1) = readBus(0xfffd);
 
   io = {};
 }

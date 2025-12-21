@@ -14,7 +14,7 @@ auto SH2::delaySlot(u32 pc) -> void {
 }
 
 auto SH2::instruction() -> void {
-  if constexpr(Accuracy::Interpreter) {
+  if(Accuracy::Interpreter || !recompiler.enabled) {
     step(1);
     exceptionHandler();
     if constexpr(Accuracy::AddressErrors) {
@@ -23,11 +23,10 @@ auto SH2::instruction() -> void {
     }
     ID = 0;
     u16 opcode = readWord(PC - 4);
+    instructionPrologue(opcode);
     execute(opcode);
     instructionEpilogue();
-  }
-
-  if constexpr(Accuracy::Recompiler) {
+  } else {
     exceptionHandler();
 
     // Recompiled blocks may be very small, negating the impact
@@ -35,6 +34,7 @@ auto SH2::instruction() -> void {
     do {
       auto block = recompiler.block(PC - 4);
       block->execute(*this);
+      ID = 0;
     } while (CCR < cyclesUntilRecompilerExit);
 
     // Reset the count as it may have been set to 0 for an early exit
@@ -42,7 +42,6 @@ auto SH2::instruction() -> void {
 
     step(CCR);
     CCR = 0;
-    ID = 0;
   }
 }
 

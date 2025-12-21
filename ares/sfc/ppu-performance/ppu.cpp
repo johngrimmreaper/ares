@@ -1,5 +1,6 @@
 #include <sfc/sfc.hpp>
 
+#undef ppu
 #define PPU PPUPerformance
 #define ppu ppuPerformanceImpl
 
@@ -21,29 +22,19 @@ PPU ppuPerformanceImpl;
 auto PPU::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("PPU");
 
-  screen = node->append<Node::Video::Screen>("Screen", 896, 480);
-  screen->colors(1 << 19, {&PPU::color, this});
-  screen->setSize(512, 480);
-  screen->setScale(0.5, 0.5);
-  screen->setAspect(8.0, 7.0);
-
-  vramSize = node->append<Node::Setting::Natural>("VRAM", 64_KiB);
-  vramSize->setAllowedValues({64_KiB, 128_KiB});
-
-  overscanEnable = screen->append<Node::Setting::Boolean>("Overscan", true, [&](auto value) {
-    screen->setSize(screenWidth->value() * 2, overscanEnable->value() ? 480 : 448);
-  });
-  overscanEnable->setDynamic(true);
-
+  screen = node->append<Node::Video::Screen>("Screen", 564, height() * 2);
   deepBlackBoost = screen->append<Node::Setting::Boolean>("Deep Black Boost", true, [&](auto value) {
     screen->resetPalette();
   });
   deepBlackBoost->setDynamic(true);
+  screen->colors(1 << 19, {&PPU::color, this});
+  screen->setSize(564, height() * 2);
+  screen->setScale(0.5, 0.5);
+  Region::PAL() ? screen->setAspect(55.0, 43.0) :screen->setAspect(8.0, 7.0);
+  screen->refreshRateHint(system.cpuFrequency(), 1364, Region::PAL() ? 312 : 262);
 
-  screenWidth = screen->append<Node::Setting::Natural>("Width", 256, [&](auto value) {
-    screen->setSize(screenWidth->value() * 2, overscanEnable->value() ? 480 : 448);
-  });
-  screenWidth->setAllowedValues({256, 352, 448});
+  vramSize = node->append<Node::Setting::Natural>("VRAM", 64_KiB);
+  vramSize->setAllowedValues({64_KiB, 128_KiB});
 
   debugger.load(node);
 }
@@ -51,7 +42,6 @@ auto PPU::load(Node::Object parent) -> void {
 auto PPU::unload() -> void {
   debugger.unload(node);
   vramSize.reset();
-  overscanEnable.reset();
   deepBlackBoost.reset();
   screen->quit();
   node->remove(screen);
@@ -92,10 +82,35 @@ auto PPU::main() -> void {
   }
 
   if(vcounter() == 240) {
-    if(state.interlace == 0) screen->setProgressive(1);
+    if(state.interlace == 0) screen->setProgressive(0);
     if(state.interlace == 1) screen->setInterlace(field());
-    if(overscanEnable->value() == 0) screen->setViewport(0, 18, width() * 2, 448);
-    if(overscanEnable->value() == 1) screen->setViewport(0,  0, width() * 2, 480);
+    auto yScale = state.interlace ? 2 : 1;
+    screen->setScale(0.5, 1.0 / yScale);
+
+    if(screen->overscan()) {
+      screen->setSize(564, height() * yScale);
+      screen->setViewport(0, 0, 564, height() * yScale);
+    } else {
+      int x = 26;
+      int y = 9 * yScale;
+      int w = 564 - 52;
+      int h = height() - 18;
+
+      if(Region::PAL()) {
+        x -= 4;
+        y += 12 * yScale;
+        h -= 31;
+
+        if(!io.overscan) {
+          y += 8 * yScale;
+          h -= 15;
+        }
+      }
+
+      screen->setSize(w, h * yScale);
+      screen->setViewport(x, y, w, h * yScale);
+    }
+
     screen->frame();
     scheduler.exit(Event::Frame);
   }
