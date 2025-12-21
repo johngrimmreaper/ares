@@ -1,0 +1,31 @@
+From: Tobias Hansen <thansen@debian.org>
+Date: Sun, 21 Dec 2025 16:27:11 +0000
+Subject: Allow all architectures
+
+ Do not refuse building on architectures not  considered in intrinsics.hpp.
+---
+ nall/nall/intrinsics.hpp | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/nall/nall/intrinsics.hpp b/nall/nall/intrinsics.hpp
+index e42110f..baed6b1 100644
+--- a/nall/nall/intrinsics.hpp
++++ b/nall/nall/intrinsics.hpp
+@@ -256,7 +256,16 @@ namespace nall {
+     static constexpr bool rv32  = 1;
+   };
+ #else
+-  #error "unable to detect architecture"
++  #warning "unable to detect architecture"
++  #define ARCHITECTURE_UNKNOWN
++  struct Architecture {
++    static constexpr bool x86   = 0;
++    static constexpr bool amd64 = 0;
++    static constexpr bool arm64 = 0;
++    static constexpr bool arm32 = 0;
++    static constexpr bool ppc64 = 0;
++    static constexpr bool ppc32 = 0;
++  };
+ #endif
+ 
+ #if !defined(ARCHITECTURE_SUPPORTS_SSE4_1)

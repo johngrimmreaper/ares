@@ -1,0 +1,72 @@
+From: David James <davidjamescastor215@proton.me>
+Date: Sun, 21 Dec 2025 16:57:20 +0000
+Subject: Use the system libchdr
+
+---
+ thirdparty/CMakeLists.txt | 32 ++++++++++++++++----------------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
+index 156f348..a4bc49a 100644
+--- a/thirdparty/CMakeLists.txt
++++ b/thirdparty/CMakeLists.txt
+@@ -8,9 +8,9 @@ option(ARES_ENABLE_CHD "Enable CHD format support via libchdr" ON)
+ 
+ if(ARES_ENABLE_CHD)
+   # lzma
+-  add_subdirectory(libchdr/deps/lzma-24.05 EXCLUDE_FROM_ALL)
+-  list(APPEND CHDR_LIBS lzma)
+-  list(APPEND CHDR_INCLUDES lzma)
++  include(FindPkgConfig)
++  pkg_check_modules(CHDR REQUIRED IMPORTED_TARGET libchdr)
++  pkg_check_modules(LZMA REQUIRED IMPORTED_TARGET liblzma)
+ 
+   if(OS_MACOS)
+     option(WITH_SYSTEM_ZLIB "Use system zlib" ON)
+@@ -32,7 +32,7 @@ if(ARES_ENABLE_CHD)
+   # zstd
+   option(ZSTD_BUILD_SHARED "BUILD SHARED LIBRARIES" OFF)
+   option(ZSTD_BUILD_PROGRAMS "BUILD PROGRAMS" OFF)
+-  add_subdirectory(libchdr/deps/zstd-1.5.6/build/cmake EXCLUDE_FROM_ALL)
++#  add_subdirectory(libchdr/deps/zstd-1.5.6/build/cmake EXCLUDE_FROM_ALL)
+   list(APPEND CHDR_LIBS libzstd_static)
+   #--------------------------------------------------
+   # chdr
+@@ -49,12 +49,12 @@ if(ARES_ENABLE_CHD)
+ 
+   list(APPEND CHDR_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/libchdr/include)
+ 
+-  add_library(chdr-static STATIC ${CHDR_SOURCES})
+-  target_include_directories(chdr-static PUBLIC ${CHDR_INCLUDES} PUBLIC libchdr/include)
+-  target_link_libraries(chdr-static PRIVATE ${CHDR_LIBS} ${PLATFORM_LIBS})
+-  target_compile_options(
+-    chdr-static
+-    PRIVATE $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-unreachable-code -Wno-unused-function>
++  add_library(chdr-static INTERFACE)
++  add_library(lzma INTERFACE)
++  target_link_libraries(chdr-static INTERFACE PkgConfig::CHDR)
++  target_link_libraries(
++    lzma
++    INTERFACE PkgConfig::LZMA
+   )
+ endif()
+ 
+@@ -112,11 +112,11 @@ set_target_properties(ymfm PROPERTIES FOLDER thirdparty PREFIX "")
+ set_target_properties(tzxfile PROPERTIES FOLDER thirdparty PREFIX "")
+ set_target_properties(sljit PROPERTIES FOLDER thirdparty PREFIX "")
+ if(ARES_ENABLE_CHD)
+-  set_target_properties(chdr-static PROPERTIES FOLDER thirdparty PREFIX "")
+-  if(NOT WITH_SYSTEM_ZLIB)
+-    set_target_properties(zlib PROPERTIES FOLDER thirdparty PREFIX "")
+-  endif()
+-  set_target_properties(lzma PROPERTIES FOLDER thirdparty PREFIX "")
+-  set_target_properties(libzstd_static PROPERTIES FOLDER thirdparty PREFIX "")
++#  set_target_properties(chdr-static PROPERTIES FOLDER thirdparty PREFIX "")
++#  if(NOT WITH_SYSTEM_ZLIB)
++#    set_target_properties(zlib PROPERTIES FOLDER thirdparty PREFIX "")
++#  endif()
++#  set_target_properties(lzma PROPERTIES FOLDER thirdparty PREFIX "")
++#  set_target_properties(libzstd_static PROPERTIES FOLDER thirdparty PREFIX "")
+ endif()
+ set_target_properties(qon PROPERTIES FOLDER thirdparty PREFIX "")
+\ No newline at end of file

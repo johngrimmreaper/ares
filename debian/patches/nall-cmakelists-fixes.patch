@@ -1,0 +1,22 @@
+From: Tobias Hansen <thansen@debian.org>
+Date: Sun, 21 Dec 2025 16:31:05 +0000
+Subject: nall/nall/CMakeLists.txt fixes
+
+* Use linux platform settings also on kfreebsd.
+---
+ nall/nall/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/nall/nall/CMakeLists.txt b/nall/nall/CMakeLists.txt
+index f129512..8b0d0f4 100644
+--- a/nall/nall/CMakeLists.txt
++++ b/nall/nall/CMakeLists.txt
+@@ -31,7 +31,7 @@ elseif(OS_MACOS)
+ elseif(OS_LINUX)
+   include(cmake/os-linux.cmake)
+ elseif(OS_FREEBSD OR OS_OPENBSD)
+-  include(cmake/os-freebsd.cmake)
++  include(cmake/os-linux.cmake)
+ endif()
+ 
+ option(ARES_TREAT_NALL_AS_SYSTEM "Enable system library semantics for nall in other targets" ON)
