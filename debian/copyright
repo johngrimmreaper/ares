@@ -70,7 +70,9 @@ Copyright: Copyright (C) 2012-2021 Yann Collet
 License: BSD-2-Clause
 
 Files: debian/*
-Copyright: 2011-2022 Tobias Hansen <thansen@debian.org>
+Copyright:
+ 2011-2022 Tobias Hansen <thansen@debian.org>
+ 2025 David James <davidjamescastor215@proton.me>
 License: GPL-3
 
 License: ISC
