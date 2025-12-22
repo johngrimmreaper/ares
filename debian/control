@@ -17,7 +17,7 @@ Build-Depends: debhelper (>= 12),
                libchdr-dev,
                libudev-dev [linux-any],
                libasound2-dev [linux-any]
-Standards-Version: 4.6.0
+Standards-Version: 4.7.2
 Vcs-Browser: https://salsa.debian.org/games-team/ares
 Vcs-Git: https://salsa.debian.org/games-team/ares.git
 Homepage: https://ares-emu.net
