@@ -30,7 +30,7 @@ auto PPU::load(Node::Object parent) -> void {
   });
   colorEmulation->setDynamic(true);
 
-  screen->colors(1 << 15, {&PPU::color, this});
+  screen->colors(1 << 15, std::bind_front(&PPU::color, this));
   screen->setSize(240, 160);
   screen->setScale(1.0, 1.0);
   screen->setAspect(1.0, 1.0);
@@ -240,7 +240,7 @@ auto PPU::frame() -> void {
 }
 
 auto PPU::power() -> void {
-  Thread::create(system.frequency(), {&PPU::main, this});
+  Thread::create(system.frequency(), std::bind_front(&PPU::main, this));
   screen->power();
 
   for(u32 n = 0x000; n <= 0x055; n++) bus.io[n] = this;
@@ -267,7 +267,8 @@ auto PPU::power() -> void {
   renderingCycle = 43;  //by default, render at first cycle of pixel output
   string gameID;
   for(u32 index : range(4)) {
-    char byte = cartridge.readRom<true>(Byte, 0xac + index);
+    n32 address = 0xac + index;
+    char byte = cartridge.readRom<true>(address).byte(address & 1);
     gameID.append(byte);
   }
   if(gameID == "AWRE") renderingCycle = 512;  //Advance Wars (USA)

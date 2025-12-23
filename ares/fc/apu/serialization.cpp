@@ -3,6 +3,7 @@ auto APU::serialize(serializer& s) -> void {
   s(pulse1);
   s(pulse2);
   s(triangle);
+  s(noise);
   s(dmc);
   s(frame);
 }
@@ -95,6 +96,6 @@ auto APU::FrameCounter::serialize(serializer& s) -> void {
   s(counter);
 
   s(odd);
-  s(delay);
-  s(delayCounter);
+  s(delayIRQ);
+  for(auto& delay : delayCounter) s(delay);
 }

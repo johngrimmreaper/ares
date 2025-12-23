@@ -17,7 +17,7 @@ Presentation::Presentation() {
   for(u32 multiplier : range(1, multipliers + 1)) {
     MenuRadioItem item{&videoSizeMenu};
     item.setText({multiplier, "x"});
-    item.onActivate([=] {
+    item.onActivate([=, this] {
       settings.video.multiplier = multiplier;
       resizeWindow();
     });
@@ -81,8 +81,11 @@ Presentation::Presentation() {
     settings.boot.fast = fastBoot.checked();
   });
   bootOptionsRegionMenu.setText("Region Preference").setIcon(Icon::Application::Browser);
-  launchDebugger.setText("Launch Debugger").setChecked(settings.boot.debugger).onToggle([&] {
+  launchDebugger.setText("Launch Tracer").setChecked(settings.boot.debugger).onToggle([&] {
     settings.boot.debugger = launchDebugger.checked();
+  });
+  awaitGDBClient.setText("Await GDB Client").setChecked(settings.boot.awaitGDBClient).onToggle([&] {
+    settings.boot.awaitGDBClient = awaitGDBClient.checked();
   });
 
   regionUJE.setText("NTSC-U -> NTSC-J -> PAL").onActivate([&] { settings.boot.prefer = "NTSC-U,NTSC-J,PAL"; });
@@ -152,7 +155,7 @@ Presentation::Presentation() {
   saveStateMenu.setText("Save State").setIcon(Icon::Media::Record);
   for(u32 slot : range(9)) {
     MenuItem item{&saveStateMenu};
-    item.setText({"Slot ", 1 + slot}).onActivate([=] {
+    item.setText({"Slot ", 1 + slot}).onActivate([=, this] {
       Program::Guard guard;
       if(program.stateSave(1 + slot)) {
         undoSaveStateMenu.setEnabled(true);
@@ -162,7 +165,7 @@ Presentation::Presentation() {
   loadStateMenu.setText("Load State").setIcon(Icon::Media::Rewind);
   for(u32 slot : range(9)) {
     MenuItem item{&loadStateMenu};
-    item.setText({"Slot ", 1 + slot}).onActivate([=] {
+    item.setText({"Slot ", 1 + slot}).onActivate([=, this] {
       Program::Guard guard;
       if(program.stateLoad(1 + slot)) {
         undoLoadStateMenu.setEnabled(true);
@@ -235,11 +238,11 @@ Presentation::Presentation() {
     .show();
   });
 
-  viewport.setDroppable().onDrop([&](auto filenames) {
+  viewport.setDroppable().onDrop([&](std::vector<string> filenames) {
     Program::Guard guard;
     if(filenames.size() != 1) return;
-    if(auto emulator = program.identify(filenames.first())) {
-      program.load(emulator, filenames.first());
+    if(auto emulator = program.identify(filenames.front())) {
+      program.load(emulator, filenames.front());
     }
   });
     
@@ -307,13 +310,13 @@ auto Presentation::resizeWindow() -> void {
   u32 viewportWidth = 320 * multiplier;
   u32 viewportHeight = 240 * multiplier;
 
-  if(emulator && program.screens) {
-    auto& node = program.screens.first();
+  if(emulator && !program.screens.empty()) {
+    auto& node = program.screens.front();
     u32 videoWidth = node->width() * node->scaleX();
     u32 videoHeight = node->height() * node->scaleY();
     if(settings.video.aspectCorrection != "None")       videoWidth = videoWidth * node->aspectX() / node->aspectY();
     if(settings.video.aspectCorrection == "Anamorphic") videoWidth = videoWidth * 4 / 3;
-    if(node->rotation() == 90 || node->rotation() == 270) swap(videoWidth, videoHeight);
+    if(node->rotation() == 90 || node->rotation() == 270) std::swap(videoWidth, videoHeight);
 
     viewportWidth = videoWidth * multiplier;
     viewportHeight = videoHeight * multiplier;
@@ -351,14 +354,16 @@ auto Presentation::loadEmulators() -> void {
   loadMenu.reset();
 
   //clean up the recent games history first
-  vector<string> recentGames;
+  std::vector<string> recentGames;
   for(u32 index : range(9)) {
     auto entry = settings.recent.game[index];
-    auto system = entry.split(";", 1L)(0);
-    auto location = entry.split(";", 1L)(1);
+    auto parts = nall::split(entry, ";", 1L);
+    parts.resize(2);
+    auto system = parts[0];
+    auto location = parts[1];
     if(location.length()) {  //remove missing games
-      if(!recentGames.find(entry)) {  //remove duplicate entries
-        recentGames.append(entry);
+      if(std::ranges::find(recentGames, entry) == recentGames.end()) {  //remove duplicate entries
+        recentGames.push_back(entry);
       }
     }
     settings.recent.game[index] = {};
@@ -375,11 +380,13 @@ auto Presentation::loadEmulators() -> void {
     for(u32 index : range(count)) {
       MenuItem item{&recentGames};
       auto entry = settings.recent.game[index];
-      auto system = entry.split(";", 1L)(0);
-      auto location = entry.split(";", 1L)(1);
+      auto parts = nall::split(entry, ";", 1L);
+      parts.resize(2);
+      auto system = parts[0];
+      auto location = parts[1];
       item.setIconForFile(location);
       item.setText({Location::base(location).trimRight("/"), " (", system, ")"});
-      item.onActivate([=] {
+      item.onActivate([=, this] {
         Program::Guard guard;
         if(!inode::exists(location)) {
           MessageDialog()
@@ -548,7 +555,8 @@ auto Presentation::refreshSystemMenu() -> void {
   u32 portsFound = 0;
   for(auto port : ares::Node::enumerate<ares::Node::Port>(emulator->root)) {
     //do not add unsupported ports to the port menu
-    if(emulator->portBlacklist.find(port->name())) continue;
+    auto portName = port->name();
+    if(std::ranges::find(emulator->portBlacklist, portName) != emulator->portBlacklist.end()) continue;
 
     if(!port->hotSwappable()) continue;
     if(port->type() != "Controller" && port->type() != "Expansion") continue;
@@ -564,7 +572,7 @@ auto Presentation::refreshSystemMenu() -> void {
       peripheralItem.setAttribute<ares::Node::Port>("port", port);
       peripheralItem.setText("Nothing");
       if(!port->connected()) peripheralItem.setChecked();
-      peripheralItem.onActivate([=] {
+      peripheralItem.onActivate([=, this] {
         auto port = peripheralItem.attribute<ares::Node::Port>("port");
         port->disconnect();
         refreshSystemMenu();
@@ -573,12 +581,12 @@ auto Presentation::refreshSystemMenu() -> void {
     }
     for(auto peripheral : port->supported()) {
       //do not add unsupported peripherals to the peripheral port menu
-      if(emulator->inputBlacklist.find(peripheral)) continue;
+      if(std::ranges::find(emulator->inputBlacklist, peripheral) != emulator->inputBlacklist.end()) continue;
 
       MenuRadioItem peripheralItem{&portMenu};
       peripheralItem.setAttribute<ares::Node::Port>("port", port);
       peripheralItem.setText(peripheral);
-      peripheralItem.onActivate([=] {
+      peripheralItem.onActivate([=, this] {
         auto port = peripheralItem.attribute<ares::Node::Port>("port");
         port->disconnect();
         port->allocate(peripheralItem.text());
@@ -657,17 +665,17 @@ auto Presentation::loadShaders() -> void {
   #endif
 
   if(shaderDirectories.size() == 0) {
-    function<void(string)> findShaderDirectories = [&](string path) {
+    std::function<void(string)> findShaderDirectories = [&](string path) {
       for(auto &entry: directory::folders(path)) findShaderDirectories({path, entry});
       auto files = directory::files(path, "*.slangp");
-      if(files.size() > 0) shaderDirectories.append((string({path}).trimLeft(location, 1L)));
+      if(files.size() > 0) shaderDirectories.push_back((string({path}).trimLeft(location, 1L)));
     };
     findShaderDirectories(location);
 
     // Sort by name and depth such that child folders appear after their parents
-    shaderDirectories.sort([](const string &lhs, const string &rhs) {
-      auto lhsParts = lhs.split("/");
-      auto rhsParts = rhs.split("/");
+    std::ranges::sort(shaderDirectories, [](const string &lhs, const string &rhs) {
+      auto lhsParts = nall::split(lhs, "/");
+      auto rhsParts = nall::split(rhs, "/");
       for(u32 i : range(min(lhsParts.size(), rhsParts.size()))) {
         if(lhsParts[i] != rhsParts[i]) return lhsParts[i] < rhsParts[i];
       }
@@ -677,7 +685,7 @@ auto Presentation::loadShaders() -> void {
 
   if(ruby::video.hasShader()) {
     for(auto &directory : shaderDirectories) {
-      auto parts = directory.split("/");
+      auto parts = nall::split(directory, "/");
       Menu parent = videoShaderMenu;
 
       if(directory != "") {
@@ -709,7 +717,7 @@ auto Presentation::loadShaders() -> void {
       for(auto &file: files) {
         MenuCheckItem item{&parent};
         item.setAttribute("file", {directory, file});
-        item.setText(string{file}.trimRight(".slangp", 1L)).onToggle([=] {
+        item.setText(string{file}.trimRight(".slangp", 1L)).onToggle([=, this] {
           settings.video.shader = {directory, file};
           ruby::video.setShader({location, settings.video.shader});
           loadShaders();
@@ -746,7 +754,8 @@ auto Presentation::loadShaders() -> void {
 
   if(settings.video.shader.imatch("None")) {none.setChecked(); settings.video.shader = "None";}
   for(auto item : shaders.objects<MenuCheckItem>()) {
-    if(settings.video.shader.imatch(item.attribute("file"))) {
+    auto temp = item.attribute("file");
+    if(settings.video.shader.imatch(temp)) {
       item.setChecked();
       settings.video.shader = item.attribute("file");
       ruby::video.setShader({location, settings.video.shader});
