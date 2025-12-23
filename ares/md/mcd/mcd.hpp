@@ -401,7 +401,9 @@ struct MCD : M68000, Thread {
     auto VideoTimeToRedbookTime(u8& hours, u8& minutes, u8& seconds, u8& frames) -> void;
     auto handleStopPointReached(s32 lba) -> void;
     auto updateCurrentVideoFrameNumber(s32 lba) -> void;
-    auto loadCurrentVideoFrameIntoBuffer(bool blankFrame) -> void;
+    auto loadCurrentVideoFrameIntoBuffer() -> void;
+    auto videoFramePrefetchThread() -> void;
+    auto decodeBiphaseCodeFromScanline(int lineNo) -> u32;
     auto power(bool reset) -> void;
     auto scanline(u32 vdpPixelBuffer[1495], u32 vcounter) -> void;
 
@@ -424,6 +426,7 @@ struct MCD : M68000, Thread {
 
     struct AnalogVideoFrameIndex {
       bool isCLV;
+      int sideNo;
       bool hasDigitalAudio;
       size_t leadInFrameCount;
       size_t activeVideoFrameCount;
@@ -440,18 +443,34 @@ struct MCD : M68000, Thread {
       n1 currentVideoFrameFieldSelectionEnabled[2];
       n1 currentVideoFrameFieldSelectionEvenField[2];
       n1 currentVideoFrameOnEvenField;
+      n1 currentVideoFrameBlanked;
+      n1 currentVideoFrameInterlaced;
+      n1 digitalMemoryFrameLatched;
       qon_desc videoFileHeader;
       qoi2_desc videoFrameHeader;
       int drawIndex;
       std::vector<unsigned char> videoFrameBuffers[2];
       std::vector<unsigned char> dummyBlankLineBuffer;
 
+      size_t vbiDataSearchStartPos;
+      size_t vbiDataSearchEndPos;
+      double vbiDataBitCellLengthInPixels;
+      std::vector<size_t> vbiDataBitSampleOffsets;
+
+      struct LineResamplingData {
+        size_t firstSamplePosX;
+        size_t lastSamplePosX;
+        std::vector<float> sampleWeightX;
+        float conversionFactor;
+      };
+      std::vector<LineResamplingData> lineResamplingData;
+
       static const size_t FrameBufferWidth = 1495;
       static const size_t FrameBufferHeight = 525;
       std::vector<u32> outputFramebuffer;
     } video;
-    vector<u8> analogAudioDataBuffer;
-    array_view<u8> analogAudioRawDataView;
+    std::vector<u8> analogAudioDataBuffer;
+    std::span<const u8> analogAudioRawDataView;
     n32 analogAudioLeadingAudioSamples;
     Decode::MMI mmi;
 
@@ -462,6 +481,8 @@ struct MCD : M68000, Thread {
     n8 inputFrozenRegs[inputRegisterCount];
     n8 outputRegs[outputRegisterCount];
     n8 outputFrozenRegs[outputRegisterCount];
+    n8 outputRegsWrittenData[outputRegisterCount];
+    n8 outputRegsWrittenCooldownTimer[outputRegisterCount];
     n1 areInputRegsFrozen;
     n1 areOutputRegsFrozen;
     n1 operationErrorFlag1;
@@ -487,7 +508,6 @@ struct MCD : M68000, Thread {
 
     u4 currentPlaybackMode;
     u3 currentPlaybackSpeed;
-    n8 skippedFrameCount;
     u1 currentPlaybackDirection;
     n8 targetDriveState;
     n8 currentDriveState;
@@ -496,6 +516,15 @@ struct MCD : M68000, Thread {
     n1 seekPerformedSinceLastFrameUpdate;
     n8 driveStateChangeDelayCounter;
     n8 selectedTrackInfo;
+
+    // Prefetch thread state
+    std::atomic_flag videoFramePrefetchPending;
+    std::atomic_flag videoFramePrefetchComplete;
+    std::atomic_flag videoFramePrefetchThreadStarted;
+    std::atomic_flag videoFramePrefetchThreadShutdownRequested;
+    std::atomic_flag videoFramePrefetchThreadShutdownComplete;
+    const unsigned char* videoFramePrefetchTarget;
+    std::vector<unsigned char> videoFramePrefetchBuffer;
   } ld;
 
   struct Timer {

@@ -4,9 +4,9 @@ struct PlayStation : Emulator {
   auto load(Menu) -> void override;
   auto unload() -> void override;
   auto save() -> bool override;
-  auto pak(ares::Node::Object) -> shared_pointer<vfs::directory> override;
+  auto pak(ares::Node::Object) -> std::shared_ptr<vfs::directory> override;
 
-  shared_pointer<mia::Pak> memoryCard;
+  std::shared_ptr<mia::Pak> memoryCard;
   u32 regionID = 0;
   sTimer discTrayTimer;
 };
@@ -15,9 +15,9 @@ PlayStation::PlayStation() {
   manufacturer = "Sony";
   name = "PlayStation";
 
-  firmware.append({"BIOS", "US", "11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef"});      //NTSC-U
-  firmware.append({"BIOS", "Japan", "9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb"});   //NTSC-J
-  firmware.append({"BIOS", "Europe", "1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09"});  //PAL
+  firmware.push_back({"BIOS", "US", "11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef"});      //NTSC-U
+  firmware.push_back({"BIOS", "Japan", "9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb"});   //NTSC-J
+  firmware.push_back({"BIOS", "Europe", "1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09"});  //PAL
 
   for(auto id : range(2)) {
     InputPort port{string{"Controller Port ", 1 + id}};
@@ -71,7 +71,7 @@ PlayStation::PlayStation() {
     device.rumble("Rumble",    virtualPorts[0].pad.rumble);
     port.append(device); }
 
-    ports.append(port);
+    ports.push_back(port);
   }
 }
 
@@ -98,6 +98,7 @@ auto PlayStation::load() -> LoadResult {
     return result;
   }
 
+  ares::PlayStation::option("Homebrew Mode", settings.general.homebrewMode);
   ares::PlayStation::option("Recompiler", !settings.general.forceInterpreter);
 
   if(!ares::PlayStation::load(root, {"[Sony] PlayStation (", region, ")"})) return otherError;
@@ -171,7 +172,7 @@ auto PlayStation::save() -> bool {
   return true;
 }
 
-auto PlayStation::pak(ares::Node::Object node) -> shared_pointer<vfs::directory> {
+auto PlayStation::pak(ares::Node::Object node) -> std::shared_ptr<vfs::directory> {
   if(node->name() == "PlayStation") return system->pak;
   if(node->name() == "PlayStation Disc") return game->pak;
   if(node->name() == "Memory Card") return memoryCard->pak;
