@@ -8,10 +8,10 @@ Subject: nall/nall/CMakeLists.txt fixes
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/nall/nall/CMakeLists.txt b/nall/nall/CMakeLists.txt
-index f129512..8b0d0f4 100644
+index 2e04497..c921983 100644
 --- a/nall/nall/CMakeLists.txt
 +++ b/nall/nall/CMakeLists.txt
-@@ -31,7 +31,7 @@ elseif(OS_MACOS)
+@@ -44,7 +44,7 @@ elseif(OS_MACOS)
  elseif(OS_LINUX)
    include(cmake/os-linux.cmake)
  elseif(OS_FREEBSD OR OS_OPENBSD)

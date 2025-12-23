@@ -3,11 +3,11 @@ Date: Sun, 21 Dec 2025 16:57:20 +0000
 Subject: Use the system libchdr
 
 ---
- thirdparty/CMakeLists.txt | 32 ++++++++++++++++----------------
- 1 file changed, 16 insertions(+), 16 deletions(-)
+ thirdparty/CMakeLists.txt | 34 +++++++++++++++++-----------------
+ 1 file changed, 17 insertions(+), 17 deletions(-)
 
 diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
-index 156f348..a4bc49a 100644
+index dd4c6fe..4d94cfb 100644
 --- a/thirdparty/CMakeLists.txt
 +++ b/thirdparty/CMakeLists.txt
 @@ -8,9 +8,9 @@ option(ARES_ENABLE_CHD "Enable CHD format support via libchdr" ON)
@@ -51,7 +51,7 @@ index 156f348..a4bc49a 100644
    )
  endif()
  
-@@ -112,11 +112,11 @@ set_target_properties(ymfm PROPERTIES FOLDER thirdparty PREFIX "")
+@@ -108,11 +108,11 @@ set_target_properties(ymfm PROPERTIES FOLDER thirdparty PREFIX "")
  set_target_properties(tzxfile PROPERTIES FOLDER thirdparty PREFIX "")
  set_target_properties(sljit PROPERTIES FOLDER thirdparty PREFIX "")
  if(ARES_ENABLE_CHD)
@@ -68,5 +68,6 @@ index 156f348..a4bc49a 100644
 +#  set_target_properties(lzma PROPERTIES FOLDER thirdparty PREFIX "")
 +#  set_target_properties(libzstd_static PROPERTIES FOLDER thirdparty PREFIX "")
  endif()
- set_target_properties(qon PROPERTIES FOLDER thirdparty PREFIX "")
+-set_target_properties(qon PROPERTIES FOLDER thirdparty PREFIX "")
++set_target_properties(qon PROPERTIES FOLDER thirdparty PREFIX "")
 \ No newline at end of file
