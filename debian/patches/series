@@ -4,3 +4,4 @@ desktop-file.patch
 sjlj-declare-xopen-source.patch
 menu-color.patch
 use_distro_libchdr.patch
+fix-missiong-qon-library.patch
