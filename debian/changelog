@@ -1,4 +1,4 @@
-ares (147+dfsg-1) UNRELEASED; urgency=medium
+ares (147+dfsg-1) unstable; urgency=medium
 
   * Updated d/watch to version 5
   * Updated SDL dependency to libsdl3-dev
@@ -6,7 +6,7 @@ ares (147+dfsg-1) UNRELEASED; urgency=medium
   * updated debian/* to use CMake
   * Bump package standards version to 6.7.2
 
- -- David James <davidjamescastor215@proton.me>  Tue, 23 Dec 2025 20:59:56 +0000
+ -- David James <davidjamescastor215@proton.me>  Wed, 24 Dec 2025 18:47:27 +0000
 
 ares (134+dfsg-1) unstable; urgency=medium
 
