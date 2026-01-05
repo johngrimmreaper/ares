@@ -1,8 +1,9 @@
 Source: ares
 Section: otherosfs
-Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
-Uploaders: Tobias Hansen <thansen@debian.org>
+Uploaders:
+ David James <davidjamescastor215@proton.me>,
+ Tobias Hansen <thansen@debian.org>
 Build-Depends: debhelper (>= 12),
                debhelper-compat (= 13),
                pkgconf,
@@ -17,7 +18,7 @@ Build-Depends: debhelper (>= 12),
                libchdr-dev,
                libudev-dev [linux-any],
                libasound2-dev [linux-any]
-Standards-Version: 4.7.2
+Standards-Version: 4.7.3
 Vcs-Browser: https://salsa.debian.org/games-team/ares
 Vcs-Git: https://salsa.debian.org/games-team/ares.git
 Homepage: https://ares-emu.net
