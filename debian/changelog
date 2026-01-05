@@ -1,13 +1,12 @@
 ares (147+dfsg-1) unstable; urgency=medium
 
-  * Team Upload
   * Updated d/watch to version 5
   * Updated SDL dependency to libsdl3-dev
   * Converted d/patches to use new CMake build system
   * updated debian/* to use CMake
-  * Bump package standards version to 6.7.2
+  * Bump package standards version to 4.7.3
 
- -- David James <davidjamescastor215@proton.me>  Wed, 24 Dec 2025 18:47:27 +0000
+ -- David James <davidjamescastor215@proton.me>  Mon, 05 Jan 2026 19:27:49 +0000
 
 ares (134+dfsg-1) unstable; urgency=medium
 
