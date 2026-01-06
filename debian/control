@@ -3,21 +3,22 @@ Section: otherosfs
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders:
  David James <davidjamescastor215@proton.me>,
- Tobias Hansen <thansen@debian.org>
-Build-Depends: debhelper (>= 12),
-               debhelper-compat (= 13),
-               pkgconf,
-               cmake,
-               libgtk-3-dev,
-               libgtksourceview-3.0-dev,
-               libsdl3-dev,
-               libpulse-dev,
-               libopenal-dev,
-               libao-dev,
-               libxv-dev,
-               libchdr-dev,
-               libudev-dev [linux-any],
-               libasound2-dev [linux-any]
+ Tobias Hansen <thansen@debian.org>,
+Build-Depends:
+ debhelper (>= 12),
+ debhelper-compat (= 13),
+ cmake,
+ libao-dev,
+ libasound2-dev [linux-any],
+ libchdr-dev,
+ libgtk-3-dev,
+ libgtksourceview-3.0-dev,
+ libopenal-dev,
+ libpulse-dev,
+ libsdl3-dev,
+ libudev-dev [linux-any],
+ libxv-dev,
+ pkgconf,
 Standards-Version: 4.7.3
 Vcs-Browser: https://salsa.debian.org/games-team/ares
 Vcs-Git: https://salsa.debian.org/games-team/ares.git
@@ -26,8 +27,11 @@ Rules-Requires-Root: no
 
 Package: ares
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Provides: nes-emulator
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Provides:
+ nes-emulator,
 Description: Accurate multi-system emulator
  ares is an emulator for systems from Atari, Nintendo, Sega, Sony, NEC, SNK,
  Microsoft, Coleco, Bandai and Benesse. It is a descendent of higan and bsnes
