@@ -22,7 +22,6 @@ Standards-Version: 4.7.3
 Vcs-Browser: https://salsa.debian.org/games-team/ares
 Vcs-Git: https://salsa.debian.org/games-team/ares.git
 Homepage: https://ares-emu.net
-Rules-Requires-Root: no
 
 Package: ares
 Architecture: any
