@@ -5,7 +5,6 @@ Uploaders:
  David James <davidjamescastor215@proton.me>,
  Tobias Hansen <thansen@debian.org>,
 Build-Depends:
- debhelper (>= 12),
  debhelper-compat (= 13),
  cmake,
  libao-dev,
