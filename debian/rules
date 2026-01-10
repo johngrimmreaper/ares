@@ -14,7 +14,7 @@ CMAKE_OPTIONS := \
 	-DARES_VERSION_OVERRIDE="v$(DEB_VERSION)" \
 	-DWITH_SYSTEM_ZLIB=ON
 
-cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec
+cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec;n64
 # Reimplementation of older disable-md-on-32bit.patch
 ifneq ($(shell $(CXX) -E -dM - < /dev/null | grep INT128),)
 	cores += ;md
