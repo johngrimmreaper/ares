@@ -1,15 +1,63 @@
-.TH ares 6 "January 15, 2022"
+.TH ares 6 "January 10, 2026"
 .SH NAME
 ares \- Accurate multi-system emulator
 .SH SYNOPSIS
+.SY
+.B ares \-\-help
+.YS
+.SY
+.B ares \-\-dump\-all\-settings
+.YS
+.SY
 .B ares
+.RB [ \-\-fullscreen ]
+.RB [ \-\-system
+.IR system ]
+.RB [ \-\-shader
+.IR shader ]
+.RB [ \-\-setting
+.IR name=<value> ]
+.RB [ --no-file-prompt ]
+.I rom
+.YS
 
 .SH DESCRIPTION
 
-ares is an emulator for systems from Atari, Nintendo, Sega, Sony, NEC, SNK,
+.B ares
+is an emulator for systems from Atari, Nintendo, Sega, Sony, NEC, SNK,
 Microsoft, Coleco, Bandai and Benesse. It is a descendent of higan and bsnes
 and focuses on accuracy and preservation. The SNES emulation is especially
 complete and polished.
+
+.SH OPTIONS
+.TP
+.B \-\-help
+.br
+Display a summary of options and exit
+.TP
+.B \-\-dump\-all\-settings
+Show a list of available settings and exit
+.TP
+.B \-\-fullscreen
+Start the emulator in fullscreen
+.TP
+.BI \-\-system " system "
+Start the emulator with the given
+.I system
+loaded
+.TP
+.BI \-\-shader " shader "
+Start the emulator wtih the given
+.I shader
+loaded
+.TP
+.B \-\-no\-file\-prompt
+Do not prompt for additional optional ROMs when loading games that support it
+.TP
+.I rom
+.br
+The path of the ROM to load
+
 
 .SH MORE INFO
 Website: https://ares-emulator.github.io/
