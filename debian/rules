@@ -14,10 +14,9 @@ CMAKE_OPTIONS := \
 	-DARES_VERSION_OVERRIDE="v$(DEB_VERSION)" \
 	-DWITH_SYSTEM_ZLIB=ON
 
-cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec
 # Reimplementation of older disable-md-on-32bit.patch
 ifneq ($(shell $(CXX) -E -dM - < /dev/null | grep INT128),)
-	cores += ;md
+	md_support += ;md
 endif
 
 ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
@@ -26,21 +25,46 @@ else
     BUILDOPT=Debug
 endif
 
-# Enforce Debian microarchitecture baseline on amd64
-# Reimplementation of no-optional-extensions.patch
+# arch.no-n64 = ares-legacy
+# arch.with-n64 = ares-full
 ifeq ($(DEB_HOST_ARCH_CPU),amd64)
-	export DEB_CFLAGS_MAINT_APPEND=-march=x86-64
-	export DEB_CXXFLAGS_MAINT_APPEND=-march=x86-64
+arch.no-n64: export DEB_CFLAGS_MAINT_APPEND = -march=x86-64
+arch.no-n64: export DEB_CXXFLAGS_MAINT_APPEND = -march=x86-64
+arch.no-n64: export cores = a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec $(md_support)
+
+arch.with-n64: export DEB_CFLAGS_MAINT_APPEND = -march=x86-64-v2
+arch.with-n64: export DEB_CXXFLAGS_MAINT_APPEND = -march=x86-64-v2
+arch.with-n64: export cores = a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec;n64 $(md_support)
 endif
 
-%:
-	dh $@
+arch.no-n64:
+	dh build --destdir=debian/tmp/ares-legacy -p ares-legacy
+	dh binary --destdir=debian/tmp/ares-legacy -p ares-legacy
+
+arch.with-n64:
+	dh build --destdir=debian/tmp/ares-full -p ares-full
+	dh binary --destdir=debian/tmp/ares-full -p ares-full
+
+clean:
+	dh clean
+
+binary: binary-arch binary-indep
+
+binary-arch: arch.no-n64 arch.with-n64 binary-indep
+
+binary-indep:
+
+build: build-arch build-indep
+
+build-indep:
+
+build-arch:
 
 override_dh_auto_configure:
-	dh_auto_configure -- \
+	dh_auto_configure --reload-all-buildenv-variables -- \
 	$(CMAKE_OPTIONS) \
 	-DCMAKE_BUILD_TYPE=$(BUILDOPT) \
 	-DARES_CORES="$(cores)"
 
-override_dh_auto_install:
-	dh_auto_install --destdir=debian/tmp
+override_dh_builddeb:
+	dh_builddeb --destdir=..
