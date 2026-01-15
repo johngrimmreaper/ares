@@ -24,7 +24,7 @@ Vcs-Git: https://salsa.debian.org/games-team/ares.git
 Homepage: https://ares-emu.net
 
 Package: ares-legacy
-Architecture: any
+Architecture: amd64
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
@@ -38,8 +38,7 @@ Description: Accurate multi-system emulator (no n64 support)
  and focuses on accuracy and preservation. The SNES emulation is especially
  complete and polished.
  .
- This package does not have n64 support. For the n64 core, install the ares-full
- packahe (x86-64-v2 support required on amd64).
+ This package does not have n64 support.
 
 Package: ares-full
 Architecture: any
@@ -47,10 +46,9 @@ Depends:
  ${misc:Depends},
  ${shlibs:Depends},
  x86-64-v2-support [amd64],
- neon-support [armhf],
 Provides:
  nes-emulator,
-Breaks:ares (<= 147+dfsg-1)
+Breaks: ares (<= 147+dfsg-1)
 Conflicts: ares-legacy
 Replaces: ares (<= 147+dfsg-1)
 Description: Accurate multi-system emulator (with n64 support)
@@ -59,4 +57,4 @@ Description: Accurate multi-system emulator (with n64 support)
  and focuses on accuracy and preservation. The SNES emulation is especially
  complete and polished.
  .
- The amd64 version of this package requires a CPU with x96-64-v2 support.
+ The amd64 version of this package requires a CPU with x86-64-v2 support.
