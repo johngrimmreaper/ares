@@ -1,2 +1,2 @@
-ares-legacy/usr/bin/sourcery
-ares-full/usr/bin/sourcery
+ares-baseline/usr/bin/sourcery
+ares-performance/usr/bin/sourcery

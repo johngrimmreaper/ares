@@ -23,14 +23,15 @@ Vcs-Browser: https://salsa.debian.org/games-team/ares
 Vcs-Git: https://salsa.debian.org/games-team/ares.git
 Homepage: https://ares-emu.net
 
-Package: ares-legacy
-Architecture: amd64
+Package: ares-baseline
+Architecture: any
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
 Provides:
  nes-emulator,
-Conflicts: ares-full
+Conflicts: ares-performance
+Breaks: ares (<= 147+dfsg-1)
 Replaces: ares (<= 147+dfsg-1)
 Description: Accurate multi-system emulator (no n64 support)
  ares is an emulator for systems from Atari, Nintendo, Sega, Sony, NEC, SNK,
@@ -38,18 +39,19 @@ Description: Accurate multi-system emulator (no n64 support)
  and focuses on accuracy and preservation. The SNES emulation is especially
  complete and polished.
  .
- This package does not have n64 support.
+ Nintendo 64 support requires advanced SIMD instructions provided by x86-64-v2
+ (amd64) and ARMv8+ (arm64) and is not included in this package. 
 
-Package: ares-full
-Architecture: any
+Package: ares-performance
+Architecture: amd64 arm64
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
  x86-64-v2-support [amd64],
 Provides:
  nes-emulator,
+Conflicts: ares-baseline
 Breaks: ares (<= 147+dfsg-1)
-Conflicts: ares-legacy
 Replaces: ares (<= 147+dfsg-1)
 Description: Accurate multi-system emulator (with n64 support)
  ares is an emulator for systems from Atari, Nintendo, Sega, Sony, NEC, SNK,
@@ -57,4 +59,5 @@ Description: Accurate multi-system emulator (with n64 support)
  and focuses on accuracy and preservation. The SNES emulation is especially
  complete and polished.
  .
- The amd64 version of this package requires a CPU with x86-64-v2 support.
+ This is the perfomance-orientated package built with x86-64-v2 or ARMv8+
+ support.

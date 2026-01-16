@@ -25,31 +25,45 @@ else
     BUILDOPT=Debug
 endif
 
-# arch.no-n64 = ares-legacy
-# arch.with-n64 = ares-full
+# arch.no-n64 = ares-baseline
+# arch.with-n64 = ares-performance
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
 arch.no-n64: export arch_level = -march=x86-64
+endif
 arch.no-n64: export cores = a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec $(md_support)
+arch.no-n64: export destdir = debian/tmp/ares-baseline
+arch.no-n64: export binaryname = ares-baseline
 
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
 arch.with-n64: export arch_level = -march=x86-64-v2
+endif
 arch.with-n64: export cores = a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec;n64 $(md_support)
+arch.with-n64: export destdir = debian/tmp/ares-performance
+arch.with-n64: export binaryname = ares-performance
 
 arch.no-n64:
 	dh_auto_clean
-	dh build --destdir=debian/tmp/ares-legacy -p ares-legacy
-	dh binary --destdir=debian/tmp/ares-legacy -p ares-legacy
+	dh build --destdir=$(destdir) -p ares-baseline -N ares-performance
+	dh binary --destdir=$(destdir) -p ares-baseline -N ares-performance
 
 arch.with-n64:
 	dh_auto_clean
-	dh build --destdir=debian/tmp/ares-full -p ares-full
-	dh binary --destdir=debian/tmp/ares-full -p ares-full
+	dh build --destdir=$(destdir) -p ares-performance -N ares-baseline
+	dh binary --destdir=$(destdir) -p ares-performance -N ares-baseline
 
 clean:
 	dh clean
 
 binary: binary-arch binary-indep
 
-# We only need to build ares-legacy on amd64
-binary-arch: arch.no-n64 arch.with-n64 binary-indep
+# Don't build targets on architechtures with no package for them
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
+binary-arch: arch.no-n64 arch.with-n64
+else ifeq ($(DEB_HOST_ARCH_CPU),arm64)
+binary-arch: arch.with-n64
+else
+binary-arch: arch.no-n64
+endif
 
 binary-indep:
 
