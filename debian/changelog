@@ -1,3 +1,20 @@
+ares (147+dfsg-2) unstable; urgency=medium
+
+  [ Alexandre Detiste ]
+  * Team upload.
+  * add debian/salsa-ci.yml
+  * wrap-and-sort -ast
+  * drop duplicated debhelper build-dep
+  * drop "Rules-Requires-Root: no": it is the default now
+
+  [ Christopher Obbard ]
+  * d/control: Use gtksourceview4 instead of gtksourceview3 (Closes: #1079407)
+
+  [ David James ]
+  * Expand man page
+
+ -- Christopher Obbard <obbardc@debian.org>  Wed, 28 Jan 2026 17:46:54 +0000
+
 ares (147+dfsg-1) unstable; urgency=medium
 
   * Updated d/watch to version 5
