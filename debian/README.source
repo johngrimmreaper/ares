@@ -1,0 +1,28 @@
+Building for different architectures
+====================================
+
+As of version 147+dfsg-3, the ares package is split into two binaries,
+ares-simd and ares-no-simd that are installed in /usr/libexec/ares/. Which of
+these two are built, and the nature of the file at /usr/bin/ares, depends on
+the architecture:
+
+amd64
+-----
+
+Both binaries are built i.e. the dh sequence is run twice. The x86-64-v2
+baseline is requred to run ares-simd. /usr/bin/ares is a launcher script that
+queries /lib64/ld-linux-x86-64.so.2 for x86-64-v2 support  and selects the
+appropriate binary automatically.
+
+arm64
+-----
+
+ares-simd requires NEON support. Since this is guaranteed by the arm64 baseline
+only ares-simd is built. /usr/bin/ares is a symlink to
+/usr/libexec/ares/ares-simd.
+
+all other architectures
+-----------------------
+
+Only ares-no-simd is built. /usr/bin/ares is a symlink to
+/usr/libexec/ares/ares-no-simd.

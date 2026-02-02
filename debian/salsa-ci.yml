@@ -6,3 +6,5 @@ variables:
   SALSA_CI_DISABLE_BUILD_PACKAGE_ANY: 1
   # like most graphical games there is no autopkgtests
   SALSA_CI_DISABLE_AUTOPKGTEST: 1
+  # add more time so we can build twice
+  SALSA_CI_BUILD_TIMEOUT_ARGS: "2h"

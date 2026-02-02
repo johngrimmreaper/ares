@@ -1,1 +1,3 @@
+no-simd/usr/*
+simd/usr/*
 usr/bin/sourcery

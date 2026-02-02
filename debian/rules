@@ -14,7 +14,7 @@ CMAKE_OPTIONS := \
 	-DARES_VERSION_OVERRIDE="v$(DEB_VERSION)" \
 	-DWITH_SYSTEM_ZLIB=ON
 
-cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec
+cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec;n64
 # Reimplementation of older disable-md-on-32bit.patch
 ifneq ($(shell $(CXX) -E -dM - < /dev/null | grep INT128),)
 	cores += ;md
@@ -36,11 +36,56 @@ endif
 %:
 	dh $@
 
+# amd64: x64-64-v2 support is required to run ares-simd. We also include ares-no-simd to conform with debian baselines
+# arm64: NEON is required for SIMD. The debian baseline for arm64 is "ahead" of this point, so NEON is guaranteed and only ares-simd is built
+# all other architectures: SIMD is not supported, so only ares-no-simd is built
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
 override_dh_auto_configure:
-	dh_auto_configure -- \
-	$(CMAKE_OPTIONS) \
-	-DCMAKE_BUILD_TYPE=$(BUILDOPT) \
-	-DARES_CORES="$(cores)"
+	dh_auto_configure --builddirectory=build/no-simd -- $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=$(BUILDOPT) -DARES_CORES="$(cores)"
+	DEB_CFLAGS_MAINT_APPEND=-march=x86-64-v2 DEB_CXXFLAGS_MAINT_APPEND=-march=x86-64-v2 dh_auto_configure \
+		--reload-all-buildenv-variables --builddirectory=build/simd -- $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=$(BUILDOPT) -DARES_CORES="$(cores)"
+else ifeq ($(DEB_HOST_ARCH_CPU),arm64)
+override_dh_auto_configure:
+	dh_auto_configure --builddirectory=build/simd -- $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=$(BUILDOPT) -DARES_CORES="$(cores)"
+else
+override_dh_auto_configure:
+	dh_auto_configure --builddirectory=build/no-simd -- $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=$(BUILDOPT) -DARES_CORES="$(cores)"
+endif
+
+override_dh_auto_build:
+ifneq ($(DEB_HOST_ARCH_CPU),arm64)
+	dh_auto_build --builddirectory=build/no-simd
+endif
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
+	dh_auto_build --builddirectory=build/simd
+endif
 
 override_dh_auto_install:
-	dh_auto_install --destdir=debian/tmp
+ifneq ($(DEB_HOST_ARCH_CPU),arm64)
+	dh_auto_install --builddirectory=build/no-simd --destdir=debian/tmp/no-simd
+endif
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
+	dh_auto_install --builddirectory=build/simd --destdir=debian/tmp/simd
+endif
+
+# We need to change the names of the binaries and install them to debian/tmp manually.
+execute_before_dh_install:
+	mkdir -p debian/tmp/usr/libexec/ares
+	mkdir -p debian/tmp/usr/bin
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
+	mv -n debian/tmp/simd/usr/bin/ares debian/tmp/usr/libexec/ares/ares-simd
+	mv -n debian/tmp/simd/usr/share debian/tmp/usr
+endif
+ifneq ($(DEB_HOST_ARCH_CPU),arm64)
+	mv -n debian/tmp/no-simd/usr/bin/ares debian/tmp/usr/libexec/ares/ares-no-simd
+	mv -n debian/tmp/no-simd/usr/share debian/tmp/usr
+endif
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
+	cp debian/ares-launcher-amd64.sh debian/tmp/usr/bin/ares
+endif
+
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
+# Don't run dh_link on amd64
+override_dh_link:
+
+endif
