@@ -1,3 +1,10 @@
+ares (147+dfsg-3) UNRELEASED; urgency=medium
+
+  * Add n64 support (Closes: #1124986)
+  * Update year in d/copyright
+
+ -- David James <davidjamescastor215@proton.me>  Mon, 02 Feb 2026 07:31:21 +0000
+
 ares (147+dfsg-2) unstable; urgency=medium
 
   [ Alexandre Detiste ]
