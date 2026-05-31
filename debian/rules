@@ -12,6 +12,7 @@ CMAKE_OPTIONS := \
 	-DARES_ENABLE_MINIMUM_CPU=OFF \
 	-DARES_SKIP_DEPS=ON \
 	-DARES_VERSION_OVERRIDE="v$(DEB_VERSION)" \
+	-DWITH_SYSTEM_LIBCHDR=ON \
 	-DWITH_SYSTEM_ZLIB=ON
 
 cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec;n64
