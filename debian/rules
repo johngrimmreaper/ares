@@ -15,10 +15,15 @@ CMAKE_OPTIONS := \
 	-DWITH_SYSTEM_LIBCHDR=ON \
 	-DWITH_SYSTEM_ZLIB=ON
 
-cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec;n64
+cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec
 # Reimplementation of older disable-md-on-32bit.patch
 ifneq ($(shell $(CXX) -E -dM - < /dev/null | grep INT128),)
 	cores += ;md
+endif
+
+# Upstream only supports n64 on amd64 and arm64
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
+	cores += ;n64
 endif
 
 ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
