@@ -2,22 +2,30 @@
 .SH NAME
 ares \- Accurate multi-system emulator
 .SH SYNOPSIS
-.SY
-.B ares \-\-help
+.SY ares
+.B \-\-help
 .YS
-.SY
-.B ares \-\-dump\-all\-settings
+.SY ares
+.B \-\-version
 .YS
-.SY
-.B ares
+.SY ares
+.B \-\-dump\-all\-settings
+.YS
+.SY ares
 .RB [ \-\-fullscreen ]
-.RB [ \-\-system
+.RB [ \-\-pseudofullscreen ]
+.RB [ \-\-kiosk ]
+.RB [ \-\-system \~\c
 .IR system ]
-.RB [ \-\-shader
+.RB [ \-\-shader \~\c
 .IR shader ]
-.RB [ \-\-setting
+.RB [ \-\-setting \~\c
 .IR name=<value> ]
-.RB [ --no-file-prompt ]
+.RB [ \-\-no-file-prompt ]
+.RB [ \-\-settings\-file \~\c
+.IR file ]
+.RB [ \-\-save\-state \~\c
+.IR slot ]
 .I rom
 .YS
 
@@ -35,11 +43,21 @@ complete and polished.
 .br
 Display a summary of options and exit
 .TP
+.B \-\-version
+Display the version string of the application and exit
+.TP
 .B \-\-dump\-all\-settings
 Show a list of available settings and exit
 .TP
 .B \-\-fullscreen
 Start the emulator in fullscreen
+.TP
+.B \-\-pseudofullscreen
+Start the emulator in pseudofullscreen mode (status bar still visible)
+.TP
+.B \-\-kiosk
+Start in minimal UI mode (implies
+.BR \-\-no-file-prompt )
 .TP
 .BI \-\-system " system "
 Start the emulator with the given
@@ -51,13 +69,33 @@ Start the emulator wtih the given
 .I shader
 loaded
 .TP
+.BI \-\-setting " name=<value> "
+Specify a
+.I value
+for the setting with the given
+.I name
+.TP
 .B \-\-no\-file\-prompt
 Do not prompt for additional optional ROMs when loading games that support it
 .TP
+.BI \-\-settings-file " file "
+Override settings with those at the given
+.IR file .
+(note: if the
+.I file
+specified does not exist, it will be created)
+.TP
+.BI \-\-save\-state " slot "
+Launch with the save state given by
+.I slot
+loaded
+.TP
 .I rom
 .br
-The path of the ROM to load
+Full filepath of the ROM to load
 
 
 .SH MORE INFO
-Website: https://ares-emulator.github.io/
+Website:
+.UR https://ares-emulator.github.io/
+.UE
