@@ -1,3 +1,9 @@
+ares (148+dfsg-1) UNRELEASED; urgency=medium
+
+  * New upstream version 148+dfsg
+
+ -- David James <davidjamescastor215@proton.me>  Sun, 31 May 2026 09:31:17 +0100
+
 ares (147+dfsg-3) unstable; urgency=medium
 
   * Add n64 support (Closes: #1124986)
