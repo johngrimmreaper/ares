@@ -128,37 +128,49 @@ auto CPU::devirtualizeDebug(u64 vaddr) -> u64 {
 
 template<u32 Size>
 inline auto CPU::busWrite(u32 address, u64 data) -> void {
-  bus.write<Size>(address, data, *this, "CPU");
+  bus.write<Size>(address, data, *this, RBusDevice::VR4300_UNCACHED);
 }
 
 template<u32 Size>
-inline auto CPU::busWriteBurst(u32 address, u32 *data) -> void {
-  bus.writeBurst<Size>(address, data, *this);
+inline auto CPU::busWriteBurst(u32 address, u32 *data) -> bool {
+  return bus.writeBurst<Size>(address, data, *this);
 }
 
 template<u32 Size>
 inline auto CPU::busRead(u32 address) -> u64 {
-  return bus.read<Size>(address, *this, "CPU");
+  return bus.read<Size>(address, *this, RBusDevice::VR4300_UNCACHED);
 }
 
 template<u32 Size>
-inline auto CPU::busReadBurst(u32 address, u32 *data) -> void {
+inline auto CPU::busReadBurst(u32 address, u32 *data) -> bool {
   return bus.readBurst<Size>(address, data, *this);
+}
+
+template<u32 Size>
+static auto reverseEndianPaddr(u32 paddr) -> u32 {
+  if constexpr(Size == Byte) return paddr ^ 7;
+  if constexpr(Size == Half) return paddr ^ 6;
+  if constexpr(Size == Word) return paddr ^ 4;
+  return paddr;
 }
 
 auto CPU::fetch(PhysAccess access) -> maybe<u32> {
   step(1 * 2);
   if(!access) return nothing;
-  if(access.cache) return icache.fetch(access.vaddr, access.paddr, cpu);
-  return busRead<Word>(access.paddr);
+  u32 paddr = access.paddr;
+  if(context.littleEndian()) paddr = reverseEndianPaddr<Word>(paddr);
+  if(access.cache) return icache.fetch(access.vaddr, paddr, cpu);
+  return busRead<Word>(paddr);
 }
 
 template<u32 Size>
 auto CPU::read(PhysAccess access) -> maybe<u64> {
   if(!access) return nothing;
   GDB::server.reportMemRead(access.vaddr, Size);
-  if(access.cache) return dcache.read<Size>(access.vaddr, access.paddr);
-  return busRead<Size>(access.paddr);
+  u32 paddr = access.paddr;
+  if(context.littleEndian()) paddr = reverseEndianPaddr<Size>(paddr);
+  if(access.cache) return dcache.read<Size>(access.vaddr, paddr);
+  return busRead<Size>(paddr);
 }
 
 template<u32 Size>
@@ -167,7 +179,7 @@ auto CPU::readDebug(u64 vaddr) -> u64 {
   auto access = devirtualize<Read, Size>(vaddr, false, false);
   if(!access) return 0;
   if(access.cache) return dcache.readDebug<Size>(access.vaddr, access.paddr);
-  return bus.read<Size>(access.paddr, dummyThread, "Ares Debugger");
+  return bus.read<Size>(access.paddr, dummyThread, RBusDevice::ARES_DEBUGGER);
 }
 
 
@@ -175,8 +187,10 @@ template<u32 Size>
 auto CPU::write(PhysAccess access, u64 data) -> bool {
   if(!access) return false;
   GDB::server.reportMemWrite(access.vaddr, Size);
-  if(access.cache) return dcache.write<Size>(access.vaddr, access.paddr, data), true;
-  return busWrite<Size>(access.paddr, data), true;
+  u32 paddr = access.paddr;
+  if(context.littleEndian()) paddr = reverseEndianPaddr<Size>(paddr);
+  if(access.cache) return dcache.write<Size>(access.vaddr, paddr, data), true;
+  return busWrite<Size>(paddr, data), true;
 }
 
 template<u32 Size>
@@ -185,8 +199,10 @@ auto CPU::writeDebug(u64 vaddr, u64 data) -> bool {
   auto access = devirtualize<Write, Size>(vaddr, false, false);
   if(!access) return false;
   GDB::server.reportMemWrite(access.vaddr, Size);
-  if(access.cache) return dcache.writeDebug<Size>(access.vaddr, access.paddr, data), true;
-  return bus.write<Size>(access.paddr, data, dummyThread, "Ares Debugger"), true;
+  u32 paddr = access.paddr;
+  if(context.littleEndian()) paddr = reverseEndianPaddr<Size>(paddr);
+  if(access.cache) return dcache.writeDebug<Size>(access.vaddr, paddr, data), true;
+  return bus.write<Size>(paddr, data, dummyThread, RBusDevice::ARES_DEBUGGER), true;
 }
 
 template<u32 Size>
@@ -217,6 +233,10 @@ auto CPU::addressException(u64 vaddr) -> void {
   scc.context.badVirtualAddress = vaddr >> 13;
   scc.xcontext.badVirtualAddress = vaddr >> 13;
   scc.xcontext.region = vaddr >> 62;
+}
+
+auto CPU::emuxException(u8 kind) -> void {
+  scc.cacheError.unused = kind;
 }
 
 template auto CPU::writeDebug<Byte>(u64, u64) -> bool;

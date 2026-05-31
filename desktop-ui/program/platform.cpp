@@ -27,6 +27,25 @@ auto Program::pak(ares::Node::Object node) -> std::shared_ptr<vfs::directory> {
 }
 
 auto Program::event(ares::Event event) -> void {
+  if(event == ares::Event::FastForwardOn) {
+    fastForwarding = true;
+    ruby::video.setBlocking(false);
+    ruby::audio.setBlocking(false);
+    ruby::audio.setDynamic(false);
+    return;
+  }
+
+  if(event == ares::Event::FastForwardOff) {
+    fastForwarding = false;
+    ruby::video.setBlocking(true);
+    ruby::audio.setBlocking(true);
+    ruby::audio.setDynamic(true);
+    return;
+  }
+
+  if(event == ares::Event::Shutdown) {
+    quit();
+  }
 }
 
 auto Program::log(ares::Node::Debugger::Tracer::Tracer node, string_view message) -> void {
@@ -85,22 +104,68 @@ auto Program::video(ares::Node::Video::Screen node, const u32* data, u32 pitch, 
   u32 multiplierY = viewportHeight / videoHeight;
   u32 multiplier = min(multiplierX, multiplierY);
 
+  auto bestFitScale = [&] {
+    f32 fracX = (f32)viewportWidth / (f32)videoWidth;
+    f32 fracY = (f32)viewportHeight / (f32)videoHeight;
+    return min(fracX, fracY);
+  };
+
+  bool scaleWarningActive = false;
+  static string lastScaleWarning;
+  auto setScaleWarning = [&](const string& message) {
+    scaleWarningActive = true;
+    if(lastScaleWarning == message) return;
+    lastScaleWarning = message;
+    presentation.statusLeft.setText(message);
+  };
+
   u32 outputWidth = videoWidth * multiplier;
   u32 outputHeight = videoHeight * multiplier;
 
   if(multiplier == 0 || settings.video.output == "Scale") {
-    f32 multiplierX = (f32)viewportWidth / (f32)videoWidth;
-    f32 multiplierY = (f32)viewportHeight / (f32)videoHeight;
-    f32 multiplier = min(multiplierX, multiplierY);
+    f32 frac = bestFitScale();
 
-    outputWidth = videoWidth * multiplier;
-    outputHeight = videoHeight * multiplier;
+    if(frac < 1.0f && settings.video.output != "Scale") {
+      setScaleWarning({"Scale changed to Best Fit because ", videoWidth, "x", videoHeight, " is too large"});
+    }
+
+    outputWidth = videoWidth * frac;
+    outputHeight = videoHeight * frac;
+  } else if(settings.video.output == "Integer") {
+    if(multiplierX == 0 || multiplierY == 0) {
+      f32 frac = bestFitScale();
+      outputWidth = videoWidth * frac;
+      outputHeight = videoHeight * frac;
+      setScaleWarning({"Scale changed to Best Fit because ", videoWidth, "x", videoHeight, " is too large"});
+    }
+  }
+
+  if(settings.video.output == "IntegerFixed") {
+    u32 fixedMult = max(1u, settings.video.fixedScale);
+    if(fixedMult > multiplierX || fixedMult > multiplierY) {
+      fixedMult = max(1u, min(multiplierX, multiplierY));
+      if(multiplierX == 0 || multiplierY == 0) {
+        f32 frac = bestFitScale();
+        outputWidth = videoWidth * frac;
+        outputHeight = videoHeight * frac;
+        setScaleWarning({"Scale changed to Best Fit because ", settings.video.fixedScale, "x is too large"});
+      } else {
+        outputWidth = videoWidth * fixedMult;
+        outputHeight = videoHeight * fixedMult;
+        setScaleWarning({"Scale changed to ", fixedMult, "x because ", settings.video.fixedScale, "x is too large"});
+      }
+    } else {
+      outputWidth = videoWidth * fixedMult;
+      outputHeight = videoHeight * fixedMult;
+    }
   }
 
   if(settings.video.output == "Stretch") {
     outputWidth = viewportWidth;
     outputHeight = viewportHeight;
   }
+
+  if(!scaleWarningActive) lastScaleWarning = {};
 
   pitch >>= 2;
   auto [output, length] = ruby::video.acquire(width, height);
@@ -169,7 +234,7 @@ auto Program::audio(ares::Node::Audio::Stream node) -> void {
 }
 
 auto Program::input(ares::Node::Input::Input node) -> void {
-  if(!driverSettings.inputDefocusAllow.checked()) {
+  if(settings.input.defocus != "Allow") {
     if(!ruby::video.fullScreen() && !presentation.focused()) {
       //treat the input as not being active
       if(auto button = node->cast<ares::Node::Input::Button>()) button->setValue(0);

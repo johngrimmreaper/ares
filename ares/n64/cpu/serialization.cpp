@@ -13,17 +13,17 @@ auto CPU::serialize(serializer& s) -> void {
   s(context.segment);
 
   for(auto& line : icache.lines) {
-    s(line.valid);
-    s(line.tag);
+    s(line.tagKey);
     s(line.index);
     s(line.words);
   }
 
   for(auto& line : dcache.lines) {
-    s(line.valid);
+    s(line.tagKey);
     s(line.dirty);
-    s(line.tag);
     s(line.index);
+    s(line.fillPc);
+    s(line.dirtyPc);
     s(line.words);
   }
 
@@ -75,6 +75,7 @@ auto CPU::serialize(serializer& s) -> void {
   s(scc.status.errorLevel);
   s(scc.status.privilegeMode);
   s(scc.status.userExtendedAddressing);
+  s(scc.status.supervisorExtendedAddressing);
   s(scc.status.kernelExtendedAddressing);
   s(scc.status.interruptMask);
   s(scc.status.de);
@@ -111,6 +112,7 @@ auto CPU::serialize(serializer& s) -> void {
   s(scc.xcontext.region);
   s(scc.xcontext.pageTableEntryBase);
   s(scc.parityError.diagnostic);
+  s(scc.cacheError.unused);
   s(scc.tagLo.primaryCacheState);
   s(scc.tagLo.physicalAddress);
   s(scc.epcError);
@@ -118,24 +120,13 @@ auto CPU::serialize(serializer& s) -> void {
   s(scc.nmiPending);
   s(scc.sysadFrozen);
 
+  s(fenv.control);
+
   for(auto& r : fpu.r) s(r.u64);
   s(fpu.csr.roundMode);
-  s(fpu.csr.flag.inexact);
-  s(fpu.csr.flag.underflow);
-  s(fpu.csr.flag.overflow);
-  s(fpu.csr.flag.divisionByZero);
-  s(fpu.csr.flag.invalidOperation);
-  s(fpu.csr.enable.inexact);
-  s(fpu.csr.enable.underflow);
-  s(fpu.csr.enable.overflow);
-  s(fpu.csr.enable.divisionByZero);
-  s(fpu.csr.enable.invalidOperation);
-  s(fpu.csr.cause.inexact);
-  s(fpu.csr.cause.underflow);
-  s(fpu.csr.cause.overflow);
-  s(fpu.csr.cause.divisionByZero);
-  s(fpu.csr.cause.invalidOperation);
-  s(fpu.csr.cause.unimplementedOperation);
+  s(fpu.csr.flag.data);
+  s(fpu.csr.enable.data);
+  s(fpu.csr.cause.data);
   s(fpu.csr.compare);
   s(fpu.csr.flushSubnormals);
 

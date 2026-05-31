@@ -12,7 +12,7 @@ inline auto CPU::getBus(u32 mode, n32 address) -> n32 {
     ARM7TDMI::irq = irq.synchronizer;
     context.romAccess = false;
   }
-  u32 word;
+  u32 word = mdr;
 
   if(memory.biosSwap && address < 0x0400'0000) address ^= 0x0200'0000;
 
@@ -23,33 +23,36 @@ inline auto CPU::getBus(u32 mode, n32 address) -> n32 {
     word = bios.read(mode, address);
     break;
 
-  case 0x02: word = readEWRAM<UseDebugger>(mode, address); break;
+  case 0x02:
+    if(memory.ewram) word = readEWRAM<UseDebugger>(mode, address);
+    else word = readIWRAM<UseDebugger>(mode, address);
+    break;
+
   case 0x03: word = readIWRAM<UseDebugger>(mode, address); break;
 
   case 0x04:
     if constexpr(!UseDebugger) prefetchStep(1);
          if((address & 0xffff'fc00) == 0x0400'0000) word = bus.io[address & 0x3ff]->readIO(mode, address);
     else if((address & 0xff00'fffc) == 0x0400'0800) word = ((IO*)this)->readIO(mode, 0x0400'0800 | (address & 3));
-    else return openBus.get(mode, address);
     break;
 
   case 0x05: word = readPRAM<UseDebugger>(mode, address); break;
   case 0x06: word = readVRAM<UseDebugger>(mode, address); break;
-
-  case 0x07:
-    if constexpr(!UseDebugger) prefetchStep(1);
-    word = ppu.readOAM(mode, address);
-    break;
+  case 0x07: word = readOAM<UseDebugger>(mode, address); break;
 
   case 0x08: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x0d:
     if constexpr(UseDebugger) return readROM<true>(mode, address);
     context.burstActive = checkBurst<IsDMA>(mode);
     context.romAccess = true;
-    if(mode & Prefetch && wait.prefetch) {
-      if(address == prefetch.addr && (!prefetch.empty() || prefetch.ahead)) {
-        prefetchStepInternal(1);
+    if(mode & Prefetch) {
+      if((address & 0x1fffe) && wait.prefetch && address == prefetch.addr && (!prefetch.empty() || prefetch.ahead)) {
+        prefetchStep(1);
         word = prefetchRead();
-        if(mode & Word) word |= prefetchRead() << 16;
+        if(mode & Word) {
+          word |= prefetchRead() << 16;
+        } else {
+          word |= word << 16;
+        }
       } else {
         if(mode & Word) address &= ~3;  //prevents misaligned PC from reading incorrect values
         prefetchSync(mode, address);
@@ -65,19 +68,22 @@ inline auto CPU::getBus(u32 mode, n32 address) -> n32 {
   case 0x0e: case 0x0f:
     if constexpr(!UseDebugger) prefetchReset();
     if constexpr(!UseDebugger) step(waitCartridge(address, false));
-    word = cartridge.readBackup(address) * 0x01010101;
+    word = cartridge.readBackup(address);
+    word |= word << 8;
+    word |= word << 16;
     break;
 
   default:
     if constexpr(!UseDebugger) prefetchStep(1);
-    return openBus.get(mode, address);
+    break;
 
   }
 
-  openBus.set(mode, address, word);
-
   if(auto result = platform->cheat(address)) return *result;
-  return word;
+  if constexpr(!UseDebugger) mdr = word;
+  if(mode & Word) address &= ~3;
+  if(mode & Half) address &= ~1;
+  return word >> (8 * (address & 3));
 }
 
 auto CPU::get(u32 mode, n32 address) -> n32 {
@@ -102,6 +108,8 @@ auto CPU::setBus(u32 mode, n32 address, n32 word) -> void {
 
   if(memory.biosSwap && address < 0x0400'0000) address ^= 0x0200'0000;
 
+  mdr = word;
+
   switch(address >> 24) {
 
   case 0x00: case 0x01:
@@ -109,7 +117,11 @@ auto CPU::setBus(u32 mode, n32 address, n32 word) -> void {
     bios.write(mode, address, word);
     break;
 
-  case 0x02: writeEWRAM(mode, address, word); break;
+  case 0x02:
+    if(memory.ewram) writeEWRAM(mode, address, word);
+    else writeIWRAM(mode, address, word);
+    break;
+
   case 0x03: writeIWRAM(mode, address, word); break;
 
   case 0x04:
@@ -120,12 +132,7 @@ auto CPU::setBus(u32 mode, n32 address, n32 word) -> void {
 
   case 0x05: writePRAM(mode, address, word); break;
   case 0x06: writeVRAM(mode, address, word); break;
-
-  case 0x07:
-    prefetchStep(1);
-    synchronize(ppu);
-    ppu.writeOAM(mode, address, word);
-    break;
+  case 0x07: writeOAM(mode, address, word); break;
 
   case 0x08: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x0d:
     context.burstActive = checkBurst<IsDMA>(mode);
@@ -149,7 +156,6 @@ auto CPU::setBus(u32 mode, n32 address, n32 word) -> void {
 
   }
 
-  openBus.set(mode, address, word);
   if constexpr(!IsDMA) {
     if(!context.romAccess) cartridge.mrom.burst = false;
   }
@@ -194,32 +200,4 @@ auto CPU::checkBurst(u32 mode) -> bool {
   if(cartridge.mrom.burst == false) return false;
   if constexpr(IsDMA) return dmac.romBurst;
   return !ARM7TDMI::nonsequential;
-}
-
-auto CPU::OpenBus::get(u32 mode, n32 address) -> n32 {
-  if(mode & Word) address &= ~3;
-  if(mode & Half) address &= ~1;
-  return data >> (8 * (address & 3));
-}
-
-auto CPU::OpenBus::set(u32 mode, n32 address, n32 word) -> void {
-  if(address >> 24 == 0x3) {
-    //open bus from IWRAM only overwrites part of the last IWRAM value accessed
-    if(mode & Word) {
-      iwramData = word;
-    } else if(mode & Half) {
-      if(address & 2) {
-        iwramData.bit(16,31) = (n16)word;
-      } else {
-        iwramData.bit( 0,15) = (n16)word;
-      }
-    } else if(mode & Byte) {
-      iwramData.byte(address & 3) = (n8)word;
-    }
-    data = iwramData;
-  } else {
-    if(mode & Byte) word = (word & 0xff) * 0x01010101;
-    if(mode & Half) word = (word & 0xffff) * 0x00010001;
-    data = word;
-  }
 }

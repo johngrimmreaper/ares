@@ -1,18 +1,20 @@
 auto CPU::DataCache::Line::hit(u32 paddr) const -> bool {
-  return valid && tag == (paddr & ~0x0000'0fff);
+  const u32 t = paddr & ~0x0000'0fffu;
+  return valid() && (tagKey & ~1u) == t;
 }
 
 auto CPU::DataCache::Line::fill(u32 paddr) -> void {
   cpu.step(40 * 2);
-  valid  = 1;
+  const u32 tag = paddr & ~0x0000'0fffu;
   dirty  = 0;
-  tag    = paddr & ~0x0000'0fff;
+  tagKey = tag;
   fillPc = cpu.ipu.pc;
-  cpu.busReadBurst<DCache>(tag | index, words);
+  setValid(cpu.busReadBurst<DCache>(tag | index, words));
 }
 
 auto CPU::DataCache::Line::writeBack() -> void {
   cpu.step(40 * 2);
+  const u32 tag = tagKey & ~0x0000'0fffu;
   dirty = 0;
   cpu.busWriteBurst<DCache>(tag | index, words);
 }
@@ -50,10 +52,15 @@ template<u32 Size>
 auto CPU::DataCache::read(u64 vaddr, u32 paddr) -> u64 {
   auto& line = this->line(vaddr);
   if(!line.hit(paddr)) {
-    if(line.valid && line.dirty) line.writeBack();
+    if(line.valid() && line.dirty) {
+      line.writeBack();
+      self.profile.dcacheWritebacks++;
+    }
     line.fill(paddr);
+    self.profile.dcacheMisses++;
   } else {
     cpu.step(1 * 2);
+    self.profile.dcacheHits++;
   }
   return line.read<Size>(paddr);
 }
@@ -65,7 +72,7 @@ auto CPU::DataCache::readDebug(u64 vaddr, u32 paddr) -> u64 {
   auto& line = this->line(vaddr);
   if(!line.hit(paddr)) {
     Thread dummyThread{};
-    return bus.read<Size>(paddr, dummyThread, "Ares Debugger");
+    return bus.read<Size>(paddr, dummyThread, RBusDevice::ARES_DEBUGGER);
   }
   return line.read<Size>(paddr);
 }
@@ -74,10 +81,15 @@ template<u32 Size>
 auto CPU::DataCache::write(u64 vaddr, u32 paddr, u64 data) -> void {
   auto& line = this->line(vaddr);
   if(!line.hit(paddr)) {
-    if(line.valid && line.dirty) line.writeBack();
+    if(line.valid() && line.dirty) {
+      line.writeBack();
+      self.profile.dcacheWritebacks++;
+    }
     line.fill(paddr);
+    self.profile.dcacheMisses++;
   } else {
     cpu.step(1 * 2);
+    self.profile.dcacheHits++;
   }
   line.write<Size>(paddr, data);
 }
@@ -89,7 +101,7 @@ auto CPU::DataCache::writeDebug(u64 vaddr, u32 paddr, u64 data) -> void {
   auto& line = this->line(vaddr);
   if(!line.hit(paddr)) {
     Thread dummyThread{};
-    return bus.write<Size>(paddr, data, dummyThread, "Ares Debugger");
+    return bus.write<Size>(paddr, data, dummyThread, RBusDevice::ARES_DEBUGGER);
   }
   line.write<Size>(paddr, data);
 }
@@ -97,10 +109,9 @@ auto CPU::DataCache::writeDebug(u64 vaddr, u32 paddr, u64 data) -> void {
 auto CPU::DataCache::power(bool reset) -> void {
   u32 index = 0;
   for(auto& line : lines) {
-    line.valid = 0;
-    line.dirty = 0;
-    line.tag   = 0;
-    line.index = index++ << 4 & 0xff0;
+    line.tagKey = 0;
+    line.dirty  = 0;
+    line.index  = index++ << 4 & 0xff0;
     for(auto& word : line.words) word = 0;
   }
 }
