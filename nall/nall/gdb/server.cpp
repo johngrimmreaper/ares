@@ -105,6 +105,16 @@ namespace nall::GDB {
     return !needHalts;
   }
 
+  auto Server::hasBreakpointAt(u64 pc) const -> bool {
+    if(!hasActiveClient) return false;
+    return std::ranges::find(breakpoints, pc) != breakpoints.end();
+  }
+
+  auto Server::hasWatchpoints() const -> bool {
+    if(!hasActiveClient) return false;
+    return !watchpointRead.empty() || !watchpointWrite.empty();
+  }
+
   /**
    * NOTE: please read the comment in the header server.hpp file before making any changes here!
    */
@@ -115,7 +125,7 @@ namespace nall::GDB {
     char cmdPrefix = cmdName.size() > 0 ? cmdName(0) : ' ';
 
     if constexpr(GDB_LOG_MESSAGES) {
-      print("GDB <: %s\n", cmdBuffer.data());
+      printf("GDB <: %s\n", cmdBuffer.data());
     }
 
     switch(cmdPrefix)
@@ -370,8 +380,8 @@ namespace nall::GDB {
           default: return "E00";
         }
 
-        if(hooks.emuCacheInvalidate) { // for re-compiler, otherwise breaks might be skipped
-          hooks.emuCacheInvalidate(address);
+        if(isInsert && hooks.emuCacheInvalidate) {
+          hooks.emuCacheInvalidate(addressStart);
         }
         return "OK";
       }

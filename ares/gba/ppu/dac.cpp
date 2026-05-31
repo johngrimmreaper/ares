@@ -13,17 +13,17 @@ auto PPU::DAC::upperLayer(u32 x, u32 y) -> void {
   n1 active[6] = {true, true, true, true, true, true};  //enable all layers if no windows are enabled
   if(ppu.window0.io.enable || ppu.window1.io.enable || ppu.window2.io.enable) {
     memory::copy(&active, &ppu.window3.io.active, sizeof(active));
-    if(ppu.window2.io.enable && ppu.window2.output) memory::copy(&active, &ppu.window2.io.active, sizeof(active));
-    if(ppu.window1.io.enable && ppu.window1.output) memory::copy(&active, &ppu.window1.io.active, sizeof(active));
-    if(ppu.window0.io.enable && ppu.window0.output) memory::copy(&active, &ppu.window0.io.active, sizeof(active));
+    if(ppu.window2.io.enable && ppu.window2.output[x]) memory::copy(&active, &ppu.window2.io.active, sizeof(active));
+    if(ppu.window1.io.enable && ppu.window1.output[x]) memory::copy(&active, &ppu.window1.io.active, sizeof(active));
+    if(ppu.window0.io.enable && ppu.window0.output[x]) memory::copy(&active, &ppu.window0.io.active, sizeof(active));
   }
 
   //priority sorting: find topmost two pixels
-  layers[OBJ] = ppu.objects.mosaic;
-  layers[BG0] = ppu.bg0.mosaic;
-  layers[BG1] = ppu.bg1.mosaic;
-  layers[BG2] = ppu.bg2.mosaic;
-  layers[BG3] = ppu.bg3.mosaic;
+  layers[OBJ] = ppu.objects.mosaicLatch;
+  layers[BG0] = ppu.bg0.mosaicLatch;
+  layers[BG1] = ppu.bg1.mosaicLatch;
+  layers[BG2] = ppu.bg2.mosaicLatch;
+  layers[BG3] = ppu.bg3.mosaicLatch;
   layers[SFX] = {true, 3, 0};
 
   aboveLayer = 5;

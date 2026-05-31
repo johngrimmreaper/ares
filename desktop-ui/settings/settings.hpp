@@ -1,9 +1,17 @@
+#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_MACOS)
+  constexpr u32 layoutVertSize = 14;
+#else
+  constexpr u32 layoutVertSize = 18;
+#endif
+
 struct Settings : Markup::Node {
   using string = nall::string;
 
   auto load() -> void;
   auto save() -> void;
   auto process(bool load) -> void;
+
+  string filePath;
 
   struct Video {
     string driver;
@@ -16,8 +24,10 @@ struct Settings : Markup::Node {
     bool nativeFullScreen = false;
     bool flush = false;
     string shader = "None";
-    u32 multiplier = 2;
+    u32 windowWidth = 800;
+    u32 windowHeight = 576;
     string output = "Scale";
+    u32 fixedScale = 2;
     string aspectCorrection = "Standard";
     bool adaptiveSizing = true;
     bool autoCentering = false;
@@ -29,7 +39,7 @@ struct Settings : Markup::Node {
     bool colorEmulation = true;
     bool deepBlackBoost = false;
     bool interframeBlending = true;
-    bool overscan = false;
+    bool overscan = true;
     bool pixelAccuracy = false;
 
     string quality = "SD";
@@ -71,6 +81,7 @@ struct Settings : Markup::Node {
     bool autoSaveMemory = true;
     bool homebrewMode = false;
     bool forceInterpreter = false;
+    bool noFilePrompt = false;
   } general;
 
   struct Rewind {
@@ -136,30 +147,30 @@ struct VideoSettings : VerticalLayout {
   Label emulatorSettingsLabel{this, Size{~0, 0}, 5};
     HorizontalLayout colorBleedLayout{this, Size{~0, 0}, 5};
       CheckLabel colorBleedOption{&colorBleedLayout, Size{0, 0}, 5};
-      Label colorBleedHint{&colorBleedLayout, Size{~0, 0}};
+      Label colorBleedHint{&colorBleedLayout, Size{~0, layoutVertSize}};
     HorizontalLayout colorEmulationLayout{this, Size{~0, 0}, 5};
       CheckLabel colorEmulationOption{&colorEmulationLayout, Size{0, 0}, 5};
-      Label colorEmulationHint{&colorEmulationLayout, Size{~0, 0}};
+      Label colorEmulationHint{&colorEmulationLayout, Size{~0, layoutVertSize}};
     HorizontalLayout deepBlackBoostLayout{this, Size{~0, 0}, 5};
       CheckLabel deepBlackBoostOption{&deepBlackBoostLayout, Size{0, 0}, 5};
-      Label deepBlackBoostHint{&deepBlackBoostLayout, Size{~0, 0}};
+      Label deepBlackBoostHint{&deepBlackBoostLayout, Size{~0, layoutVertSize}};
     HorizontalLayout interframeBlendingLayout{this, Size{~0, 0}, 5};
       CheckLabel interframeBlendingOption{&interframeBlendingLayout, Size{0, 0}, 5};
-      Label interframeBlendingHint{&interframeBlendingLayout, Size{~0, 0}};
+      Label interframeBlendingHint{&interframeBlendingLayout, Size{~0, layoutVertSize}};
     HorizontalLayout overscanLayout{this, Size{~0, 0}};
       CheckLabel overscanOption{&overscanLayout, Size{0, 0}, 5};
-      Label overscanHint{&overscanLayout, Size{~0, 0}};
+      Label overscanHint{&overscanLayout, Size{~0, layoutVertSize}};
     HorizontalLayout pixelAccuracyLayout{this, Size{~0, 0}};
       CheckLabel pixelAccuracyOption{&pixelAccuracyLayout, Size{0, 0}, 5};
-      Label pixelAccuracyHint{&pixelAccuracyLayout, Size{~0, 0}};
+      Label pixelAccuracyHint{&pixelAccuracyLayout, Size{~0, layoutVertSize}};
   //
   Label renderSettingsLabel{this, Size{~0, 0}, 5};
   HorizontalLayout disableVideoInterfaceProcessingLayout{this, Size{~0, 0}, 5};
     CheckLabel disableVideoInterfaceProcessingOption{&disableVideoInterfaceProcessingLayout, Size{0, 0}, 5};
-    Label disableVideoInterfaceProcessingHint{&disableVideoInterfaceProcessingLayout, Size{0, 0}};
+    Label disableVideoInterfaceProcessingHint{&disableVideoInterfaceProcessingLayout, Size{0, layoutVertSize}};
   HorizontalLayout weaveDeinterlacingLayout{this, Size{~0, 0}, 5};
     CheckLabel weaveDeinterlacingOption{&weaveDeinterlacingLayout, Size{0, 0}, 5};
-    Label weaveDeinterlacingHint{&weaveDeinterlacingLayout, Size{0, 0}};
+    Label weaveDeinterlacingHint{&weaveDeinterlacingLayout, Size{0, layoutVertSize}};
   HorizontalLayout renderQualityLayout{this, Size{~0, 0}, 5};
     RadioLabel renderQuality1x{&renderQualityLayout, Size{0, 0}};
     RadioLabel renderQuality2x{&renderQualityLayout, Size{0, 0}};
@@ -167,9 +178,9 @@ struct VideoSettings : VerticalLayout {
     Group renderQualityGroup{&renderQuality1x, &renderQuality2x, &renderQuality4x};
   HorizontalLayout renderSupersamplingLayout{this, Size{~0, 0}, 5};
     CheckLabel renderSupersamplingOption{&renderSupersamplingLayout, Size{0, 0}, 5};
-    Label renderSupersamplingHint{&renderSupersamplingLayout, Size{0, 0}};
+    Label renderSupersamplingHint{&renderSupersamplingLayout, Size{0, layoutVertSize}};
   HorizontalLayout renderSettingsLayout{this, Size{~0, 0}};
-      Label renderSettingsHint{&renderSettingsLayout, Size{0, 0}};
+      Label renderSettingsHint{&renderSettingsLayout, Size{0, layoutVertSize}};
 };
 
 struct AudioSettings : VerticalLayout {
@@ -204,6 +215,7 @@ struct InputSettings : VerticalLayout {
     ComboButton systemList{&indexLayout, Size{~0, 0}};
     ComboButton portList{&indexLayout, Size{~0, 0}};
     ComboButton deviceList{&indexLayout, Size{~0, 0}};
+  Label inputHint{this, Size{~0, 0}, 5};
   TableView inputList{this, Size{~0, ~0}};
   HorizontalLayout controlLayout{this, Size{~0, 0}};
     Label assignLabel{&controlLayout, Size{~0, 0}};
@@ -252,38 +264,40 @@ struct OptionSettings : VerticalLayout {
   Label commonSettingsLabel{this, Size{~0, 0}, 5};
     HorizontalLayout rewindLayout{this, Size{~0, 0}, 5};
       CheckLabel rewind{&rewindLayout, Size{0, 0}, 5};
-      Label rewindHint{&rewindLayout, Size{~0, 0}};
+      Label rewindHint{&rewindLayout, Size{~0, layoutVertSize}};
     HorizontalLayout runAheadLayout{this, Size{~0, 0}, 5};
       CheckLabel runAhead{&runAheadLayout, Size{0, 0}, 5};
-      Label runAheadHint{&runAheadLayout, Size{~0, 0}};
+      Label runAheadHint{&runAheadLayout, Size{~0, layoutVertSize}};
     HorizontalLayout autoSaveMemoryLayout{this, Size{~0, 0}, 5};
       CheckLabel autoSaveMemory{&autoSaveMemoryLayout, Size{0, 0}, 5};
-      Label autoSaveMemoryHint{&autoSaveMemoryLayout, Size{~0, 0}};
+      Label autoSaveMemoryHint{&autoSaveMemoryLayout, Size{~0, layoutVertSize}};
     HorizontalLayout homebrewModeLayout{this, Size{~0, 0}, 5};
       CheckLabel homebrewMode{&homebrewModeLayout, Size{0, 0}, 5};
-      Label homebrewModeHint{&homebrewModeLayout, Size{~0, 0}};
+      Label homebrewModeHint{&homebrewModeLayout, Size{~0, layoutVertSize}};
     HorizontalLayout forceInterpreterLayout{this, Size{~0, 0}, 5};
       CheckLabel forceInterpreter{&forceInterpreterLayout, Size{0, 0}, 5};
-      Label forceInterpreterHint{&forceInterpreterLayout, Size{0, 0}};
+      Label forceInterpreterHint{&forceInterpreterLayout, Size{0, layoutVertSize}};
+    HorizontalLayout noFilePromptLayout{this, Size{~0, 0}, 5};
+      CheckLabel noFilePromptOption{&noFilePromptLayout, Size{0, 0}, 5};
+      Label noFilePromptHint{&noFilePromptLayout, Size{0, layoutVertSize}};
   Label nintendo64SettingsLabel{this, Size{~0, 0}, 5};
     HorizontalLayout nintendo64ExpansionPakLayout{this, Size{~0, 0}, 5};
       CheckLabel nintendo64ExpansionPakOption{&nintendo64ExpansionPakLayout, Size{0, 0}, 5};
-      Label nintendo64ExpansionPakHint{&nintendo64ExpansionPakLayout, Size{0, 0}};
+      Label nintendo64ExpansionPakHint{&nintendo64ExpansionPakLayout, Size{0, layoutVertSize}};
     HorizontalLayout nintendo64ControllerPakBankLayout{this, Size{~0, 0}, 5};
-      Label nintendo64ControllerPakBankLabel{&nintendo64ControllerPakBankLayout, Size{0, 0}};
+      Label nintendo64ControllerPakBankLabel{&nintendo64ControllerPakBankLayout, Size{0, layoutVertSize}};
       ComboButton nintendo64ControllerPakBankOption{&nintendo64ControllerPakBankLayout, Size{0, 0}};
-      // LineEdit nintendo64ControllerPakBankOption{&nintendo64ControllerPakBankLayout, Size{40, 0}};
-      Label nintendo64ControllerPakBankHint{&nintendo64ControllerPakBankLayout, Size{0, 0}};
+      Label nintendo64ControllerPakBankHint{&nintendo64ControllerPakBankLayout, Size{0, layoutVertSize}};
 
   Label gameBoyAdvanceSettingsLabel{this, Size{~0, 0}, 5};
     HorizontalLayout gameBoyPlayerLayout{this, Size{~0, 0}, 5};
       CheckLabel gameBoyPlayerOption{&gameBoyPlayerLayout, Size{0, 0}, 5};
-      Label gameBoyPlayerHint{&gameBoyPlayerLayout, Size{0, 0}};
+      Label gameBoyPlayerHint{&gameBoyPlayerLayout, Size{0, layoutVertSize}};
 
   Label megaDriveSettingsLabel{this, Size{~0, 0}, 5};
     HorizontalLayout megaDriveTmssLayout{this, Size{~0, 0}, 5};
       CheckLabel megaDriveTmssOption{&megaDriveTmssLayout, Size{0, 0}, 5};
-      Label megaDriveTmssHint{&megaDriveTmssLayout, Size{0, 0}};
+      Label megaDriveTmssHint{&megaDriveTmssLayout, Size{0, layoutVertSize}};
 };
 
 struct FirmwareSettings : VerticalLayout {
@@ -415,17 +429,31 @@ struct DebugSettings : VerticalLayout {
   HorizontalLayout portLayout{this, Size{~0, 0}};
     Label portLabel{&portLayout, Size{48, 20}};
     LineEdit port{&portLayout, Size{~0, 0}};
-    Label portHint{&portLayout, Size{~0, 0}};
+    Label portHint{&portLayout, Size{~0, layoutVertSize}};
 
   HorizontalLayout ipv4Layout{this, Size{~0, 0}};
-    Label ipv4Label{&ipv4Layout, Size{48, 20}};
     CheckLabel ipv4{&ipv4Layout, Size{~0, 0}};
 
   HorizontalLayout enabledLayout{this, Size{~0, 0}};
-    Label enabledLabel{&enabledLayout, Size{48, 20}};
     CheckLabel enabled{&enabledLayout, Size{~0, 0}};
 
   Label connectInfo{this, Size{~0, 30}, 5};
+};
+
+struct ImportExportSettings : VerticalLayout {
+  auto construct() -> void;
+  auto refresh() -> void;
+  auto setVisible(bool visible = true) -> ImportExportSettings&;
+
+  Label settingsFileLabel{this, Size{~0, 0}, 5};
+  TextEdit settingsView{this, Size{~0, ~0}};
+  HorizontalLayout controlsLayout{this, Size{~0, 0}};
+    CheckLabel useImported{&controlsLayout, Size{~0, 0}, 5};
+    Canvas spacer{&controlsLayout, Size{1, 0}};
+    Button importButton{&controlsLayout, Size{80, 0}};
+    Button exportButton{&controlsLayout, Size{80, 0}};
+  
+  bool imported = false;
 };
 
 struct HomePanel : VerticalLayout {
@@ -451,6 +479,7 @@ struct SettingsWindow : Window {
       PathSettings pathSettings;
       DriverSettings driverSettings;
       DebugSettings debugSettings;
+      ImportExportSettings importExportSettings;
       HomePanel homePanel;
   
   bool initialized = false;
@@ -472,3 +501,4 @@ extern FirmwareSettings& firmwareSettings;
 extern PathSettings& pathSettings;
 extern DriverSettings& driverSettings;
 extern DebugSettings& debugSettings;
+extern ImportExportSettings& importExportSettings;

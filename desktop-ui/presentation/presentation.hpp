@@ -3,6 +3,8 @@ struct Presentation : Window {
 
   Presentation();
   auto resizeWindow() -> void;
+  auto refreshWindowSizeMenu() -> void;
+  auto refreshFixedScaleMenu() -> void;
   auto loadEmulators() -> void;
   auto loadEmulator() -> void;
   auto unloadEmulator(bool reloading = false) -> void;
@@ -11,6 +13,7 @@ struct Presentation : Window {
   auto refreshSystemMenu() -> void;
 
   std::vector<string> shaderDirectories;
+  static inline bool shaderArgApplied = false;
 
   MenuBar menuBar{this};
     Menu loadMenu{&menuBar};
@@ -19,19 +22,19 @@ struct Presentation : Window {
       Menu videoSizeMenu{&settingsMenu};
         Group videoSizeGroup;
       Menu videoOutputMenu{&settingsMenu};
-        MenuRadioItem videoOutputScale{&videoOutputMenu};
-        MenuRadioItem videoOutputIntegerScale{&videoOutputMenu};
-        MenuRadioItem videoOutputStretch{&videoOutputMenu};
-        Group videoOutputGroup{&videoOutputIntegerScale, &videoOutputScale, &videoOutputStretch};
-        MenuSeparator videoOutputSeparator{&videoOutputMenu};
-        MenuRadioItem videoAspectCorrectionNone{&videoOutputMenu};
-        MenuRadioItem videoAspectCorrectionStandard{&videoOutputMenu};
-        MenuRadioItem videoAspectCorrectionAnamorphic{&videoOutputMenu};
-        Group videoAspectCorrectionGroup{&videoAspectCorrectionNone, &videoAspectCorrectionStandard, 
-                                         &videoAspectCorrectionAnamorphic};
-        MenuSeparator videoOutputSeparator2{&videoOutputMenu};
-        MenuCheckItem videoAdaptiveSizing{&videoOutputMenu};
-        MenuCheckItem videoAutoCentering{&videoOutputMenu};
+        MenuRadioItem videoOutputScale;
+        MenuRadioItem videoOutputIntegerScale;
+        MenuRadioItem videoOutputStretch;
+        Group videoOutputGroup;
+        std::vector<MenuRadioItem> videoFixedScaleItems;
+        MenuSeparator videoOutputSeparator;
+        MenuRadioItem videoAspectCorrectionNone;
+        MenuRadioItem videoAspectCorrectionStandard;
+        MenuRadioItem videoAspectCorrectionAnamorphic;
+        Group videoAspectCorrectionGroup;
+        MenuSeparator videoOutputSeparator2;
+        MenuCheckItem videoAdaptiveSizing;
+        MenuCheckItem videoAutoCentering;
       Menu videoShaderMenu{&settingsMenu};
       Menu bootOptionsMenu{&settingsMenu};
         MenuCheckItem fastBoot{&bootOptionsMenu};
@@ -60,6 +63,7 @@ struct Presentation : Window {
       MenuItem pathSettingsAction{&settingsMenu};
       MenuItem driverSettingsAction{&settingsMenu};
       MenuItem debugSettingsAction{&settingsMenu};
+      MenuItem importExportAction{&settingsMenu};
     Menu toolsMenu{&menuBar};
       Menu saveStateMenu{&toolsMenu};
       Menu loadStateMenu{&toolsMenu};
@@ -78,6 +82,7 @@ struct Presentation : Window {
       MenuItem streamManagerAction{&toolsMenu};
       MenuItem propertiesViewerAction{&toolsMenu};
       MenuItem traceLoggerAction{&toolsMenu};
+      MenuItem tapeViewerAction{&toolsMenu};
     Menu helpMenu{&menuBar};
       MenuItem aboutAction{&helpMenu};
 
