@@ -1,0 +1,30 @@
+From: David James <davidjamescastor215@proton.me>
+Date: Tue, 2 Jun 2026 11:50:24 +0100
+Subject: Restore old behaviour for resolving symlinks
+
+Upstream tries to resolve symlinks within ares. This is breaking symlink
+handling for Debian, and is unnecessary. Go back to pre-v148 behaviour of
+allowing the OS to resolve them.
+
+Forwarded: https://github.com/ares-emulator/ares/pull/2558#issuecomment-4603038450
+---
+ desktop-ui/emulator/emulator.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/desktop-ui/emulator/emulator.cpp b/desktop-ui/emulator/emulator.cpp
+index 8e0e1d3..0910a7e 100644
+--- a/desktop-ui/emulator/emulator.cpp
++++ b/desktop-ui/emulator/emulator.cpp
+@@ -165,7 +165,12 @@ auto Emulator::load(std::shared_ptr<mia::Pak> pak, string& path) -> string {
+     filters.trimRight(":", 1L);
+     filters.prepend(pak->name(), "|");
+     dialog.setFilters({filters, "All|*"});
++#if defined (PLATFORM_LINUX)
++    //leave resolving symlinks to the OS on linux
++    location = program.openFile(dialog);
++#else
+     location = directory::resolveSymLink(program.openFile(dialog));
++#endif
+   }
+ 
+   if(location) {

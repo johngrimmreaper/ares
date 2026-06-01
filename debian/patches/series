@@ -4,3 +4,4 @@ desktop-file.patch
 sjlj-declare-xopen-source.patch
 menu-color.patch
 use-distro-libchdr.patch
+restore-old-path-resolution-behaviour.patch
