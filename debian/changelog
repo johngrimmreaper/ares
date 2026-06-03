@@ -1,8 +1,15 @@
 ares (148+dfsg-1) UNRELEASED; urgency=medium
 
   * New upstream version 148+dfsg
+  * Refreshed patches
+  * Update Standards version to 4.7.4
+  * Updated d/ares.6 to reflect new command line options
+  * Fix bug in launcher script that was preventing arguments from being passed
+    through to ares
+  * Drop n64 support for !amd64 and !arm64 architectures to reflect upstream
+  * Restore pre-v148 behaviour for resolving paths
 
- -- David James <davidjamescastor215@proton.me>  Sun, 31 May 2026 09:31:17 +0100
+ -- David James <davidjamescastor215@proton.me>  Wed, 03 Jun 2026 12:30:32 +0100
 
 ares (147+dfsg-3) unstable; urgency=medium
 

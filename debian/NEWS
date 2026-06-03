@@ -1,0 +1,7 @@
+ares (148+dfsg-1) UNRELEASED; urgency=medium
+
+From v148, the n64 core is only supported on amd64 and arm64. This is due to
+changes upstream. Upstream may add additional architectures in the future
+but the core needs to be disabled on non-amd64/non-arm64 for now. 
+
+ -- David James <davidjamescastor215@proton.me>  Wed, 03 Jun 2026 11:41:15 +0100
