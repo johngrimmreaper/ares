@@ -1,5 +1,6 @@
-ares (148+dfsg-1) UNRELEASED; urgency=medium
+ares (148+dfsg-1) unstable; urgency=medium
 
+  [ David James ]
   * New upstream version 148+dfsg
   * Refreshed patches
   * Update Standards version to 4.7.4
@@ -9,7 +10,10 @@ ares (148+dfsg-1) UNRELEASED; urgency=medium
   * Drop n64 support for !amd64 and !arm64 architectures to reflect upstream
   * Restore pre-v148 behaviour for resolving paths
 
- -- David James <davidjamescastor215@proton.me>  Wed, 03 Jun 2026 12:30:32 +0100
+  [ Christopher Obbard ]
+  * d/control: add myself to Uploaders
+
+ -- Christopher Obbard <obbardc@debian.org>  Fri, 05 Jun 2026 01:50:19 +0100
 
 ares (147+dfsg-3) unstable; urgency=medium
 
