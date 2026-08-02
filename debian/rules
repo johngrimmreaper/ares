@@ -80,12 +80,22 @@ execute_before_dh_install:
 	mkdir -p debian/tmp/usr/bin
 ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
 	mv -n debian/tmp/simd/usr/bin/ares debian/tmp/usr/libexec/ares/ares-simd
-	mv -n debian/tmp/simd/usr/share debian/tmp/usr
 endif
 ifneq ($(DEB_HOST_ARCH_CPU),arm64)
 	mv -n debian/tmp/no-simd/usr/bin/ares debian/tmp/usr/libexec/ares/ares-no-simd
-	mv -n debian/tmp/no-simd/usr/share debian/tmp/usr
 endif
+
+# The architecture-independent data is identical in both build variants.
+# Install it once rather than trying to merge two usr/share directories.
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
+	mv debian/tmp/simd/usr/share debian/tmp/usr
+else
+	mv debian/tmp/no-simd/usr/share debian/tmp/usr
+endif
+
+# Remove the variant-specific staging roots after extracting their files.
+	rm -rf debian/tmp/simd debian/tmp/no-simd
+
 ifeq ($(DEB_HOST_ARCH_CPU),amd64)
 	cp debian/ares-launcher-amd64.sh debian/tmp/usr/bin/ares
 endif
