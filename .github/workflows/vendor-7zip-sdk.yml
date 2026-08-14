@@ -1,0 +1,44 @@
+name: Vendor 7-Zip SDK
+
+on:
+  push:
+    branches:
+      - development/archive-disc-containers
+    paths:
+      - scripts/vendor-7zip-sdk.sh
+      - .github/workflows/vendor-7zip-sdk.yml
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout ares
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Vendor official decoder subset
+        shell: bash
+        run: scripts/vendor-7zip-sdk.sh
+
+      - name: Verify and commit vendored sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git status --short
+          if git diff --quiet -- thirdparty/lzma-sdk-26.02 && \
+             git diff --cached --quiet -- thirdparty/lzma-sdk-26.02; then
+            echo 'Vendored SDK already matches the pinned source.'
+            exit 0
+          fi
+          git config user.name 'Reaper CI'
+          git config user.email 'JohnGrimmReaper@disroot.org'
+          git add thirdparty/lzma-sdk-26.02
+          git commit -m 'thirdparty: vendor 7-Zip 26.02 decoder'
+          git push origin HEAD:development/archive-disc-containers

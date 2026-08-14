@@ -49,9 +49,10 @@ jobs:
       - name: Build Debian package
         shell: bash
         env:
-          DEB_BUILD_OPTIONS: parallel=2 nocheck
+          DEB_BUILD_OPTIONS: nocheck
         run: |
           set -euo pipefail
+          export DEB_BUILD_OPTIONS="parallel=$(nproc) nocheck"
           dpkg-buildpackage -b -uc -us
 
       - name: Verify build products
