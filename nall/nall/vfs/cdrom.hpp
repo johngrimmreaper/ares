@@ -8,7 +8,7 @@
 #include <nall/decode/chd.hpp>
 #endif
 #include <nall/decode/wav.hpp>
-#include <nall/decode/zip.hpp>
+#include <nall/decode/zip-archive.hpp>
 #include <utility>
 #include <vector>
 
@@ -24,10 +24,10 @@ struct cdrom : file {
     auto instance = std::make_shared<enable_make_shared>();
 
     if (location.iendsWith(".mmi")) {
-      instance->_archive = std::make_unique<Decode::ZIP>();
+      instance->_archive = std::make_unique<Decode::ZIPArchive>();
       if (!instance->_archive->open(location)) return {};
 
-      maybe<Decode::ZIP::File> compressedFile = instance->_archive->findFile(pathWithinArchive);
+      maybe<Decode::Archive::File> compressedFile = instance->_archive->findFile(pathWithinArchive);
       if (compressedFile && instance->loadCue(location, instance->_archive.get(), &compressedFile.get())) return instance;
     }
 
@@ -86,7 +86,7 @@ struct cdrom : file {
   }
 
 private:
-  auto loadCue(const string& cueLocation, const Decode::ZIP* archive, const Decode::ZIP::File* compressedFile) -> bool {
+  auto loadCue(const string& cueLocation, const Decode::Archive* archive, const Decode::Archive::File* compressedFile) -> bool {
     auto cuesheet = std::make_shared<Decode::CUE>();
     if(!cuesheet->load(cueLocation, archive, compressedFile)) return false;
 
@@ -321,7 +321,7 @@ private:
   }
 #endif
 
-  void loadSub(const string& location, const Decode::ZIP* archive, const Decode::ZIP::File* compressedFile, CD::Session& session) {
+  void loadSub(const string& location, const Decode::Archive* archive, const Decode::Archive::File* compressedFile, CD::Session& session) {
     auto subchannel = session.encode((u32)abs(session.leadIn.lba) + (u32)session.leadOut.end + 1);
     const u64 overlayStartSectors = (u64)CD::LeadInSectors + (u64)CD::Track1Pregap;
     const u64 overlayStartBytes   = overlayStartSectors * 96;
@@ -360,7 +360,7 @@ private:
   u64 _offset = 0;
   atomic<u64> _loadOffset = 0;
   thread _thread;
-  std::unique_ptr<Decode::ZIP> _archive;
+  std::unique_ptr<Decode::Archive> _archive;
 };
 
 }
