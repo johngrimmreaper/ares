@@ -32,8 +32,7 @@ jobs:
           set -euo pipefail
           git diff --check
           git status --short
-          if git diff --quiet -- thirdparty/lzma-sdk-26.02 && \
-             git diff --cached --quiet -- thirdparty/lzma-sdk-26.02; then
+          if [[ -z "$(git status --porcelain -- thirdparty/lzma-sdk-26.02)" ]]; then
             echo 'Vendored SDK already matches the pinned source.'
             exit 0
           fi
