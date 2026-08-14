@@ -2,6 +2,7 @@
 
 #include <nall/maybe.hpp>
 #include <nall/string.hpp>
+#include <ctime>
 #include <span>
 #include <vector>
 
@@ -26,6 +27,7 @@ struct Archive {
   virtual ~Archive() = default;
 
   virtual auto findFile(const string& filename) const -> const maybe<File> = 0;
+  virtual auto files() const -> std::vector<File> = 0;
   virtual auto open(const string& filename) -> bool = 0;
   virtual auto extract(const File& file) const -> std::vector<u8> = 0;
   virtual auto isDataUncompressed(const File& file) const -> bool = 0;
