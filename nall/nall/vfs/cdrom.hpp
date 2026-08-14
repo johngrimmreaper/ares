@@ -8,7 +8,7 @@
 #include <nall/decode/chd.hpp>
 #endif
 #include <nall/decode/wav.hpp>
-#include <nall/decode/zip-archive.hpp>
+#include <nall/decode/disc-archive.hpp>
 #include <utility>
 #include <vector>
 
@@ -41,6 +41,14 @@ struct cdrom : file {
 #if defined(ARES_ENABLE_CHD)
     if(location.iendsWith(".chd") && instance->loadChd(location)) return instance;
 #endif
+    if(location.iendsWith(".zip")) {
+      Decode::DiscArchive source;
+      if(source.open(location)) {
+        auto descriptor = source.descriptor;
+        instance->_archive = std::move(source.archive);
+        if(instance->loadCue(location, instance->_archive.get(), &descriptor)) return instance;
+      }
+    }
     return {};
   }
 
@@ -89,6 +97,7 @@ private:
   auto loadCue(const string& cueLocation, const Decode::Archive* archive, const Decode::Archive::File* compressedFile) -> bool {
     auto cuesheet = std::make_shared<Decode::CUE>();
     if(!cuesheet->load(cueLocation, archive, compressedFile)) return false;
+    const bool archived = archive != nullptr && compressedFile != nullptr;
 
     CD::Session session;
     session.leadIn.lba = -(CD::LeadInSectors + CD::Track1Pregap);
@@ -159,7 +168,7 @@ private:
 
     //load user data on separate thread
     _thread = thread::create(
-    [this, archive, compressedFile, cueLocation, cuesheet = std::move(cuesheet)](uintptr) -> void {
+    [this, archive, archived, cueLocation, cuesheet = std::move(cuesheet)](uintptr) -> void {
 
     s32 lbaFileBase = 0;
     for(auto& file : cuesheet->files) {
@@ -168,7 +177,7 @@ private:
       file_buffer fileBuffer;
       std::vector<u8> rawDataBuffer;
       std::span<const u8> rawDataView;
-      if(compressedFile != nullptr) {
+      if(archived) {
         auto filePathInArchive = file.archiveFolder;
         filePathInArchive.append(file.name);
         auto fileEntry = archive->findFile(filePathInArchive);
@@ -209,7 +218,7 @@ private:
               target[15] = 0x01;  // mode
               if(usingFileBuffer) {
                 fileBuffer.read({ target + 16, length });
-              } else {
+              } else if(fileDataReadPos + length <= rawDataView.size()) {
                 memcpy(target + 16, rawDataView.data() + fileDataReadPos, length);
                 fileDataReadPos += length;
               }
@@ -219,7 +228,7 @@ private:
               //BIN + WAV: direct copy
               if(usingFileBuffer) {
                 fileBuffer.read({target, length});
-              } else {
+              } else if(fileDataReadPos + length <= rawDataView.size()) {
                 memcpy(target, rawDataView.data() + fileDataReadPos, length);
                 fileDataReadPos += length;
               }
