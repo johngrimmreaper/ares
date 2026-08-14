@@ -1,11 +1,19 @@
 name: Push
+
 on:
-  push
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.head_ref || github.ref }}'
   cancel-in-progress: true
+
 permissions:
   contents: write
+
 jobs:
   build:
     name: Build ares (primary)
@@ -14,10 +22,12 @@ jobs:
     with:
       codesign: true
       official: ${{ github.ref_name == 'master' || github.ref_type == 'tag' }}
+
   build-aux:
     name: Build ares (auxiliary)
     uses: ./.github/workflows/build-aux.yml
     secrets: inherit
+
   release:
     name: Release
     needs: build

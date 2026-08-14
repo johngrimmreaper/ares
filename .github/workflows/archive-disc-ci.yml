@@ -1,0 +1,69 @@
+name: Archive Disc CI
+
+on:
+  push:
+    branches:
+      - development/archive-disc-containers
+  pull_request:
+    branches:
+      - development/archive-disc-containers
+  workflow_dispatch:
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  noble-package-build:
+    name: Ubuntu 24.04 package build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Add ares dependency PPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo add-apt-repository -y ppa:johngrimmreaper/24.04
+          sudo apt-get update
+
+      - name: Install Debian build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends devscripts equivs
+          sudo mk-build-deps \
+            --install \
+            --remove \
+            --tool 'apt-get -y --no-install-recommends' \
+            debian/control
+
+      - name: Build Debian package
+        shell: bash
+        env:
+          DEB_BUILD_OPTIONS: parallel=2 nocheck
+        run: |
+          set -euo pipefail
+          dpkg-buildpackage -b -uc -us
+
+      - name: Verify build products
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(../ares_*_amd64.deb)
+          if ((${#packages[@]} == 0)); then
+            echo 'No amd64 ares package was produced.' >&2
+            exit 1
+          fi
+          for package in "${packages[@]}"; do
+            dpkg-deb --info "$package"
+          done
