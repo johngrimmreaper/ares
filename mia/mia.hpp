@@ -7,6 +7,7 @@
 #include <nall/vfs.hpp>
 #include <nall/beat/single/apply.hpp>
 #include <nall/decode/cue.hpp>
+#include <nall/decode/disc-archive.hpp>
 #include <nall/string/markup/json.hpp>
 #if defined(ARES_ENABLE_CHD)
 #include <nall/decode/chd.hpp>
