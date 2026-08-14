@@ -53,7 +53,7 @@ struct DiscArchive {
   }
 
   auto readDataSector(u32 sectorID) -> std::vector<u8> {
-    if(!archive || descriptor.name.empty()) return {};
+    if(!archive || !descriptor.name) return {};
 
     Decode::CUE cuesheet;
     if(!cuesheet.load(location, archive.get(), &descriptor)) return {};
