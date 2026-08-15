@@ -7,11 +7,10 @@ Subject: Use the system libchdr
  1 file changed, 13 insertions(+)
 
 diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
-index 614713d..ece0fca 100644
+index 238ed5d..ece0fca 100644
 --- a/thirdparty/CMakeLists.txt
 +++ b/thirdparty/CMakeLists.txt
-@@ -5,8 +5,18 @@ target_compile_definitions(sljit PUBLIC SLJIT_HAVE_CONFIG_PRE=1 SLJIT_HAVE_CONFI
- target_compile_options(sljit PRIVATE $<$<COMPILE_LANG_AND_ID:C,AppleClang,Clang,GNU>:-Wno-conditional-uninitialized>)
+@@ -33,6 +33,16 @@ set_target_properties(sevenzip-sdk PROPERTIES POSITION_INDEPENDENT_CODE ON FOLDER thirdparty PREFIX "")
  
  option(ARES_ENABLE_CHD "Enable CHD format support via libchdr" ON)
 +option(WITH_SYSTEM_LIBCHDR "Use the system libchdr instead of bundled" OFF)
@@ -27,9 +26,7 @@ index 614713d..ece0fca 100644
 +  target_link_libraries(lzma INTERFACE PkgConfig::LZMA)
 +else()
    # lzma
-   add_subdirectory(libchdr/deps/lzma-25.01 EXCLUDE_FROM_ALL)
-   list(APPEND CHDR_INCLUDES lzma)
-@@ -57,6 +67,7 @@ if(ARES_ENABLE_CHD)
+@@ -85,6 +95,7 @@ if(ARES_ENABLE_CHD)
      PRIVATE $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-unreachable-code -Wno-unused-function>
    )
  endif()
@@ -37,7 +34,7 @@ index 614713d..ece0fca 100644
  
  add_library(
    tzxfile
-@@ -109,8 +120,10 @@ set_target_properties(ymfm PROPERTIES FOLDER thirdparty PREFIX "")
+@@ -137,8 +148,10 @@ set_target_properties(ymfm PROPERTIES FOLDER thirdparty PREFIX "")
  set_target_properties(tzxfile PROPERTIES FOLDER thirdparty PREFIX "")
  set_target_properties(sljit PROPERTIES FOLDER thirdparty PREFIX "")
  if(ARES_ENABLE_CHD)
