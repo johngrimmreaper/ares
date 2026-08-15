@@ -1,10 +1,11 @@
 #pragma once
 
-#include <nall/maybe.hpp>
-#include <nall/string.hpp>
+#include <cassert>
 #include <ctime>
 #include <span>
 #include <vector>
+#include <nall/maybe.hpp>
+#include <nall/string.hpp>
 
 namespace nall::Decode {
 
