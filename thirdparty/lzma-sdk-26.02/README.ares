@@ -9,5 +9,6 @@ The files in C/ are copied byte-for-byte from that upstream commit and are
 public-domain code by Igor Pavlov as stated in the source headers. Only the
 read-only 7z parser/decoder sources needed by ares are compiled.
 
-This copy is intentionally vendored so Debian/Ubuntu source packages are fully
-self-contained and Launchpad builds never need network access.
+This copy is intentionally vendored so archive decoding is self-contained,
+requires no external 7z executable at runtime, and does not depend on network
+access during ares builds.
