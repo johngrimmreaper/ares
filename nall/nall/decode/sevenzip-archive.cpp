@@ -95,7 +95,14 @@ struct SevenZipArchive::Impl {
         return SZ_ERROR_READ;
       }
 
-      auto remaining = self->file.size() - self->file.offset();
+      auto fileSize = self->file.size();
+      auto fileOffset = self->file.offset();
+      if(fileOffset > fileSize) {
+        *size = 0;
+        return SZ_ERROR_READ;
+      }
+
+      auto remaining = fileSize - fileOffset;
       auto length = (size_t)std::min<u64>(remaining, *size);
       if(length) self->file.read(std::span<u8>((u8*)data, length));
       *size = length;
@@ -106,15 +113,31 @@ struct SevenZipArchive::Impl {
       auto self = from(stream);
       if(!self->file) return SZ_ERROR_READ;
 
-      s64 base = 0;
-      if(origin == SZ_SEEK_CUR) base = (s64)self->file.offset();
-      if(origin == SZ_SEEK_END) base = (s64)self->file.size();
+      auto fileSize = self->file.size();
+      if(fileSize > (u64)std::numeric_limits<Int64>::max()) return SZ_ERROR_FAIL;
 
-      auto target = base + *position;
-      if(target < 0 || (u64)target > self->file.size()) return SZ_ERROR_FAIL;
+      u64 base = 0;
+      if(origin == SZ_SEEK_SET) base = 0;
+      else if(origin == SZ_SEEK_CUR) base = self->file.offset();
+      else if(origin == SZ_SEEK_END) base = fileSize;
+      else return SZ_ERROR_FAIL;
+      if(base > fileSize) return SZ_ERROR_FAIL;
+
+      u64 target = 0;
+      if(*position >= 0) {
+        auto delta = (u64)*position;
+        if(delta > fileSize - base) return SZ_ERROR_FAIL;
+        target = base + delta;
+      } else {
+        // Convert the negative displacement to its magnitude without negating
+        // INT64_MIN, which would itself overflow a signed integer.
+        auto delta = (u64)(-(*position + 1)) + 1;
+        if(delta > base) return SZ_ERROR_FAIL;
+        target = base - delta;
+      }
 
       self->file.seek(target);
-      *position = target;
+      *position = (Int64)target;
       return SZ_OK;
     }
 
