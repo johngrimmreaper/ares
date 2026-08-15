@@ -1,0 +1,13 @@
+7-Zip ANSI-C decoder subset
+==========================
+
+Source: https://github.com/ip7z/7zip
+Release tag: 26.02
+Pinned upstream commit: f9d78aff31a5f2521ae7ddbdc97c4a8855808959
+
+The files in C/ are copied byte-for-byte from that upstream commit and are
+public-domain code by Igor Pavlov as stated in the source headers. Only the
+read-only 7z parser/decoder sources needed by ares are compiled.
+
+This copy is intentionally vendored so Debian/Ubuntu source packages are fully
+self-contained and Launchpad builds never need network access.
