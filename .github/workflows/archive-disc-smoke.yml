@@ -1,0 +1,136 @@
+name: Archive Disc Smoke
+
+on:
+  push:
+    branches:
+      - feature/archive-disc-sevenzip
+    paths:
+      - '.github/workflows/archive-disc-smoke.yml'
+      - 'mia/**'
+      - 'nall/**'
+      - 'thirdparty/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mega-cd-archive-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install build and archive tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y -qq
+          sudo apt-get install -y cmake ccache ninja-build libsdl2-dev libgtk-3-dev qt6-base-dev
+          sudo apt-get install -y 7zip || sudo apt-get install -y p7zip-full
+
+      - name: Build SDL3
+        shell: bash
+        run: .github/scripts/build_sdl.sh
+
+      - name: Inject MIA smoke target
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > mia/archive-disc-smoke.cpp <<'CPP'
+          #define MIA_LIBRARY
+          #include <mia/mia.hpp>
+          #include <cstdio>
+
+          auto main(int argc, char** argv) -> int {
+            if(argc != 2) {
+              std::fprintf(stderr, "usage: mia-archive-disc-smoke <disc-container>\n");
+              return 64;
+            }
+
+            auto matches = mia::identify(argv[1]);
+            bool foundMegaCD = false;
+            for(auto& match : matches) {
+              std::printf("identified: %s\n", (const char*)match);
+              if(match == "Mega CD") foundMegaCD = true;
+            }
+
+            if(!foundMegaCD) {
+              std::fprintf(stderr, "Mega CD was not identified for %s\n", argv[1]);
+              return 1;
+            }
+            return 0;
+          }
+          CPP
+
+          cat >> mia/CMakeLists.txt <<'CMAKE'
+
+          # Development-only target injected by archive-disc-smoke.yml.
+          add_executable(mia-archive-disc-smoke archive-disc-smoke.cpp)
+          target_compile_definitions(mia-archive-disc-smoke PRIVATE MIA_LIBRARY)
+          target_include_directories(mia-archive-disc-smoke PRIVATE ${CMAKE_SOURCE_DIR})
+          target_link_libraries(mia-archive-disc-smoke PRIVATE ares::mia ares::nall)
+          CMAKE
+
+      - name: Build MIA smoke executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset ubuntu-ci
+          cmake --build build --target mia-archive-disc-smoke
+
+      - name: Create synthetic Mega CD fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ares-archive-disc-smoke
+          mkdir -p /tmp/ares-archive-disc-smoke/disc
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          root = Path('/tmp/ares-archive-disc-smoke')
+          disc = root / 'disc'
+
+          cue = '''FILE "track.bin" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n'''
+          (disc / 'game.cue').write_text(cue, encoding='ascii')
+
+          sector = bytearray(2352)
+          user = memoryview(sector)[16:16 + 2048]
+          user[0:4] = b'SEGA'
+          user[4:16] = b'DISCSYSTEM  '
+          user[0x180:0x180 + 14] = b'T-00000-00    '
+          (disc / 'track.bin').write_bytes(sector)
+
+          with zipfile.ZipFile(root / 'mega-cd.zip', 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+              zf.write(disc / 'game.cue', 'disc/game.cue')
+              zf.write(disc / 'track.bin', 'disc/track.bin')
+          PY
+
+          cd /tmp/ares-archive-disc-smoke
+          if command -v 7zz >/dev/null 2>&1; then
+            sevenzip=7zz
+          elif command -v 7z >/dev/null 2>&1; then
+            sevenzip=7z
+          else
+            echo 'No 7-Zip command found after package installation' >&2
+            exit 1
+          fi
+
+          "$sevenzip" a -bd -y -t7z -ms=on  mega-cd-solid.7z    disc >/dev/null
+          "$sevenzip" a -bd -y -t7z -ms=off mega-cd-nonsolid.7z disc >/dev/null
+
+          "$sevenzip" l mega-cd-solid.7z
+          "$sevenzip" l mega-cd-nonsolid.7z
+
+      - name: Identify archived Mega CD media
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke="$(find build -type f -name mia-archive-disc-smoke -perm -111 -print -quit)"
+          test -n "$smoke"
+
+          "$smoke" /tmp/ares-archive-disc-smoke/mega-cd.zip
+          "$smoke" /tmp/ares-archive-disc-smoke/mega-cd-solid.7z
+          "$smoke" /tmp/ares-archive-disc-smoke/mega-cd-nonsolid.7z
