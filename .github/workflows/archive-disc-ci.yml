@@ -17,10 +17,22 @@ permissions:
   contents: read
 
 jobs:
-  noble-package-build:
-    name: Ubuntu 24.04 package build
+  source-build:
+    name: Ubuntu 24.04 source build (${{ matrix.variant }})
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: x86-64
+            minimum-cpu: OFF
+            optional-targets: ON
+            run-tests: true
+          - variant: x86-64-v2
+            minimum-cpu: ON
+            optional-targets: OFF
+            run-tests: false
 
     steps:
       - name: Checkout source
@@ -31,40 +43,69 @@ jobs:
       - name: Add ares dependency PPA
         shell: bash
         run: |
-          set -euo pipefail
           sudo add-apt-repository -y ppa:johngrimmreaper/24.04
           sudo apt-get update
 
-      - name: Install Debian build dependencies
+      - name: Install source build and fixture dependencies
         shell: bash
         run: |
-          set -euo pipefail
-          sudo apt-get install -y --no-install-recommends devscripts equivs
+          sudo apt-get install -y --no-install-recommends devscripts equivs ninja-build p7zip-full python3
           sudo mk-build-deps \
             --install \
             --remove \
             --tool 'apt-get -y --no-install-recommends' \
             debian/control
 
-      - name: Build Debian package
+      - name: Configure directly from the source tree
         shell: bash
-        env:
-          DEB_BUILD_OPTIONS: nocheck
         run: |
-          set -euo pipefail
-          export DEB_BUILD_OPTIONS="parallel=$(nproc) nocheck"
-          dpkg-buildpackage -b -uc -us
+          cmake -S . -B "build/${{ matrix.variant }}" -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DARES_BUILD_LOCAL=OFF \
+            -DARES_ENABLE_MINIMUM_CPU=${{ matrix.minimum-cpu }} \
+            -DARES_SKIP_DEPS=ON \
+            -DARES_BUILD_OPTIONAL_TARGETS=${{ matrix.optional-targets }} \
+            -DARES_CORES=md \
+            -DWITH_SYSTEM_LIBCHDR=ON
 
-      - name: Verify build products
+      - name: Build Ares
+        shell: bash
+        run: cmake --build "build/${{ matrix.variant }}" --parallel "$(nproc)"
+
+      - name: Generate legal synthetic SevenZip fixtures
+        if: matrix.run-tests
+        shell: bash
+        run: tests/archive-disc/generate-fixtures.sh test-fixtures
+
+      - name: Run archive-disc integration matrix
+        if: matrix.run-tests
         shell: bash
         run: |
-          set -euo pipefail
-          shopt -s nullglob
-          packages=(../ares_*_amd64.deb)
-          if ((${#packages[@]} == 0)); then
-            echo 'No amd64 ares package was produced.' >&2
+          mkdir -p "artifacts/${{ matrix.variant }}"
+          "build/${{ matrix.variant }}/tests/archive-disc/archive-disc-test" test-fixtures \
+            | tee "artifacts/${{ matrix.variant }}/archive-disc-test.log"
+          tar -cJf "artifacts/${{ matrix.variant }}/synthetic-sevenzip-fixtures.tar.xz" \
+            -C test-fixtures .
+
+      - name: Inspect executable linkage
+        shell: bash
+        run: |
+          mkdir -p "artifacts/${{ matrix.variant }}"
+          binary=$(find "build/${{ matrix.variant }}" -type f -name ares -perm -111 -print -quit)
+          if [ -z "$binary" ]; then
+            echo 'The Ares executable was not produced.' >&2
             exit 1
           fi
-          for package in "${packages[@]}"; do
-            dpkg-deb --info "$package"
-          done
+          ldd "$binary" | tee "artifacts/${{ matrix.variant }}/ldd.txt"
+          grep -F 'libchdr.so' "artifacts/${{ matrix.variant }}/ldd.txt"
+          cp "$binary" "artifacts/${{ matrix.variant }}/ares"
+          sha256sum "artifacts/${{ matrix.variant }}/ares" \
+            > "artifacts/${{ matrix.variant }}/SHA256SUMS"
+
+      - name: Upload inspected build and test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: archive-disc-ubuntu-24.04-${{ matrix.variant }}
+          path: artifacts/${{ matrix.variant }}
+          if-no-files-found: warn
