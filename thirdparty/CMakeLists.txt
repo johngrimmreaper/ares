@@ -33,8 +33,19 @@ target_include_directories(sevenzip-sdk PUBLIC lzma-sdk-26.02/C)
 set_target_properties(sevenzip-sdk PROPERTIES POSITION_INDEPENDENT_CODE ON FOLDER thirdparty PREFIX "")
 
 option(ARES_ENABLE_CHD "Enable CHD format support via libchdr" ON)
+option(WITH_SYSTEM_LIBCHDR "Use the system libchdr instead of the bundled copy" OFF)
 
 if(ARES_ENABLE_CHD)
+  if(WITH_SYSTEM_LIBCHDR)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(CHDR REQUIRED IMPORTED_TARGET libchdr)
+    pkg_check_modules(LZMA REQUIRED IMPORTED_TARGET liblzma)
+
+    add_library(chdr-static INTERFACE)
+    add_library(lzma INTERFACE)
+    target_link_libraries(chdr-static INTERFACE PkgConfig::CHDR)
+    target_link_libraries(lzma INTERFACE PkgConfig::LZMA)
+  else()
   # lzma
   add_subdirectory(libchdr/deps/lzma-25.01 EXCLUDE_FROM_ALL)
   list(APPEND CHDR_INCLUDES lzma)
@@ -84,6 +95,7 @@ if(ARES_ENABLE_CHD)
     chdr-static
     PRIVATE $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-unreachable-code -Wno-unused-function>
   )
+  endif()
 endif()
 
 add_library(
@@ -136,7 +148,7 @@ add_library(qon STATIC qon/qon.cpp)
 set_target_properties(ymfm PROPERTIES FOLDER thirdparty PREFIX "")
 set_target_properties(tzxfile PROPERTIES FOLDER thirdparty PREFIX "")
 set_target_properties(sljit PROPERTIES FOLDER thirdparty PREFIX "")
-if(ARES_ENABLE_CHD)
+if(ARES_ENABLE_CHD AND NOT WITH_SYSTEM_LIBCHDR)
   set_target_properties(chdr-static PROPERTIES FOLDER thirdparty PREFIX "")
   set_target_properties(miniz PROPERTIES FOLDER thirdparty PREFIX "")
   set_target_properties(zstd PROPERTIES FOLDER thirdparty PREFIX "")
