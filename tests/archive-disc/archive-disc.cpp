@@ -100,11 +100,12 @@ auto testMediaDetection(const string& root) -> void {
 }  // namespace
 
 auto nall::main(Arguments arguments) -> void {
-  if(arguments.size() != 1) {
-    print("usage: archive-disc-test <generated-fixture-directory>\n");
+  if(arguments.size() != 1 || !arguments[0].beginsWith("--fixtures=")) {
+    print("usage: archive-disc-test --fixtures=<generated-fixture-directory>\n");
     std::exit(EXIT_FAILURE);
   }
-  auto root = arguments[0];
+  auto root = arguments[0].trimLeft("--fixtures=", 1L);
+  check(directory::exists(root), "synthetic fixture directory exists", root);
 
   expectDiscArchive(root, "one-cue-one-bin.7z", "one CUE plus one BIN");
   expectDiscArchive(root, "multi-track.7z", "one CUE plus multiple BIN tracks");

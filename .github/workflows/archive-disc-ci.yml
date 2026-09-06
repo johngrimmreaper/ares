@@ -75,19 +75,23 @@ jobs:
       - name: Generate legal synthetic SevenZip fixtures
         if: matrix.run-tests
         shell: bash
-        run: tests/archive-disc/generate-fixtures.sh test-fixtures
+        run: |
+          tests/archive-disc/generate-fixtures.sh test-fixtures
+          mkdir -p "artifacts/${{ matrix.variant }}"
+          tar -cJf "artifacts/${{ matrix.variant }}/synthetic-sevenzip-fixtures.tar.xz" \
+            -C test-fixtures .
 
       - name: Run archive-disc integration matrix
         if: matrix.run-tests
         shell: bash
         run: |
           mkdir -p "artifacts/${{ matrix.variant }}"
-          "build/${{ matrix.variant }}/tests/archive-disc/archive-disc-test" test-fixtures \
+          "build/${{ matrix.variant }}/tests/archive-disc/archive-disc-test" \
+            "--fixtures=${GITHUB_WORKSPACE}/test-fixtures" \
             | tee "artifacts/${{ matrix.variant }}/archive-disc-test.log"
-          tar -cJf "artifacts/${{ matrix.variant }}/synthetic-sevenzip-fixtures.tar.xz" \
-            -C test-fixtures .
 
       - name: Inspect executable linkage
+        if: always()
         shell: bash
         run: |
           mkdir -p "artifacts/${{ matrix.variant }}"
