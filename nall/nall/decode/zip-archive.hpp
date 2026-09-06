@@ -102,7 +102,10 @@ private:
     }
 
     for(auto& entry : entries) {
-      if(entry.file.name == *normalized) return &entry;
+      if(entry.file.name == *normalized) {
+        errorMessage = {};
+        return &entry;
+      }
     }
 
     const Entry* match = nullptr;
@@ -114,7 +117,8 @@ private:
       }
       match = &entry;
     }
-    if(!match) errorMessage = {"Archive member not found: ", *normalized};
+    if(match) errorMessage = {};
+    else errorMessage = {"Archive member not found: ", *normalized};
     return match;
   }
 

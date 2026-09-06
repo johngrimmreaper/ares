@@ -107,6 +107,10 @@ inline auto CUE::load(const string& location, const Decode::Archive* archive, co
   }
 
   for(auto& file : files) {
+    if(archive && !Archive::resolveMemberName(archiveFolder, file.name)) {
+      errorMessage = {"Unsafe CUE member reference: ", file.name};
+      return false;
+    }
     if(!file.scan(Location::path(location), archiveFolder, archive)) {
       if(archive) errorMessage = archive->error();
       if(!errorMessage) errorMessage = {"CUE member is missing or unsupported: ", file.name};
