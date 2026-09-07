@@ -120,7 +120,9 @@ auto testMediaDetection(const string& root) -> void {
   auto medium = mia::Medium::create("Mega CD");
   auto result = medium->load(path);
   check(result == successful, "Mega CD load reaches mounted cd.rom", result.info);
-  check(medium->pak && medium->pak->read("cd.rom"), "Mega CD pak exposes cd.rom");
+  auto mounted = medium->pak ? medium->pak->read("cd.rom") : std::shared_ptr<vfs::file>{};
+  check((bool)mounted, "Mega CD pak exposes cd.rom");
+  if(mounted) check(mounted->offset() == 0, "Mega CD analysis preserves mounted disc position");
 }
 
 }  // namespace
