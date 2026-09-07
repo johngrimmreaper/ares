@@ -34,6 +34,7 @@ def mode1_raw_sector(number: int) -> bytes:
 raw = b"".join(mode1_raw_sector(n) for n in range(4))
 iso = b"".join(sega_user_sector(n) for n in range(4))
 audio = b"".join(bytes([0x40 + n]) * 2352 for n in range(3))
+audio_pregap = b"".join(bytes([0x30 + n]) * 2352 for n in range(2))
 
 def put(case: str, name: str, content: bytes | str) -> None:
     path = root / case / name
@@ -51,6 +52,9 @@ for case in ("one", "solid", "non-solid"):
 put("multi", "game.cue", 'FILE "data.bin" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\nFILE "audio.bin" BINARY\n  TRACK 02 AUDIO\n    INDEX 01 00:00:00\n')
 put("multi", "data.bin", raw)
 put("multi", "audio.bin", audio)
+
+put("single-bin", "game.cue", 'FILE "Combined Disc.bin" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n  TRACK 02 AUDIO\n    INDEX 00 00:00:04\n    INDEX 01 00:00:06\n')
+put("single-bin", "Combined Disc.bin", raw + audio_pregap + audio)
 
 put("nested", "Collection/Disc/game.cue", cue)
 put("nested", "Collection/Disc/disc.bin", raw)
@@ -89,6 +93,7 @@ make_archive() {
 output_path=$(cd "$fixture_root" && pwd)
 make_archive "$output_path/one-cue-one-bin.7z" "$work_root/one" on
 make_archive "$output_path/multi-track.7z" "$work_root/multi" on
+make_archive "$output_path/single-bin-mixed.7z" "$work_root/single-bin" on
 make_archive "$output_path/nested.7z" "$work_root/nested" on
 make_archive "$output_path/case-mismatch.7z" "$work_root/case" on
 make_archive "$output_path/unicode.7z" "$work_root/unicode" on

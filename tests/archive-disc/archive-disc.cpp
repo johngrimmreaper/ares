@@ -84,6 +84,32 @@ auto testMountedDisc(const string& root) -> void {
   check(repeated == data, "mounted disc repeated random access is stable");
 }
 
+auto testSingleBinMixedDisc(const string& root) -> void {
+  string error;
+  auto disc = vfs::cdrom::open(fixture(root, "single-bin-mixed.7z"), &error);
+  check((bool)disc, "single BIN with data and audio tracks mounts", error);
+  if(!disc) return;
+  vfs::file& mounted = *disc;
+
+  auto dataOffset = 2448ull * (CD::LeadInSectors + CD::LBAtoABA(2)) + 16;
+  mounted.seek(dataOffset);
+  std::vector<u8> data(2048);
+  mounted.read(data);
+  check(data[0x100] == 2, "single-BIN data-sector mapping");
+
+  auto index00Offset = 2448ull * (CD::LeadInSectors + CD::LBAtoABA(4));
+  mounted.seek(index00Offset);
+  std::vector<u8> index00(2352);
+  mounted.read(index00);
+  check(index00.front() == 0x30 && index00.back() == 0x30, "single-BIN audio INDEX 00 mapping");
+
+  auto index01Offset = 2448ull * (CD::LeadInSectors + CD::LBAtoABA(6));
+  mounted.seek(index01Offset);
+  std::vector<u8> index01(2352);
+  mounted.read(index01);
+  check(index01.front() == 0x40 && index01.back() == 0x40, "single-BIN audio INDEX 01 mapping");
+}
+
 auto testMediaDetection(const string& root) -> void {
   auto path = fixture(root, "one-cue-one-bin.7z");
   auto matches = mia::identify(path);
@@ -109,6 +135,7 @@ auto nall::main(Arguments arguments) -> void {
 
   expectDiscArchive(root, "one-cue-one-bin.7z", "one CUE plus one BIN");
   expectDiscArchive(root, "multi-track.7z", "one CUE plus multiple BIN tracks");
+  expectDiscArchive(root, "single-bin-mixed.7z", "single BIN with mixed data/audio tracks");
   expectDiscArchive(root, "nested.7z", "nested archive directory");
   expectDiscArchive(root, "case-mismatch.7z", "unique case-insensitive CUE reference");
   expectDiscArchive(root, "unicode.7z", "Unicode member names");
@@ -125,6 +152,7 @@ auto nall::main(Arguments arguments) -> void {
   expectFailure(root, "case-collision.7z", "Ambiguous case-insensitive", "case-colliding members are not guessed");
 
   testMountedDisc(root);
+  testSingleBinMixedDisc(root);
   testMediaDetection(root);
 
   print("\n", failures ? "FAILED" : "PASSED", ": ", failures, " failed checks\n");
