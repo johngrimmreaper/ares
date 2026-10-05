@@ -1,0 +1,18 @@
+From: Tobias Hansen <thansen@debian.org>
+Date: Sun, 21 Dec 2025 16:33:36 +0000
+Subject: Enhance desktop file
+
+* Add keywords entry.
+---
+ desktop-ui/resource/ares.desktop | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/desktop-ui/resource/ares.desktop b/desktop-ui/resource/ares.desktop
+index 66accf5..1b2edfb 100644
+--- a/desktop-ui/resource/ares.desktop
++++ b/desktop-ui/resource/ares.desktop
+@@ -6,3 +6,4 @@ Icon=ares
+ Terminal=false
+ Type=Application
+ Categories=Game;Emulator;
++Keywords=emulator;Nintendo;SNES;NES;Gameboy;Famicom;Super;
