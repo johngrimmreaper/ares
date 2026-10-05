@@ -1,0 +1,8 @@
+Version: 5
+
+Template: Github
+Dversionmangle: s/\+dfsg\d*//
+Owner: ares-emulator
+Project: ares
+Repack: yes
+Repacksuffix: +dfsg
