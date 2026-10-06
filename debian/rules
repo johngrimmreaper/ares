@@ -66,6 +66,13 @@ ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
 	dh_auto_build --builddirectory=build/simd
 endif
 
+override_dh_auto_test:
+	dh_auto_configure --builddirectory=build/archive-test -- $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=$(BUILDOPT) -DARES_CORES="$(cores)" -DARES_BUILD_OPTIONAL_TARGETS=ON
+	cmake --build build/archive-test --target archive-disc-test --parallel
+	rm -rf build/archive-disc-fixtures
+	tests/archive-disc/generate-fixtures.sh build/archive-disc-fixtures
+	test_bin="$$(find build/archive-test -type f -name archive-disc-test -perm -111 -print -quit)"; test -n "$$test_bin"; "$$test_bin" build/archive-disc-fixtures
+
 override_dh_auto_install:
 ifneq ($(DEB_HOST_ARCH_CPU),arm64)
 	dh_auto_install --builddirectory=build/no-simd --destdir=debian/tmp/no-simd
