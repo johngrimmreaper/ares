@@ -67,7 +67,7 @@ ifneq (,$(filter $(DEB_HOST_ARCH_CPU), amd64 arm64))
 endif
 
 override_dh_auto_test:
-	dh_auto_configure --builddirectory=build/archive-test -- $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=$(BUILDOPT) -DARES_CORES="$(cores)" -DARES_BUILD_OPTIONAL_TARGETS=ON
+	dh_auto_configure --builddirectory=build/archive-test -- $(CMAKE_OPTIONS) -DCMAKE_BUILD_TYPE=$(BUILDOPT) -DARES_CORES="md" -DARES_BUILD_OPTIONAL_TARGETS=ON
 	cmake --build build/archive-test --target archive-disc-test --parallel
 	rm -rf build/archive-disc-fixtures
 	tests/archive-disc/generate-fixtures.sh build/archive-disc-fixtures
