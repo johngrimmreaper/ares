@@ -71,7 +71,7 @@ override_dh_auto_test:
 	cmake --build build/archive-test --target archive-disc-test --parallel
 	rm -rf build/archive-disc-fixtures
 	tests/archive-disc/generate-fixtures.sh build/archive-disc-fixtures
-	test_bin="$$(find build/archive-test -type f -name archive-disc-test -perm -111 -print -quit)"; test -n "$$test_bin"; "$$test_bin" build/archive-disc-fixtures
+	test_bin="$$(find build/archive-test -type f -name archive-disc-test -perm -111 -print -quit)"; test -n "$$test_bin"; "$$test_bin" build/archive-disc-fixtures/one-cue-one-bin.7z
 
 override_dh_auto_install:
 ifneq ($(DEB_HOST_ARCH_CPU),arm64)
