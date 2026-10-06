@@ -157,10 +157,15 @@ auto testMediaDetection(const string& root) -> void {
 
 auto nall::main(Arguments arguments) -> void {
   if(arguments.size() != 1) {
-    print("usage: archive-disc-test <generated-fixture-directory>\n");
+    print("usage: archive-disc-test <fixture-archive>\n");
     std::exit(EXIT_FAILURE);
   }
-  auto root = arguments[0];
+  auto fixtureArchive = arguments[0];
+  if(!file::exists(fixtureArchive)) {
+    print("fixture archive does not exist: ", fixtureArchive, "\n");
+    std::exit(EXIT_FAILURE);
+  }
+  auto root = Location::path(fixtureArchive);
 
   expectDiscArchive(root, "one-cue-one-bin.7z", "one CUE plus one BIN");
   expectDiscArchive(root, "multi-track.7z", "one CUE plus multiple BIN tracks");
