@@ -6,6 +6,7 @@ using namespace nall;
 #include <nall/decode/disc-archive.hpp>
 #include <mia/mia.hpp>
 
+#include <cstdio>
 #include <cstdlib>
 #include <string_view>
 
@@ -59,11 +60,38 @@ auto expectFailure(const string& root, const string& archiveName, std::string_vi
   check(sector.empty() && contains(archive.error(), expected), testName, archive.error());
 }
 
+auto testSevenZipDecodedView(const string& root) -> void {
+  Decode::SevenZipArchive archive;
+  auto opened = archive.open(fixture(root, "solid.7z"));
+  check(opened, "SevenZip cache fixture opens", archive.error());
+  if(!opened) return;
+
+  auto entry = archive.findFile("disc.bin");
+  check((bool)entry, "SevenZip cache fixture resolves BIN member", archive.error());
+  if(!entry) return;
+
+  check(archive.isDataUncompressed(*entry), "SevenZip BIN exposes decoded SDK cache", archive.error());
+  auto first = archive.dataViewIfUncompressed(*entry);
+  auto second = archive.dataViewIfUncompressed(*entry);
+  check(first.size() == entry->size, "SevenZip cached view covers the full BIN member", archive.error());
+  check(first.data() == second.data() && first.size() == second.size(),
+    "SevenZip cached view is reused without re-extraction", archive.error());
+}
+
 auto testMountedDisc(const string& root) -> void {
   string error;
-  auto disc = vfs::cdrom::open(fixture(root, "multi-track.7z"), &error);
+  auto archivePath = fixture(root, "multi-track.7z");
+  auto disc = vfs::cdrom::open(archivePath, &error);
   check((bool)disc, "CUE with data and audio tracks mounts", error);
   if(!disc) return;
+
+  // Archived discs must be fully materialized before open() returns. Truncating
+  // the source container here makes any later archive access fail, while reads
+  // from the RAM-backed disc image must remain unaffected.
+  auto source = std::fopen((const char*)archivePath, "wb");
+  check(source != nullptr, "mounted SevenZip source is closed after materialization");
+  if(source) std::fclose(source);
+
   vfs::file& mounted = *disc;
 
   auto dataOffset = 2448ull * (CD::LeadInSectors + CD::LBAtoABA(2)) + 16;
@@ -152,6 +180,7 @@ auto nall::main(Arguments arguments) -> void {
   expectFailure(root, "traversal.7z", "Unsafe CUE", "traversal-style CUE reference is rejected");
   expectFailure(root, "case-collision.7z", "Ambiguous case-insensitive", "case-colliding members are not guessed");
 
+  testSevenZipDecodedView(root);
   testMountedDisc(root);
   testSingleBinMixedDisc(root);
   testMediaDetection(root);
