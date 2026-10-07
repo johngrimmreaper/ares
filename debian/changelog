@@ -7,7 +7,8 @@ ares (148-0ubuntu1~noble1) noble; urgency=medium
     declare the upstream CMake minimum and direct OpenGL/X11 dependencies.
   * Build baseline x86-64 and x86-64-v2 binaries on amd64 with runtime dispatch;
     install shared data from one variant and exclude the sourcery build tool.
-  * Update maintainer metadata, vendored license coverage and package docs.
+  * Update maintainer metadata, vendored license coverage and package docs;
+    record unresolved per-file provenance for embedded firmware.
 
  -- Reaper <JohnGrimmReaper@disroot.org>  Wed, 07 Oct 2026 22:07:50 +0000
 
