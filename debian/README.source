@@ -1,0 +1,60 @@
+Ubuntu packaging of the original upstream release
+=================================================
+
+This branch starts directly at upstream Ares v148, commit
+0aafd85789215e84e1e43415c07d4c88461b7899. Upstream commits retain their
+original identities. Debian/Salsa supplies packaging knowledge and derived
+files, not Git ancestry. The initial import was taken from Salsa master at
+15e2123befb01e87c85e1e42722d7f477b456e62; its complete changelog is preserved.
+
+The upstream source is intact: no +dfsg repack, Files-Excluded, source patches,
+or unvendoring. libchdr and its LZMA, miniz and zstd dependencies are built from
+thirdparty/. debian/source/format is 3.0 (quilt), with no patch series.
+License notices and the unresolved provenance of embedded firmware are recorded
+in debian/copyright; firmware permissions need separate verification before
+redistribution.
+
+This Ubuntu 24.04 Noble package is a v148 baseline for investigating a later
+upstream performance regression. Emulation features are unchanged. Actual
+Mega Drive performance must be checked by the user on their target machine.
+
+Build variants
+==============
+
+All builds use ARES_BUILD_LOCAL=OFF to avoid -march=native, and
+ARES_SKIP_DEPS=ON to prevent fetching upstream prebuilt dependencies.
+ARES_ENABLE_MINIMUM_CPU=OFF lets packaging control instruction-set baselines.
+Normal builds use upstream RelWithDebInfo; DEB_BUILD_OPTIONS=noopt selects Debug.
+Hardening and QA flags are supplied by dpkg-buildflags.
+
+amd64: build ares-no-simd with -march=x86-64 and ares-simd with -march=x86-64-v2.
+Both live in /usr/libexec/ares/. /usr/bin/ares queries
+/lib64/ld-linux-x86-64.so.2 --help under LC_ALL=C and uses exec to launch the
+appropriate binary, forwarding every argument unchanged.
+
+arm64: NEON is guaranteed by the architecture baseline, so only ares-simd is
+built. /usr/bin/ares is a symlink to it.
+
+Other architectures supported by upstream: build only ares-no-simd, with
+/usr/bin/ares as a symlink. Nintendo 64 is included only on amd64/arm64.
+Mega Drive requires compiler support for __int128. Foreign architectures have
+not been validated by the initial native amd64 build.
+
+Each variant is installed into its own temporary staging root. Keep the binary
+from each, but install /usr/share only once: from SIMD on amd64/arm64, otherwise
+from no-SIMD. Remove both remaining variant roots before dh_install. The
+sourcery resource compiler is a build tool and is excluded from the package.
+
+Build dependencies
+==================
+
+CMake >= 3.28 is required by upstream. Use GTK3, OpenGL/X11 and the ALSA,
+PulseAudio, OpenAL, libao, SDL3 and udev backends. Noble needs an available SDL3
+backport. libchdr-dev, GtkSourceView and Xv are not build dependencies.
+The optional librashader runtime is not required; upstream's bundled header
+loader supports environments without it.
+
+Use the user's deb-packages/deb_builder.yml for local Noble validation with
+upload_to_ppa=false, sign_source_package=false and run_sbuild_verification=true.
+The orig tarball must be generated from v148 with no exclusions. The builder
+may stage packaging separately but must not change this upstream source.
