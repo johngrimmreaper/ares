@@ -56,5 +56,8 @@ loader supports environments without it.
 
 Use the user's deb-packages/deb_builder.yml for local Noble validation with
 upload_to_ppa=false, sign_source_package=false and run_sbuild_verification=true.
-The orig tarball must be generated from v148 with no exclusions. The builder
-may stage packaging separately but must not change this upstream source.
+The orig tarball must be generated from v148 with no exclusions. The Noble
+baseline profile sets source_build_upstream_ref=v148 and archives that same
+revision for staging, then overlays committed debian/ only. The builder rejects
+changes outside packaging. This keeps Git export-subst version metadata equal
+in staging and the orig tarball without patches or diff-ignore rules.
