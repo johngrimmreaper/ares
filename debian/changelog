@@ -1,3 +1,11 @@
+ares (148-0ubuntu3~noble1) noble; urgency=medium
+
+  * Record the 38 bundled firmware files and their SHA-256 fingerprints.
+  * Trace resource embedding and document unresolved redistribution rights
+    without changing firmware binaries or emulator behavior.
+
+ -- Reaper <JohnGrimmReaper@disroot.org>  Sun, 25 Oct 2026 21:03:04 +0000
+
 ares (148-0ubuntu2~noble1) noble; urgency=medium
 
   * Normalize '+' in the Ares CMake display-version override to avoid the

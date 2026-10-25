@@ -12,7 +12,8 @@ or unvendoring. libchdr and its LZMA, miniz and zstd dependencies are built from
 thirdparty/. debian/source/format is 3.0 (quilt), with no patch series.
 License notices and the unresolved provenance of embedded firmware are recorded
 in debian/copyright; firmware permissions need separate verification before
-redistribution.
+redistribution. See debian/firmware-provenance.md for the 38-file evidence
+inventory and debian/firmware-manifest.sha256 for exact binary fingerprints.
 
 This Ubuntu 24.04 Noble package is a v148 baseline for investigating a later
 upstream performance regression. Emulation features are unchanged. Actual
