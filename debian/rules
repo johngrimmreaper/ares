@@ -8,11 +8,16 @@ CXX ?= g++
 # DEB_VERSION
 include /usr/share/dpkg/pkg-info.mk
 
+# Upstream CMake parses version suffixes only when introduced by '-'.
+# Translate '+' in the display override without changing the Debian version,
+# preserving the git snapshot timestamp and SHA for regression identification.
+ARES_CMAKE_VERSION := $(subst +,-,$(DEB_VERSION))
+
 CMAKE_OPTIONS := \
 	-DARES_BUILD_LOCAL=OFF \
 	-DARES_ENABLE_MINIMUM_CPU=OFF \
 	-DARES_SKIP_DEPS=ON \
-	-DARES_VERSION_OVERRIDE="v$(DEB_VERSION)"
+	-DARES_VERSION_OVERRIDE="v$(ARES_CMAKE_VERSION)"
 
 cores := a26;fc;sfc;sg;ms;ps1;pce;ng;msx;cv;myvision;gb;gba;ws;ngp;spec
 # Reimplementation of older disable-md-on-32bit.patch

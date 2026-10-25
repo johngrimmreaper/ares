@@ -1,3 +1,11 @@
+ares (148-0ubuntu2~noble1) noble; urgency=medium
+
+  * Normalize '+' in the Ares CMake display-version override to avoid the
+    upstream canonical-version fallback for +git and +dfsg Debian versions.
+  * Keep the actual Debian version and snapshot SHA unchanged in dpkg metadata.
+
+ -- Reaper <JohnGrimmReaper@disroot.org>  Sun, 25 Oct 2026 20:25:01 +0000
+
 ares (148-0ubuntu1~noble1) noble; urgency=medium
 
   * Build the original upstream v148 source as an Ubuntu regression baseline;

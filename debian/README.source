@@ -45,6 +45,15 @@ from each, but install /usr/share only once: from SIMD on amd64/arm64, otherwise
 from no-SIMD. Remove both remaining variant roots before dh_install. The
 sourcery resource compiler is a build tool and is excluded from the package.
 
+Version metadata
+================
+
+The Debian package version remains authoritative in dpkg and the changelog.
+Upstream CMake accepts only '-' as a suffix separator when determining its
+canonical project version. debian/rules therefore translates '+' to '-' in the
+display-only ARES_VERSION_OVERRIDE. Snapshot timestamps and source SHAs stay
+visible; the CMake canonical version remains 0.148.0 for v148-based builds.
+
 Build dependencies
 ==================
 
